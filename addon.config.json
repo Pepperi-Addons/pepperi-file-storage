@@ -1,0 +1,20 @@
+{
+  "AddonUUID": "a0eca9ba-c7b6-4c91-95c9-c0a17fccd679",
+  "AddonVersion": "0.0.0",
+  "DebugPort": 4500,
+  "WebappBaseUrl": "https://app.sandbox.pepperi.com",
+  "DefaultEditor": "main",
+  "Endpoints": [
+    "installation.ts",
+    "api.ts"
+  ],
+  "Editors": [
+    "main"
+  ],
+  "PublishConfig": {
+    "ClientStack": "ng10",
+    "Editors": [],
+    "Dependencies": {},
+    "CPISide": []
+  }
+}
