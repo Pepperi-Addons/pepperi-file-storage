@@ -7,12 +7,17 @@ import { Client, Request } from '@pepperi-addons/debug-server'
 export async function get_file(client: Client, request: Request) 
 {
 	const pfs = new PfsService(client);
- 	return pfs.downloadFromAWS(request.body.fileName);
+ 	return pfs.downloadFromAWS(request);
 }
 
 export async function post_file(client: Client, request: Request) 
 {
 	const pfs = new PfsService(client);
- 	return pfs.uploadToAWS(request.body.filename, request.body.filebody, request.body.contentType);
+ 	return pfs.uploadToAWS(request);
 }
 
+export async function list_files(client: Client, request: Request) 
+{
+	const pfs = new PfsService(client);
+ 	return pfs.listFiles(request);
+}
