@@ -1,18 +1,19 @@
-import { PapiClient, InstalledAddon } from '@pepperi-addons/papi-sdk'
+import { PapiClient } from '@pepperi-addons/papi-sdk'
 import { Client, Request } from '@pepperi-addons/debug-server';
 import S3, { ListObjectsV2Request, Metadata } from 'aws-sdk/clients/s3';
 import AWS from 'aws-sdk';
-import { ConfigurationServicePlaceholders } from 'aws-sdk/lib/config_service_placeholders';
+import jwtDecode from 'jwt-decode';
 
-const BUCKET = 'pepperi-storage-stage';
-
+const BUCKET = 'pepperi-file-storage-dev';
 
 class PfsService 
 {
 	papiClient: PapiClient
 	s3: S3;
+	DistributorUUID: string;
+	AddonUUID: string;
 
-	constructor(private client: Client) 
+	constructor(private client: Client, private request: Request) 
 	{
 		this.papiClient = new PapiClient({
 			baseURL: client.BaseURL,
@@ -31,24 +32,49 @@ class PfsService
 			sessionToken
 		});
 
+		this.DistributorUUID = jwtDecode(client.OAuthAccessToken)['pepperi.distributoruuid'];
+		this.AddonUUID = this.request.query.AddonUUID;
 		this.s3 = new S3();
 	}
 
-	async uploadToAWS(request: Request): Promise<boolean> 
+	/**
+	 * Each distributor is given its own folder, and each addon has its own folder within the distributor's folder.
+	 * Addons place objects in their folder. An absolute path is a path that includes the Distributor's UUID, 
+	 * the Addon's UUID and the trailing requested path.
+	 * @param relativePath the path relative to the addon's folder
+	 * @returns a string in the format ${this.DistributorUUID}/${this.AddonUUID}/${relativePath}
+	 */
+	private getAbsolutePath(relativePath: string)
+	{
+		return `${this.DistributorUUID}/${this.AddonUUID}/${relativePath}`;
+	}
+
+	/**
+	 * Each distributor is given its own folder, and each addon has its own folder within the distributor's folder.
+	 * Addons place objects in their folder. A relative path is a path that's relative to the addon's folder.
+	 * @param absolutePath the original path the addon requested
+	 * @returns a relative path string
+	 */
+	 private getRelativePath(absolutePath: string): string
+	{
+		return absolutePath.split(`${this.DistributorUUID}/${this.AddonUUID}/`)[1];
+	}
+
+	async uploadToAWS(): Promise<boolean> 
 	{
 		try 
 		{
 
-			const entryname = request.body.filename;
-			const metadata: Metadata = this.getMetada(request);
+			const entryname = this.getAbsolutePath(this.request.body.filename);
+			const metadata: Metadata = this.getMetada();
 
-			const buf = Buffer.from(request.body.filebody.split(/base64,/)[1], 'base64');
+			const buf = Buffer.from(this.request.body.filebody.split(/base64,/)[1], 'base64');
 			const params = {
 				Bucket: BUCKET,
 				Key: entryname,
 				Metadata: metadata,
 				Body: buf,
-				ContentType: request.body.contentType,
+				ContentType: this.request.body.contentType,
 				ContentEncoding: 'base64'
 			};
 
@@ -60,83 +86,109 @@ class PfsService
 		catch (err) 
 		{
 			if (err instanceof Error)
-				console.error(`Could not upload file ${request.body.filename} to S3. ${err.message}`);
+			{
+				console.error(`Could not upload file ${this.request.body.filename} to S3. ${err.message}`);
+				throw err;
+			}
 		}
 		return false;
 	}
 
 	/**
 	 * Returns a Metadata object rperesenting the needed metadata.
-	 * @param request 
 	 * @returns a dictionary representation of the metadata.
 	 */
-	protected getMetada(request: Request): Metadata 
+	protected getMetada(): Metadata 
 	{
 		const metadata: Metadata = {};
 
-		const splitFileKey = request.body.filename.split('/');
+		metadata["Sync"] = this.request.body.Sync ? this.request.body.Sync : "None";
 
-		metadata["Name"] = splitFileKey.pop();
-		metadata["Folder"] = splitFileKey.join('/');
-
-		metadata["Sync"] = request.body.Sync ? request.body.Sync : "None";
-
-		if (request.body.Description) 
+		if (this.request.body.Description) 
 		{
-			metadata["Description"] = request.body.Description;
+			metadata["Description"] = this.request.body.Description;
 		}
 
 		return metadata;
 	}
 
-	async downloadFromAWS(request: Request) 
+	async downloadFromAWS() 
 	{
 		try 
 		{
 
-			const entryname: string = request.query.fileName;
+			const entryname: string = this.getAbsolutePath(this.request.query.fileName);
 
 			const params = {
 				Bucket: BUCKET,
 				Key: entryname,
 			};
 
+			const splitFileKey = this.request.query.fileName.split('/');
+
 			// Downloading files from the bucket
-			const uploaded = await this.s3.upload(params).promise();
+			const downloaded: any = await this.s3.getObject(params).promise();
 
-			console.log(`File Downloaded file`);
-			const downloaded = await this.s3.getObject(params).promise();
-			console.log(downloaded);
+			const response = {
+				Key: this.request.query.fileName,
+				Name: splitFileKey.pop(), //The last part of the path is the object name
+				Folder: splitFileKey.join('/'), // the rest of the path is its folder.
+				URI: `data:@${downloaded.ContentType};base64,${downloaded.Body.toString('base64')}`,
+				Sync: downloaded.Metadata.sync ? downloaded.Metadata.sync : "None",
+				MIME: downloaded.ContentType,
+				URL: "this is the cdn url...",
+				...(downloaded.Metadata.description && { Description: downloaded.Metadata.description }),
+			}
 
-			return downloaded;
+			console.log(`File Downloaded`);
+
+			return response;
 		}
 		catch (err) 
 		{
 			if (err instanceof Error)
+			{
 				console.error(`${err.message}`);
+				throw(err);
+			}
 		}
-		return false;
 	}
 
-	async listFiles(request: Request) 
+	async listFiles() 
 	{
+		const response: any[] = [];
 		try 
 		{
 			const params: ListObjectsV2Request = {
 				Bucket: BUCKET,
-				Prefix: request.query.folder  // Can be your folder name
+				Prefix: this.getAbsolutePath(this.request.query.folder)
 			};
 
 			const objectList = await this.s3.listObjectsV2(params).promise();
 			console.log(objectList);        
 			console.log(`Files listing done successfully successfully.`);
+
+			
+			objectList.Contents?.forEach(object => 
+			{
+				const relativePath: string = this.getRelativePath(object.Key ? object.Key : "");
+				const splitFileKey = relativePath.split('/');
+				response.push({
+					Key: relativePath,
+					Name: splitFileKey.pop(), //The last part of the path is the object name
+					Folder: splitFileKey.join('/'), // the rest of the path is its folder.
+					URL: "this is the cdn url...",
+				})
+			});
 		}
 		catch (err) 
 		{
 			if (err instanceof Error)
-				console.error(`Could not list files in folder ${request.body.filename}. ${err.message}`);
+			{
+				console.error(`Could not list files in folder ${this.request.body.filename}. ${err.message}`);
+				throw err;
+			}
 		}
-		return false;
 	}
 }
 
