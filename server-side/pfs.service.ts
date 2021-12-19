@@ -3,17 +3,19 @@ import { Client, Request } from '@pepperi-addons/debug-server';
 import S3, { ListObjectsV2Request, Metadata } from 'aws-sdk/clients/s3';
 import AWS from 'aws-sdk';
 import jwtDecode from 'jwt-decode';
-import { CdnServers, IPfsDownloadObjectResponse, S3Buckets } from './constants';
+import { CdnServers, IPfsDownloadObjectResponse, IPfsListFilesResultObjects, S3Buckets } from './constants';
 import { mime } from 'mime-types';
 
-class PfsService {
+class PfsService 
+{
 	papiClient: PapiClient
 	s3: S3;
 	DistributorUUID: string;
 	AddonUUID: string;
 	readonly environment: string;
 
-	constructor(private client: Client, private request: Request) {
+	constructor(private client: Client, private request: Request) 
+	{
 		this.papiClient = new PapiClient({
 			baseURL: client.BaseURL,
 			token: client.OAuthAccessToken,
@@ -45,7 +47,8 @@ class PfsService {
 	 * @param relativePath the path relative to the addon's folder
 	 * @returns a string in the format ${this.DistributorUUID}/${this.AddonUUID}/${relativePath}
 	 */
-	private getAbsolutePath(relativePath: string): string {
+	private getAbsolutePath(relativePath: string): string 
+	{
 		return `${this.DistributorUUID}/${this.AddonUUID}/${relativePath}`;
 	}
 
@@ -55,12 +58,16 @@ class PfsService {
 	 * @param absolutePath the original path the addon requested
 	 * @returns a relative path string
 	 */
-	private getRelativePath(absolutePath: string): string {
+	private getRelativePath(absolutePath: string): string 
+	{
 		return absolutePath.split(`${this.DistributorUUID}/${this.AddonUUID}/`)[1];
 	}
 
-	async uploadToAWS(): Promise<boolean> {
-		try {
+	async uploadToAWS(): Promise<boolean> 
+	{
+		const res = true;
+		try 
+		{
 			const entryname = this.getAbsolutePath(this.request.body.Key);
 			const metadata: Metadata = this.getMetada();
 
@@ -79,33 +86,41 @@ class PfsService {
 
 			console.log(`File uploaded successfully to ${uploaded.Location}`);
 		}
-		catch (err) {
-			if (err instanceof Error) {
+		catch (err) 
+		{
+			if (err instanceof Error) 
+			{
 				console.error(`Could not upload file ${this.request.body.Key} to S3. ${err.message}`);
-				throw err;
 			}
+			throw err;
 		}
-		return false;
+		return res;
 	}
 
-	private isValidURL(s): boolean {
+	private isValidURL(s): boolean 
+	{
 		let url: URL;
-		try {
+		try 
+		{
 			url = new URL(s);
 		}
-		catch (e) {
+		catch (e) 
+		{
 			return false;
 		}
 
 		return url.protocol === "http:" || url.protocol === "https:";
 	}
 
-	private getMimeType(): string {
-		if (this.isValidURL(this.request.body.URI)) {
+	private getMimeType(): string 
+	{
+		if (this.isValidURL(this.request.body.URI)) 
+		{
 			// Get mime type from received url
 			return mime.contentType(this.request.body.URI);
 		}
-		else {
+		else 
+		{
 			// Get mime type from base64 data
 			return this.request.body.URI.match(/[^:]\w+\/[\w-+\d.]+(?=;|,)/)[0];
 		}
@@ -113,23 +128,29 @@ class PfsService {
 
 
 	/**
-	 * Returns a Metadata object rperesenting the needed metadata.
+	 * Returns a Metadata object representing the needed metadata.
 	 * @returns a dictionary representation of the metadata.
 	 */
-	protected getMetada(): Metadata {
+	protected getMetada(): Metadata 
+	{
 		const metadata: Metadata = {};
 
 		metadata["Sync"] = this.request.body.Sync ? this.request.body.Sync : "None";
+		metadata["Hidden"] = this.request.body.Hidden ? this.request.body.Hidden : "None";
+		metadata["CreationDateTime"] = this.request.body.CreationDateTime ? this.request.body.CreationDateTime : (new Date()).toISOString();
 
-		if (this.request.body.Description) {
+		if (this.request.body.Description) 
+		{
 			metadata["Description"] = this.request.body.Description;
 		}
 
 		return metadata;
 	}
 
-	async downloadFromAWS() {
-		try {
+	async downloadFromAWS(): Promise<IPfsDownloadObjectResponse> 
+	{
+		try 
+		{
 
 			const entryname: string = this.getAbsolutePath(this.request.query.fileName);
 
@@ -151,6 +172,7 @@ class PfsService {
 				MIME: downloaded.ContentType,
 				URL: `${CdnServers[this.environment]}/${entryname}`,
 				Hidden: downloaded.Metadata.hidden ? downloaded.Metadata.hidden : false,
+				CreationDateTime: downloaded.Metadata.creationDateTime,
 				...(downloaded.Metadata.description && { Description: downloaded.Metadata.description }),
 			}
 
@@ -158,18 +180,22 @@ class PfsService {
 
 			return response;
 		}
-		catch (err) {
-			if (err instanceof Error) {
+		catch (err) 
+		{
+			if (err instanceof Error) 
+			{
 				console.error(`${err.message}`);
-				throw (err);
 			}
+			throw (err);
 		}
 	}
 
-	async listFiles() {
-		const response: any[] = [];
-		const requestedPage: number = this.request.query.page ? this.request.query.page : 0;
-		const pageSize: number = this.request.query.page_size ? this.request.query.page_size : 1000;
+	
+	async listFiles(): Promise<IPfsListFilesResultObjects> 
+	{
+		const response: IPfsListFilesResultObjects = [];
+		const requestedPage: number = this.getQueryRequestedPageNumber();
+		const pageSize: number = this.request.query.page_size ? this.request.query.page_size : 100;
 
 		let currentPage = 0;
 		const params: ListObjectsV2Request = {
@@ -179,24 +205,35 @@ class PfsService {
 			MaxKeys: pageSize
 		};
 
-		try {
-			do {
+		try 
+		{
+			do 
+			{
 				const objectList = await this.s3.listObjectsV2(params).promise();
 				console.log(objectList);
 
-				if (currentPage == requestedPage) {
+				// Populate the response with the retrieved objects if all of the pages
+				// were requested (requestedPage === -1), or if the current page
+				// is the requested page.
+				if (requestedPage === -1 || currentPage === requestedPage) 
+				{
 					this.populateListResponseWithObjects(objectList, response);
 				}
 
 				currentPage++;
 				params.ContinuationToken = objectList.NextContinuationToken;
 			}
-			while (currentPage <= requestedPage);
+
+			// The loop continues as long as the requested page was not yet reached, 
+			// or there's a next page.
+			while (this.shouldRetrieveNextObjectsListPage(currentPage, requestedPage, params.ContinuationToken));
 
 			console.log(`Files listing done successfully.`);
 		}
-		catch (err) {
-			if (err instanceof Error) {
+		catch (err) 
+		{
+			if (err instanceof Error) 
+			{
 				console.error(`Could not list files in folder ${this.request.body.filename}. ${err.message}`);
 				throw err;
 			}
@@ -205,20 +242,51 @@ class PfsService {
 		return response;
 	}
 
-	private populateListResponseWithObjects(objectList: S3.ListObjectsV2Output, response: any[]) {
-		objectList.Contents?.forEach(object => {
+	/**
+	 * Returns true if there is a next page (a continuationToken was sent), and 
+	 * either all pages were requested or the currentPage is not the requestedPage.
+	 * @param currentPage the page that was currently retrueved.
+	 * @param requestedPage the page that was requested.
+	 * @param continuationToken the continuationToken retrieved in the last page.
+	 * @returns boolean
+	 */
+	private shouldRetrieveNextObjectsListPage(currentPage: number, requestedPage: number, continuationToken: string | undefined) 
+	{
+		const areAllPagesRequested: boolean = requestedPage === -1;
+		const res = (continuationToken && (currentPage <= requestedPage || areAllPagesRequested));
+		return res;
+	}
+
+	getQueryRequestedPageNumber(): number 
+	{
+		let res: number = this.request.query.page ? this.request.query.page : 0;
+		
+		// Pagination first page is 0
+		if(res === 1)
+		{
+			res = 0;
+		}
+
+		return res;
+	}
+
+	private populateListResponseWithObjects(objectList: S3.ListObjectsV2Output, response: IPfsListFilesResultObjects) 
+	{
+		objectList.Contents?.forEach(object => 
+		{
 			const relativePath: string = this.getRelativePath(object.Key ? object.Key : "");
 			const splitFileKey = relativePath.split('/');
 			response.push({
 				Key: relativePath,
-				Name: splitFileKey.pop(),
+				Name: `${splitFileKey.pop()}`,
 				Folder: splitFileKey.join('/'),
 				URL: `${CdnServers[this.environment]}/${object.Key}`,
 				ModificationDateTime: object.LastModified?.toISOString()
 			});
 		});
 
-		objectList.CommonPrefixes?.forEach(object => {
+		objectList.CommonPrefixes?.forEach(object => 
+		{
 			const relativePath: string = this.getRelativePath(object.Prefix ? object.Prefix : "");
 			const splitFileKey = relativePath.split('/');
 			splitFileKey.pop(); // folders look like "folder/sub_folder/sub_subfolder/", so splitting by '/' results in a trailing "" 

@@ -19,7 +19,18 @@ export interface IPfsDownloadObjectResponse{
     Folder: string,
     Sync: "None" | "Device" | "DeviceThumbnail" | "Always",
     MIME: string,
-    URL: String,
+    URL: string,
 	Hidden: boolean,
+    CreationDateTime: string,
 	Description?: string
 }
+
+export interface IPfsListFilesResultObject{
+    Key: string,
+    Name: string,
+    Folder:string,
+    URL: string,
+    ModificationDateTime?: string
+}
+
+export type IPfsListFilesResultObjects = Array<IPfsListFilesResultObject>
