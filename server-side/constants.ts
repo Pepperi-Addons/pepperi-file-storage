@@ -12,3 +12,14 @@ export const CdnServers = {
 	//The next entry is just a placeholder, not a real CDN.
 	"dev": "pfs.dev.pepperi.com"
 }
+
+export interface IPfsDownloadObjectResponse{
+    Key: string,
+    Name: string,
+    Folder: string,
+    Sync: "None" | "Device" | "DeviceThumbnail" | "Always",
+    MIME: string,
+    URL: String,
+	Hidden: boolean,
+	Description?: string
+}

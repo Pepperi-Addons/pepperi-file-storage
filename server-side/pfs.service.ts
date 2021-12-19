@@ -3,18 +3,17 @@ import { Client, Request } from '@pepperi-addons/debug-server';
 import S3, { ListObjectsV2Request, Metadata } from 'aws-sdk/clients/s3';
 import AWS from 'aws-sdk';
 import jwtDecode from 'jwt-decode';
-import { CdnServers, S3Buckets } from './constants';
+import { CdnServers, IPfsDownloadObjectResponse, S3Buckets } from './constants';
+import { mime } from 'mime-types';
 
-class PfsService 
-{
+class PfsService {
 	papiClient: PapiClient
 	s3: S3;
 	DistributorUUID: string;
 	AddonUUID: string;
 	readonly environment: string;
 
-	constructor(private client: Client, private request: Request) 
-	{
+	constructor(private client: Client, private request: Request) {
 		this.papiClient = new PapiClient({
 			baseURL: client.BaseURL,
 			token: client.OAuthAccessToken,
@@ -26,6 +25,7 @@ class PfsService
 		const accessKeyId = "";
 		const secretAccessKey = "";
 		const sessionToken = "";
+
 		AWS.config.update({
 			accessKeyId,
 			secretAccessKey,
@@ -45,8 +45,7 @@ class PfsService
 	 * @param relativePath the path relative to the addon's folder
 	 * @returns a string in the format ${this.DistributorUUID}/${this.AddonUUID}/${relativePath}
 	 */
-	private getAbsolutePath(relativePath: string): string 
-	{
+	private getAbsolutePath(relativePath: string): string {
 		return `${this.DistributorUUID}/${this.AddonUUID}/${relativePath}`;
 	}
 
@@ -56,26 +55,22 @@ class PfsService
 	 * @param absolutePath the original path the addon requested
 	 * @returns a relative path string
 	 */
-	private getRelativePath(absolutePath: string): string 
-	{
+	private getRelativePath(absolutePath: string): string {
 		return absolutePath.split(`${this.DistributorUUID}/${this.AddonUUID}/`)[1];
 	}
 
-	async uploadToAWS(): Promise<boolean> 
-	{
-		try 
-		{
-
-			const entryname = this.getAbsolutePath(this.request.body.filename);
+	async uploadToAWS(): Promise<boolean> {
+		try {
+			const entryname = this.getAbsolutePath(this.request.body.Key);
 			const metadata: Metadata = this.getMetada();
 
-			const buf = Buffer.from(this.request.body.filebody.split(/base64,/)[1], 'base64');
+			const buf = Buffer.from(this.request.body.URI.split(/base64,/)[1], 'base64');
 			const params = {
 				Bucket: S3Buckets[this.environment],
 				Key: entryname,
 				Metadata: metadata,
 				Body: buf,
-				ContentType: this.request.body.contentType,
+				ContentType: this.getMimeType(),
 				ContentEncoding: 'base64'
 			};
 
@@ -84,39 +79,57 @@ class PfsService
 
 			console.log(`File uploaded successfully to ${uploaded.Location}`);
 		}
-		catch (err) 
-		{
-			if (err instanceof Error) 
-			{
-				console.error(`Could not upload file ${this.request.body.filename} to S3. ${err.message}`);
+		catch (err) {
+			if (err instanceof Error) {
+				console.error(`Could not upload file ${this.request.body.Key} to S3. ${err.message}`);
 				throw err;
 			}
 		}
 		return false;
 	}
 
+	private isValidURL(s): boolean {
+		let url: URL;
+		try {
+			url = new URL(s);
+		}
+		catch (e) {
+			return false;
+		}
+
+		return url.protocol === "http:" || url.protocol === "https:";
+	}
+
+	private getMimeType(): string {
+		if (this.isValidURL(this.request.body.URI)) {
+			// Get mime type from received url
+			return mime.contentType(this.request.body.URI);
+		}
+		else {
+			// Get mime type from base64 data
+			return this.request.body.URI.match(/[^:]\w+\/[\w-+\d.]+(?=;|,)/)[0];
+		}
+	}
+
+
 	/**
 	 * Returns a Metadata object rperesenting the needed metadata.
 	 * @returns a dictionary representation of the metadata.
 	 */
-	protected getMetada(): Metadata 
-	{
+	protected getMetada(): Metadata {
 		const metadata: Metadata = {};
 
 		metadata["Sync"] = this.request.body.Sync ? this.request.body.Sync : "None";
 
-		if (this.request.body.Description) 
-		{
+		if (this.request.body.Description) {
 			metadata["Description"] = this.request.body.Description;
 		}
 
 		return metadata;
 	}
 
-	async downloadFromAWS() 
-	{
-		try 
-		{
+	async downloadFromAWS() {
+		try {
 
 			const entryname: string = this.getAbsolutePath(this.request.query.fileName);
 
@@ -128,13 +141,12 @@ class PfsService
 			const splitFileKey = this.request.query.fileName.split('/');
 
 			// Downloading files from the bucket
-			const downloaded: any = await this.s3.getObject(params).promise();
+			const downloaded: any = await this.s3.headObject(params).promise();
 
-			const response = {
+			const response: IPfsDownloadObjectResponse = {
 				Key: this.request.query.fileName,
 				Name: splitFileKey.pop(), //The last part of the path is the object name
 				Folder: splitFileKey.join('/'), // the rest of the path is its folder.
-				URI: `data:@${downloaded.ContentType};base64,${downloaded.Body.toString('base64')}`,
 				Sync: downloaded.Metadata.sync ? downloaded.Metadata.sync : "None",
 				MIME: downloaded.ContentType,
 				URL: `${CdnServers[this.environment]}/${entryname}`,
@@ -146,18 +158,15 @@ class PfsService
 
 			return response;
 		}
-		catch (err) 
-		{
-			if (err instanceof Error) 
-			{
+		catch (err) {
+			if (err instanceof Error) {
 				console.error(`${err.message}`);
 				throw (err);
 			}
 		}
 	}
 
-	async listFiles() 
-	{
+	async listFiles() {
 		const response: any[] = [];
 		const requestedPage: number = this.request.query.page ? this.request.query.page : 0;
 		const pageSize: number = this.request.query.page_size ? this.request.query.page_size : 1000;
@@ -170,15 +179,12 @@ class PfsService
 			MaxKeys: pageSize
 		};
 
-		try 
-		{
-			do 
-			{
+		try {
+			do {
 				const objectList = await this.s3.listObjectsV2(params).promise();
 				console.log(objectList);
 
-				if (currentPage == requestedPage) 
-				{
+				if (currentPage == requestedPage) {
 					this.populateListResponseWithObjects(objectList, response);
 				}
 
@@ -189,10 +195,8 @@ class PfsService
 
 			console.log(`Files listing done successfully.`);
 		}
-		catch (err) 
-		{
-			if (err instanceof Error) 
-			{
+		catch (err) {
+			if (err instanceof Error) {
 				console.error(`Could not list files in folder ${this.request.body.filename}. ${err.message}`);
 				throw err;
 			}
@@ -201,10 +205,8 @@ class PfsService
 		return response;
 	}
 
-	private populateListResponseWithObjects(objectList: S3.ListObjectsV2Output, response: any[]) 
-	{
-		objectList.Contents?.forEach(object => 
-		{
+	private populateListResponseWithObjects(objectList: S3.ListObjectsV2Output, response: any[]) {
+		objectList.Contents?.forEach(object => {
 			const relativePath: string = this.getRelativePath(object.Key ? object.Key : "");
 			const splitFileKey = relativePath.split('/');
 			response.push({
@@ -216,8 +218,7 @@ class PfsService
 			});
 		});
 
-		objectList.CommonPrefixes?.forEach(object => 
-		{
+		objectList.CommonPrefixes?.forEach(object => {
 			const relativePath: string = this.getRelativePath(object.Prefix ? object.Prefix : "");
 			const splitFileKey = relativePath.split('/');
 			splitFileKey.pop(); // folders look like "folder/sub_folder/sub_subfolder/", so splitting by '/' results in a trailing "" 
