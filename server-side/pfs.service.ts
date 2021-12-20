@@ -195,7 +195,7 @@ class PfsService
 	{
 		const response: IPfsListFilesResultObjects = [];
 		const requestedPage: number = this.getQueryRequestedPageNumber();
-		const pageSize: number = this.request.query.page_size ? this.request.query.page_size : 100;
+		const pageSize: number = this.request.query.page_size ? parseInt(this.request.query.page_size) : 100;
 
 		let currentPage = 0;
 		const params: ListObjectsV2Request = {
@@ -259,7 +259,7 @@ class PfsService
 
 	getQueryRequestedPageNumber(): number 
 	{
-		let res: number = this.request.query.page ? this.request.query.page : 0;
+		let res: number = this.request.query.page ? parseInt(this.request.query.page) : 0;
 		
 		// Pagination first page is 0
 		if(res === 1)
@@ -296,7 +296,8 @@ class PfsService
 				Key: relativePath,
 				Name: `${splitFileKey.pop()}/`,
 				Folder: splitFileKey.join('/'),
-				URL: `${CdnServers[this.environment]}/${relativePath}`,
+				MIME: "pepperi/folder",
+				// URL: `${CdnServers[this.environment]}/${relativePath}`,
 			});
 		});
 	}

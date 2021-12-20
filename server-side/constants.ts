@@ -10,7 +10,7 @@ export const CdnServers = {
 	"sandbox": "pfs.staging.pepperi.com",
 	"eu": "pfs.eu.pepperi.com",
 	//The next entry is just a placeholder, not a real CDN.
-	"dev": "pfs.dev.pepperi.com"
+	"dev": "d3jagocnvgzx6w.cloudfront.net"
 }
 
 export interface IPfsDownloadObjectResponse{
@@ -29,8 +29,9 @@ export interface IPfsListFilesResultObject{
     Key: string,
     Name: string,
     Folder:string,
-    URL: string,
-    ModificationDateTime?: string
+    URL?: string, // Folders don't have a URL, only files do.
+    MIME?: string, // Folders return a MIME of type "pepperi/folder"
+    ModificationDateTime?: string // Folders don't have a ModificationDateTime, only files do.
 }
 
 export type IPfsListFilesResultObjects = Array<IPfsListFilesResultObject>
