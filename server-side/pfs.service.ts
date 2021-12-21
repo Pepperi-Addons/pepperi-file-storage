@@ -24,17 +24,18 @@ class PfsService
 			actionUUID: client.AddonUUID
 		});
 
-		const accessKeyId = "";
-		const secretAccessKey = "";
-		const sessionToken = "";
+		// const accessKeyId = "";
+		// const secretAccessKey = "";
+		// const sessionToken = "";
 
-		AWS.config.update({
-			accessKeyId,
-			secretAccessKey,
-			sessionToken
-		});
+		// AWS.config.update({
+		// 	accessKeyId,
+		// 	secretAccessKey,
+		// 	sessionToken
+		// });
 
-		this.environment = jwtDecode(client.OAuthAccessToken)['pepperi.datacenter'];
+		// this.environment = jwtDecode(client.OAuthAccessToken)['pepperi.datacenter'];
+		this.environment = 'dev';
 		this.DistributorUUID = jwtDecode(client.OAuthAccessToken)['pepperi.distributoruuid'];
 		this.AddonUUID = this.request.query.AddonUUID;
 		this.s3 = new S3();
