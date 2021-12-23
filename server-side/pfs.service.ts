@@ -1,15 +1,15 @@
 import { PapiClient } from '@pepperi-addons/papi-sdk'
 import { Client, Request } from '@pepperi-addons/debug-server';
-import S3, { ListObjectsV2Request, Metadata } from 'aws-sdk/clients/s3';
-import AWS from 'aws-sdk';
 import jwtDecode from 'jwt-decode';
 import { CdnServers, IPfsDownloadObjectResponse, IPfsListFilesResultObjects, S3Buckets } from './constants';
 import { mime } from 'mime-types';
 
+const AWS = require('aws-sdk'); // AWS is part of the lambda's environment. Importing it will result in it being rolled up redundently.
+
 class PfsService 
 {
-	papiClient: PapiClient
-	s3: S3;
+	papiClient: PapiClient;
+	s3: any;
 	DistributorUUID: string;
 	AddonUUID: string;
 	readonly environment: string;
@@ -34,11 +34,10 @@ class PfsService
 		// 	sessionToken
 		// });
 
-		// this.environment = jwtDecode(client.OAuthAccessToken)['pepperi.datacenter'];
-		this.environment = 'dev';
+		this.environment = jwtDecode(client.OAuthAccessToken)['pepperi.datacenter'];
 		this.DistributorUUID = jwtDecode(client.OAuthAccessToken)['pepperi.distributoruuid'];
 		this.AddonUUID = this.request.query.AddonUUID;
-		this.s3 = new S3();
+		this.s3 = new AWS.S3();
 	}
 
 	/**
@@ -70,8 +69,7 @@ class PfsService
 		try 
 		{
 			const entryname = this.getAbsolutePath(this.request.body.Key);
-			const metadata: Metadata = this.getMetada();
-
+			const metadata: {} = this.getMetada();
 			const buf = Buffer.from(this.request.body.URI.split(/base64,/)[1], 'base64');
 			const params = {
 				Bucket: S3Buckets[this.environment],
@@ -132,9 +130,9 @@ class PfsService
 	 * Returns a Metadata object representing the needed metadata.
 	 * @returns a dictionary representation of the metadata.
 	 */
-	protected getMetada(): Metadata 
+	protected getMetada(): {}
 	{
-		const metadata: Metadata = {};
+		const metadata = {};
 
 		metadata["Sync"] = this.request.body.Sync ? this.request.body.Sync : "None";
 		metadata["Hidden"] = this.request.body.Hidden ? this.request.body.Hidden : "None";
@@ -199,7 +197,7 @@ class PfsService
 		const pageSize: number = this.request.query.page_size ? parseInt(this.request.query.page_size) : 100;
 
 		let currentPage = 0;
-		const params: ListObjectsV2Request = {
+		const params: any = {
 			Bucket: S3Buckets[this.environment],
 			Prefix: this.getAbsolutePath(this.request.query.folder),
 			Delimiter: '/',
@@ -271,7 +269,7 @@ class PfsService
 		return res;
 	}
 
-	private populateListResponseWithObjects(objectList: S3.ListObjectsV2Output, response: IPfsListFilesResultObjects) 
+	private populateListResponseWithObjects(objectList, response: IPfsListFilesResultObjects) 
 	{
 		objectList.Contents?.forEach(object => 
 		{
@@ -298,7 +296,6 @@ class PfsService
 				Name: `${splitFileKey.pop()}/`,
 				Folder: splitFileKey.join('/'),
 				MIME: "pepperi/folder",
-				// URL: `${CdnServers[this.environment]}/${relativePath}`,
 			});
 		});
 	}
