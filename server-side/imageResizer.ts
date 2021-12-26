@@ -6,7 +6,7 @@ export class ImageResizer {
         private readonly imageBuffer: Buffer) {
 
         if (!SupportedImageMimeTypes.includes(mimeType)) {
-            // throw new Error(`Bad Request. Creating a thumbnail for MIME type ${mimeType} is not supported.`)
+            throw new Error(`Bad Request. Creating a thumbnail for MIME type ${mimeType} is not supported.`)
         }
     }
 
