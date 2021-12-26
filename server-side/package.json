@@ -24,12 +24,12 @@
         "nodemon": "^2.0.4",
         "rollup": "^2.10.9",
         "rollup-plugin-typescript2": "^0.27.1",
-        "ts-node": "^8.10.1",
         "typescript": "~3.8.0"
     },
     "dependencies": {
         "@pepperi-addons/debug-server": "*",
         "@pepperi-addons/papi-sdk": "*",
-        "aws-sdk": "^2.1045.0"
+        "aws-sdk": "^2.1045.0",
+        "sharp": "^0.29.3"
     }
 }
