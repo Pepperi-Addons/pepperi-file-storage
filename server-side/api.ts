@@ -1,4 +1,4 @@
-import PfsService from './pfs.service'
+import { PfsService } from './pfs.service'
 import { Client, Request } from '@pepperi-addons/debug-server'
 
 // add functions here

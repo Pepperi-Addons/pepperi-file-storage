@@ -35,3 +35,5 @@ export interface IPfsListFilesResultObject{
 }
 
 export type IPfsListFilesResultObjects = Array<IPfsListFilesResultObject>
+
+export const SupportedImageMimeTypes = ["image/png", "image/svg+xml", "image/webp", "image/jpeg", "image/avif", "image/tiff", "image/gif"];

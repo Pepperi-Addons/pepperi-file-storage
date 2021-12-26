@@ -3,10 +3,11 @@ import { Client, Request } from '@pepperi-addons/debug-server';
 import jwtDecode from 'jwt-decode';
 import { CdnServers, IPfsDownloadObjectResponse, IPfsListFilesResultObjects, S3Buckets } from './constants';
 import { mime } from 'mime-types';
+import { ImageResizer } from './imageResizer';
 
 const AWS = require('aws-sdk'); // AWS is part of the lambda's environment. Importing it will result in it being rolled up redundently.
 
-class PfsService 
+export class PfsService 
 {
 	papiClient: PapiClient;
 	s3: any;
@@ -45,11 +46,12 @@ class PfsService
 	 * Addons place objects in their folder. An absolute path is a path that includes the Distributor's UUID, 
 	 * the Addon's UUID and the trailing requested path.
 	 * @param relativePath the path relative to the addon's folder
+	 * @param addedPrefix add a prefix before the standard absolute path
 	 * @returns a string in the format ${this.DistributorUUID}/${this.AddonUUID}/${relativePath}
 	 */
-	private getAbsolutePath(relativePath: string): string 
+	private getAbsolutePath(relativePath: string, addedPrefix?:string): string 
 	{
-		return `${this.DistributorUUID}/${this.AddonUUID}/${relativePath}`;
+		return `${addedPrefix ? `${addedPrefix}/` : ""}${this.DistributorUUID}/${this.AddonUUID}/${relativePath}`;
 	}
 
 	/**
@@ -83,6 +85,10 @@ class PfsService
 			// Uploading files to the bucket (sync)
 			const uploaded = await this.s3.upload(params).promise();
 
+			if(this.request.body.Thumbnails){
+				await this.uploadThumbnails(buf);
+			}
+
 			console.log(`File uploaded successfully to ${uploaded.Location}`);
 		}
 		catch (err) 
@@ -94,6 +100,25 @@ class PfsService
 			throw err;
 		}
 		return res;
+	}
+
+	private async uploadThumbnails(buf: Buffer) {
+		const imageResizer = new ImageResizer(this.getMimeType(), buf);
+		this.request.body.Thumbnails.forEach(async (thumbnailRequest) => {
+
+			const nu = (await imageResizer.resize(thumbnailRequest));
+
+			const thumbnailParams = {
+				Bucket: S3Buckets[this.environment],
+				Key: `${this.getAbsolutePath(this.request.body.Key, 'thumbnails')}_${thumbnailRequest.Size}`,
+				Metadata:  this.getMetada(),
+				Body: nu,
+				ContentType: this.getMimeType(),
+			};
+
+			// Uploading thumbnails to the bucket (sync)
+			const uploadedThumbnail = await this.s3.upload(thumbnailParams).promise();
+		});
 	}
 
 	private isValidURL(s): boolean 
@@ -135,7 +160,7 @@ class PfsService
 		const metadata = {};
 
 		metadata["Sync"] = this.request.body.Sync ? this.request.body.Sync : "None";
-		metadata["Hidden"] = this.request.body.Hidden ? this.request.body.Hidden : "None";
+		metadata["Hidden"] = this.request.body.Hidden ? this.request.body.Hidden.toString() : "false";
 		metadata["CreationDateTime"] = this.request.body.CreationDateTime ? this.request.body.CreationDateTime : (new Date()).toISOString();
 
 		if (this.request.body.Description) 
@@ -189,7 +214,6 @@ class PfsService
 		}
 	}
 
-	
 	async listFiles(): Promise<IPfsListFilesResultObjects> 
 	{
 		const response: IPfsListFilesResultObjects = [];
@@ -300,5 +324,3 @@ class PfsService
 		});
 	}
 }
-
-export default PfsService;
