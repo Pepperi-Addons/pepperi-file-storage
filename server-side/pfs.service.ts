@@ -1,8 +1,9 @@
-import { PapiClient } from '@pepperi-addons/papi-sdk'
+import { FindOptions, PapiClient } from '@pepperi-addons/papi-sdk'
 import { Client, Request } from '@pepperi-addons/debug-server';
 import jwtDecode from 'jwt-decode';
-import { CdnServers, IPfsDownloadObjectResponse, IPfsListFilesResultObjects, S3Buckets } from './constants';
+import { CdnServers, IPfsDownloadObjectResponse, IPfsListFilesResultObjects, METADATA_ADAL_TABLE_NAME, S3Buckets } from './constants';
 import { mime } from 'mime-types';
+import { MetadataService } from 'aws-sdk';
 
 const AWS = require('aws-sdk'); // AWS is part of the lambda's environment. Importing it will result in it being rolled up redundently.
 
@@ -24,17 +25,18 @@ class PfsService
 			actionUUID: client.AddonUUID
 		});
 
-		// const accessKeyId = "";
-		// const secretAccessKey = "";
-		// const sessionToken = "";
+		const accessKeyId = "ASIAS53OHLXUTG6VGA57";
+		const secretAccessKey = "hGG5aaxdzN0SsLFNxhkYuu2F2PFm9/WHRLUGJ1I3";
+		const sessionToken = "IQoJb3JpZ2luX2VjEJT//////////wEaDGV1LWNlbnRyYWwtMSJIMEYCIQCUrJ5q+aOXLMfIGNaxH69w0chkuDofw+Wl8m+os7fQdgIhAOMLOcbhxIo1MvJgjhoK7r59XJHNJ5sfkRM5RGLwiYrnKpcDCI7//////////wEQARoMMjAxNTU3NzYxNTEzIgwF7Hx4ppUd0ESzKeEq6wJeVILqmYtB49hlj3zyBv86g7W/MlQ17V0u/g+W4hH/8SysF0rAvEDdmE0M5mrArFT5xUglqQH8plGLj7AdTc5JhjD+SneHVJ0AE9lYH4VC5IcakYZihWsiXqM82AreMNI52DVzx1Bov5PxjpAodxtCgMTt7QOkFEJ7rzBQN6gnR53WevD93kquaYqfg6iD4vrDz1ZY5BwPoOEfgU3T9eRuN9K9VZ8zPdDLQJX/rpIC0V25U4Pk9F1yeE3QUTPll4uZLB/0zxw8ngw/0uXFajPi/fmh4iqenwkW4qQNjUcm5yZVbSmoGHgS8Vu+VrXH7goxhwZqmNAq0MkVy4XtvCSJ+VA/gfb1JjvJwZl28lhWNPexLQ5J0x91XSQAiLRm2c8A2UWH9i4TrXnL+CeBM0IaweVsZ+UwadoxOiUYjpyBw8sFdPnzWruC7N/6R79J19tBUQ+GWo2GjdoJt05uGBDY0xbCrNl2BSw2eAswpr2hjgY6pQGrSa5N6dAkpxDU8cc5AHv8zu/14/bXiu3S5B4Yj8PUUid6tRfNjHd01TFEnugxXYenlfobh0Hpz0UDRcM5EvIARcQeWWbVqq6JsaVE8z+OW0J8xaViizNFsBX5G/eWFx+aZF8NHHEBg3VFGUHi1YsiQ97wRU/ksrNmcLv5Sy6aQAnHarWs0B73da+QVnir20qMy29hpEguns2hBWudLOWI7Eo8v/g=";
 
-		// AWS.config.update({
-		// 	accessKeyId,
-		// 	secretAccessKey,
-		// 	sessionToken
-		// });
+		AWS.config.update({
+			accessKeyId,
+			secretAccessKey,
+			sessionToken
+		});
 
-		this.environment = jwtDecode(client.OAuthAccessToken)['pepperi.datacenter'];
+		// this.environment = jwtDecode(client.OAuthAccessToken)['pepperi.datacenter'];
+		this.environment = 'dev';
 		this.DistributorUUID = jwtDecode(client.OAuthAccessToken)['pepperi.distributoruuid'];
 		this.AddonUUID = this.request.query.AddonUUID;
 		this.s3 = new AWS.S3();
@@ -74,16 +76,17 @@ class PfsService
 			const params = {
 				Bucket: S3Buckets[this.environment],
 				Key: entryname,
-				Metadata: metadata,
+				// Metadata: metadata,
 				Body: buf,
-				ContentType: this.getMimeType(),
+				// ContentType: this.getMimeType(),
 				ContentEncoding: 'base64'
 			};
 
 			// Uploading files to the bucket (sync)
-			const uploaded = await this.s3.upload(params).promise();
+			// const uploaded = await this.s3.upload(params).promise();
+			await this.upsertMetadataToAdal();
 
-			console.log(`File uploaded successfully to ${uploaded.Location}`);
+			// console.log(`File uploaded successfully to ${uploaded.Location}`);
 		}
 		catch (err) 
 		{
@@ -94,6 +97,10 @@ class PfsService
 			throw err;
 		}
 		return res;
+	}
+	upsertMetadataToAdal() {
+		const metadata = this.getMetada();	
+		return this.papiClient.addons.data.uuid(this.AddonUUID).table(METADATA_ADAL_TABLE_NAME).upsert(metadata);
 	}
 
 	private isValidURL(s): boolean 
@@ -130,18 +137,22 @@ class PfsService
 	 * Returns a Metadata object representing the needed metadata.
 	 * @returns a dictionary representation of the metadata.
 	 */
-	protected getMetada(): {}
+	protected getMetada(): {Key: string, Sync: string, Hidden: boolean, MIME: string, Folder: string, Description?: string}
 	{
-		const metadata = {};
-
-		metadata["Sync"] = this.request.body.Sync ? this.request.body.Sync : "None";
-		metadata["Hidden"] = this.request.body.Hidden ? this.request.body.Hidden : "None";
-		metadata["CreationDateTime"] = this.request.body.CreationDateTime ? this.request.body.CreationDateTime : (new Date()).toISOString();
-
-		if (this.request.body.Description) 
-		{
-			metadata["Description"] = this.request.body.Description;
+		const pathFoldersList = this.request.body.Key.split('/');
+		if (this.request.body.Key.endsWith('/')) {//This is a new folder being created...
+			pathFoldersList.pop();
 		}
+		const containingFolder = pathFoldersList.join('/');
+		
+		const metadata = {
+			Key: this.getAbsolutePath(this.request.body.Key),
+			Folder: containingFolder,
+			Sync: this.request.body.Sync ? this.request.body.Sync : "None",
+			Hidden: this.request.body.Hidden ? this.request.body.Hidden : false,
+			Mime: this.getMimeType(),
+			...(this.request.body.Description && {Description: this.request.body.Description})
+		};
 
 		return metadata;
 	}
@@ -190,71 +201,79 @@ class PfsService
 	}
 
 	
-	async listFiles(): Promise<IPfsListFilesResultObjects> 
+	async listFiles()//: Promise<IPfsListFilesResultObjects> 
 	{
 		const response: IPfsListFilesResultObjects = [];
-		const requestedPage: number = this.getQueryRequestedPageNumber();
-		const pageSize: number = this.request.query.page_size ? parseInt(this.request.query.page_size) : 100;
+		// const requestedPage: number = this.getQueryRequestedPageNumber();
+		// const pageSize: number = this.request.query.page_size ? parseInt(this.request.query.page_size) : 100;
 
-		let currentPage = 0;
-		const params: any = {
-			Bucket: S3Buckets[this.environment],
-			Prefix: this.getAbsolutePath(this.request.query.folder),
-			Delimiter: '/',
-			MaxKeys: pageSize
-		};
+		// let currentPage = 0;
+		// const params: any = {
+		// 	Bucket: S3Buckets[this.environment],
+		// 	Prefix: this.getAbsolutePath(this.request.query.folder),
+		// 	Delimiter: '/',
+		// 	MaxKeys: pageSize
+		// };
 
-		try 
-		{
-			do 
-			{
-				const objectList = await this.s3.listObjectsV2(params).promise();
-				console.log(objectList);
+		// try 
+		// {
+		// 	do 
+		// 	{
+		// 		const objectList = await this.s3.listObjectsV2(params).promise();
+		// 		console.log(objectList);
 
-				// Populate the response with the retrieved objects if all of the pages
-				// were requested (requestedPage === -1), or if the current page
-				// is the requested page.
-				if (requestedPage === -1 || currentPage === requestedPage) 
-				{
-					this.populateListResponseWithObjects(objectList, response);
-				}
+		// 		// Populate the response with the retrieved objects if all of the pages
+		// 		// were requested (requestedPage === -1), or if the current page
+		// 		// is the requested page.
+		// 		if (requestedPage === -1 || currentPage === requestedPage) 
+		// 		{
+		// 			this.populateListResponseWithObjects(objectList, response);
+		// 		}
 
-				currentPage++;
-				params.ContinuationToken = objectList.NextContinuationToken;
+		// 		currentPage++;
+		// 		params.ContinuationToken = objectList.NextContinuationToken;
+		// 	}
+
+		// 	// The loop continues as long as the requested page was not yet reached, 
+		// 	// or there's a next page.
+		// 	while (this.shouldRetrieveNextObjectsListPage(currentPage, requestedPage, params.ContinuationToken));
+		// export interface FindOptions {
+		// 	fields?: string[];
+		// 	where?: string;
+		// 	order_by?: string;
+		// 	page?: number;
+		// 	page_size?: number;
+		// 	include_nested?: boolean;
+		// 	full_mode?: boolean;
+		// 	include_deleted?: boolean;
+		// 	is_distinct?: boolean;
+		// }
+			const findOptions: FindOptions = {
+				where: `Folder = ${this.getAbsolutePath(this.request.body.Key.slice(0, -1))} ${this.request.query.where ? "AND this.request.query.where" : ""}`,
+				...(this.request.query.page_size && {page_size: parseInt(this.request.query.page_size)}),
+				...(this.request.query.page && {page: parseInt(this.request.query.page)}),
+				...(this.request.query.fields && {fields: this.request.query.fields}),
 			}
 
-			// The loop continues as long as the requested page was not yet reached, 
-			// or there's a next page.
-			while (this.shouldRetrieveNextObjectsListPage(currentPage, requestedPage, params.ContinuationToken));
+			const res =  await this.papiClient.addons.data.uuid(this.AddonUUID).table(METADATA_ADAL_TABLE_NAME).find(findOptions);
 
 			console.log(`Files listing done successfully.`);
-		}
-		catch (err) 
-		{
-			if (err instanceof Error) 
-			{
-				console.error(`Could not list files in folder ${this.request.body.filename}. ${err.message}`);
-				throw err;
-			}
-		}
 
-		return response;
+			return res;
+		// }
+		// catch (err) 
+		// {
+		// 	if (err instanceof Error) 
+		// 	{
+		// 		console.error(`Could not list files in folder ${this.request.body.filename}. ${err.message}`);
+		// 		throw err;
+		// 	}
+		// }
+
+		// return response;
 	}
 
-	/**
-	 * Returns true if there is a next page (a continuationToken was sent), and 
-	 * either all pages were requested or the currentPage is not the requestedPage.
-	 * @param currentPage the page that was currently retrueved.
-	 * @param requestedPage the page that was requested.
-	 * @param continuationToken the continuationToken retrieved in the last page.
-	 * @returns boolean
-	 */
-	private shouldRetrieveNextObjectsListPage(currentPage: number, requestedPage: number, continuationToken: string | undefined) 
-	{
-		const areAllPagesRequested: boolean = requestedPage === -1;
-		const res = (continuationToken && (currentPage <= requestedPage || areAllPagesRequested));
-		return res;
-	}
+	
 
 	getQueryRequestedPageNumber(): number 
 	{

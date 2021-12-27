@@ -9,23 +9,63 @@ The error Message is importent! it will be written in the audit log and help the
 */
 
 import { Client, Request } from '@pepperi-addons/debug-server'
+import { PapiClient } from '@pepperi-addons/papi-sdk';
+import { METADATA_ADAL_TABLE_NAME } from './constants';
 
-export async function install(client: Client, request: Request): Promise<any> 
-{
-	return {success:true,resultObject:{}}
+export async function install(client: Client, request: Request): Promise<any> {
+
+	const papiClient = createPapiClient(client);
+	await createMetadataADALTable(papiClient);
+
+	return { success: true, resultObject: {} }
 }
 
-export async function uninstall(client: Client, request: Request): Promise<any> 
-{
-	return {success:true,resultObject:{}}
+async function createMetadataADALTable(papiClient: PapiClient) {
+	await papiClient.addons.data.schemes.post({
+		Name: METADATA_ADAL_TABLE_NAME,
+		Type: 'indexed_data',
+		Fields: {
+			Description: {
+				Type: 'String',
+			},
+			MIME: {
+				Type: 'String',
+				Indexed: true
+			},
+			Sync: {
+				Type: 'String',
+				Indexed: true
+			},
+			Thumbnails: {
+				Type: 'String'
+			},
+			Folder: {
+				Type: 'String',
+				Indexed: true
+			}
+		} as any,
+	});
 }
 
-export async function upgrade(client: Client, request: Request): Promise<any> 
-{
-	return {success:true,resultObject:{}}
+export async function uninstall(client: Client, request: Request): Promise<any> {
+	return { success: true, resultObject: {} }
 }
 
-export async function downgrade(client: Client, request: Request): Promise<any> 
+export async function upgrade(client: Client, request: Request): Promise<any> {
+	return { success: true, resultObject: {} }
+}
+
+export async function downgrade(client: Client, request: Request): Promise<any> {
+	return { success: true, resultObject: {} }
+}
+
+function createPapiClient(Client: Client)
 {
-	return {success:true,resultObject:{}}
+	return new PapiClient({
+		token: Client.OAuthAccessToken,
+		baseURL: Client.BaseURL,
+		addonUUID: Client.AddonUUID,
+		addonSecretKey: Client.AddonSecretKey,
+		actionUUID: Client.ActionUUID,
+	});
 }
