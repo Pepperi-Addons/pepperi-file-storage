@@ -25,9 +25,9 @@ class PfsService
 			actionUUID: client.AddonUUID
 		});
 
-		const accessKeyId = "ASIAS53OHLXUTG6VGA57";
-		const secretAccessKey = "hGG5aaxdzN0SsLFNxhkYuu2F2PFm9/WHRLUGJ1I3";
-		const sessionToken = "IQoJb3JpZ2luX2VjEJT//////////wEaDGV1LWNlbnRyYWwtMSJIMEYCIQCUrJ5q+aOXLMfIGNaxH69w0chkuDofw+Wl8m+os7fQdgIhAOMLOcbhxIo1MvJgjhoK7r59XJHNJ5sfkRM5RGLwiYrnKpcDCI7//////////wEQARoMMjAxNTU3NzYxNTEzIgwF7Hx4ppUd0ESzKeEq6wJeVILqmYtB49hlj3zyBv86g7W/MlQ17V0u/g+W4hH/8SysF0rAvEDdmE0M5mrArFT5xUglqQH8plGLj7AdTc5JhjD+SneHVJ0AE9lYH4VC5IcakYZihWsiXqM82AreMNI52DVzx1Bov5PxjpAodxtCgMTt7QOkFEJ7rzBQN6gnR53WevD93kquaYqfg6iD4vrDz1ZY5BwPoOEfgU3T9eRuN9K9VZ8zPdDLQJX/rpIC0V25U4Pk9F1yeE3QUTPll4uZLB/0zxw8ngw/0uXFajPi/fmh4iqenwkW4qQNjUcm5yZVbSmoGHgS8Vu+VrXH7goxhwZqmNAq0MkVy4XtvCSJ+VA/gfb1JjvJwZl28lhWNPexLQ5J0x91XSQAiLRm2c8A2UWH9i4TrXnL+CeBM0IaweVsZ+UwadoxOiUYjpyBw8sFdPnzWruC7N/6R79J19tBUQ+GWo2GjdoJt05uGBDY0xbCrNl2BSw2eAswpr2hjgY6pQGrSa5N6dAkpxDU8cc5AHv8zu/14/bXiu3S5B4Yj8PUUid6tRfNjHd01TFEnugxXYenlfobh0Hpz0UDRcM5EvIARcQeWWbVqq6JsaVE8z+OW0J8xaViizNFsBX5G/eWFx+aZF8NHHEBg3VFGUHi1YsiQ97wRU/ksrNmcLv5Sy6aQAnHarWs0B73da+QVnir20qMy29hpEguns2hBWudLOWI7Eo8v/g=";
+		const accessKeyId = "";
+		const secretAccessKey = "";
+		const sessionToken = "";
 
 		AWS.config.update({
 			accessKeyId,
@@ -35,8 +35,7 @@ class PfsService
 			sessionToken
 		});
 
-		// this.environment = jwtDecode(client.OAuthAccessToken)['pepperi.datacenter'];
-		this.environment = 'dev';
+		this.environment = jwtDecode(client.OAuthAccessToken)['pepperi.datacenter'];
 		this.DistributorUUID = jwtDecode(client.OAuthAccessToken)['pepperi.distributoruuid'];
 		this.AddonUUID = this.request.query.AddonUUID;
 		this.s3 = new AWS.S3();
@@ -150,7 +149,7 @@ class PfsService
 			Folder: containingFolder,
 			Sync: this.request.body.Sync ? this.request.body.Sync : "None",
 			Hidden: this.request.body.Hidden ? this.request.body.Hidden : false,
-			Mime: this.getMimeType(),
+			MIME: this.getMimeType(),
 			...(this.request.body.Description && {Description: this.request.body.Description})
 		};
 
