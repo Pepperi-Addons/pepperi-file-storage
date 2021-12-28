@@ -233,7 +233,7 @@ class PfsService
 		{
 			if (err instanceof Error) 
 			{
-				console.error(`Could not list files in folder ${this.request.body.filename}. ${err.message}`);
+				console.error(`Could not list files in folder ${this.request.query.folder}. ${err.message}`);
 				throw err;
 			}
 		}
