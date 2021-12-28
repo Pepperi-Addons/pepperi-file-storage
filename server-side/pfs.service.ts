@@ -214,8 +214,8 @@ class PfsService
 		// 	MaxKeys: pageSize
 		// };
 
-		// try 
-		// {
+		try 
+		{
 		// 	do 
 		// 	{
 		// 		const objectList = await this.s3.listObjectsV2(params).promise();
@@ -257,8 +257,18 @@ class PfsService
 			const res =  await this.papiClient.addons.data.uuid(this.AddonUUID).table(METADATA_ADAL_TABLE_NAME).find(findOptions);
 
 			console.log(`Files listing done successfully.`);
-
 			return res;
+
+		}
+		catch (err) 
+		{
+			if (err instanceof Error) 
+			{
+				console.error(`Could not list files in folder ${this.request.query.folder}. ${err.message}`);
+				throw err;
+			}
+		}
+
 		// }
 		// catch (err) 
 		// {
