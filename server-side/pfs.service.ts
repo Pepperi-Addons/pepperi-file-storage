@@ -37,7 +37,7 @@ class PfsService
 
 		this.environment = jwtDecode(client.OAuthAccessToken)['pepperi.datacenter'];
 		this.DistributorUUID = jwtDecode(client.OAuthAccessToken)['pepperi.distributoruuid'];
-		this.AddonUUID = this.request.query.AddonUUID;
+		this.AddonUUID = this.request.query.addon_uuid;
 		this.s3 = new AWS.S3();
 	}
 
@@ -161,20 +161,20 @@ class PfsService
 		try 
 		{
 
-			const entryname: string = this.getAbsolutePath(this.request.query.fileName);
+			const entryname: string = this.getAbsolutePath(this.request.query.key);
 
 			const params = {
 				Bucket: S3Buckets[this.environment],
 				Key: entryname,
 			};
 
-			const splitFileKey = this.request.query.fileName.split('/');
+			const splitFileKey = this.request.query.key.split('/');
 
 			// Downloading files from the bucket
 			const downloaded: any = await this.s3.headObject(params).promise();
 
 			const response: IPfsDownloadObjectResponse = {
-				Key: this.request.query.fileName,
+				Key: this.request.query.key,
 				Name: splitFileKey.pop(), //The last part of the path is the object name
 				Folder: splitFileKey.join('/'), // the rest of the path is its folder.
 				Sync: downloaded.Metadata.sync ? downloaded.Metadata.sync : "None",
