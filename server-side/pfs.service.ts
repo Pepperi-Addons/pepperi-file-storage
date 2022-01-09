@@ -68,22 +68,40 @@ class PfsService
 		const res = true;
 		try 
 		{
-			const entryname = this.getAbsolutePath(this.request.body.Key);
+			let entryname = this.getAbsolutePath(this.request.body.Key);
+			if(entryname.startsWith('/'))
+				entryname = entryname.slice(1); // remove the '/' from the start - because it create folder  named '/'
+
 			const metadata: {} = this.getMetada();
-			const buf = Buffer.from(this.request.body.URI.split(/base64,/)[1], 'base64');
-			const params = {
-				Bucket: S3Buckets[this.environment],
-				Key: entryname,
-				Metadata: metadata,
-				Body: buf,
-				ContentType: this.getMimeType(),
-				ContentEncoding: 'base64'
-			};
 
-			// Uploading files to the bucket (sync)
-			const uploaded = await this.s3.upload(params).promise();
+			let params =  {
+					Bucket: S3Buckets[this.environment],
+					Key: entryname,
+					Metadata: metadata,
+				};
 
-			console.log(`File uploaded successfully to ${uploaded.Location}`);
+			if(this.request.body.URI){ 
+				const buf = Buffer.from(this.request.body.URI.split(/base64,/)[1], 'base64');
+			
+				params["Body"]= buf;
+				params["ContentType"]= this.getMimeType();
+				params["ContentEncoding"]= 'base64';
+							// Uploading files to the bucket (sync)
+				const uploaded = await this.s3.upload(params).promise();
+				console.log(`File uploaded successfully to ${uploaded.Location}`);
+
+			}
+			else{ // if URI == "" then it is creation of a folde
+				if(!entryname.endsWith('/'))
+					params["Key"]= `${entryname}/`;
+
+				params["ContentType"]= "pepperi/folder";
+				const created =  await this.s3.putObject(params).promise()
+				console.log(`Folder uploaded successfully `);
+
+			}
+			
+
 		}
 		catch (err) 
 		{
@@ -197,9 +215,14 @@ class PfsService
 		const pageSize: number = this.request.query.page_size ? parseInt(this.request.query.page_size) : 100;
 
 		let currentPage = 0;
-		const params: any = {
+		let prefix = "";
+		if(this.request.query.folder != '/'){ //  '/' means root folder, so no need to add more '/' in AbsolutePath path  - we will send "";
+			prefix = this.request.query.folder.endsWith('/') ? this.request.query.folder : `${this.request.query.folder}/`;
+
+		}
+			const params: any = {
 			Bucket: S3Buckets[this.environment],
-			Prefix: this.getAbsolutePath(this.request.query.folder),
+			Prefix: this.getAbsolutePath(prefix),
 			Delimiter: '/',
 			MaxKeys: pageSize
 		};
