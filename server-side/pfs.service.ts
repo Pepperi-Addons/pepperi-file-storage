@@ -33,11 +33,13 @@ class PfsService
 		// 	secretAccessKey,
 		// 	sessionToken
 		// });
-
+				 
+				 
 		this.environment = jwtDecode(client.OAuthAccessToken)['pepperi.datacenter'];
 		this.DistributorUUID = jwtDecode(client.OAuthAccessToken)['pepperi.distributoruuid'];
 		this.AddonUUID = this.request.query.addon_uuid;
 		this.s3 = new AWS.S3();
+				
 	}
 
 	/**
@@ -49,6 +51,9 @@ class PfsService
 	 */
 	private getAbsolutePath(relativePath: string): string 
 	{
+		if(relativePath.startsWith('/'))
+			relativePath = relativePath.slice(1);;
+
 		return `${this.DistributorUUID}/${this.AddonUUID}/${relativePath}`;
 	}
 
@@ -68,9 +73,9 @@ class PfsService
 		const res = true;
 		try 
 		{
+			await this.validatAddonSecretKey();
+			
 			let entryname = this.getAbsolutePath(this.request.body.Key);
-			if(entryname.startsWith('/'))
-				entryname = entryname.slice(1); // remove the '/' from the start - because it create folder  named '/'
 
 			const metadata: {} = this.getMetada();
 
@@ -113,6 +118,41 @@ class PfsService
 		}
 		return res;
 	}
+
+	private async validatAddonSecretKey() {
+
+		if (!this.request.header["X-Pepperi-SecretKey"] || !await this.isValidRequestedAddon(this.client, this.request.header["X-Pepperi-SecretKey"], this.AddonUUID)) {
+			let err: any = new Error("Authorization request denied. check secret key");
+			err.code = 401;
+			throw err;
+		}
+		
+	}
+
+	private async  isValidRequestedAddon(client: Client, secretKey, addonUUID){
+		const papiClient = new PapiClient({
+		  baseURL: client.BaseURL,
+		  token: client.OAuthAccessToken,
+		  addonUUID: addonUUID,
+		  actionUUID: client.ActionUUID,
+		  addonSecretKey: secretKey
+		});
+
+		try{
+			var res = await papiClient.get(`/var/sk/addons/${addonUUID}/validate`);
+			return true;
+		}
+		catch (err) 
+		{
+			if (err instanceof Error) 
+			{
+				console.error(`${err.message}`);
+			}
+			return false;
+		}
+
+	}
+
 
 	private isValidURL(s): boolean 
 	{
@@ -216,8 +256,10 @@ class PfsService
 
 		let currentPage = 0;
 		let prefix = "";
-		if(this.request.query.folder != '/'){ //  '/' means root folder, so no need to add more '/' in AbsolutePath path  - we will send "";
-			prefix = this.request.query.folder.endsWith('/') ? this.request.query.folder : `${this.request.query.folder}/`;
+		let folder :string = this.request.query.folder;
+		folder = folder.split("'").join("");
+		if(folder != '/'){ //  '/' means root folder, so no need to add more '/' in AbsolutePath path  - we will send "";
+			prefix = folder.endsWith('/') ? folder : `${folder}/`;
 
 		}
 			const params: any = {
