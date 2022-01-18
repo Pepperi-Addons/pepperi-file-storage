@@ -28,14 +28,14 @@ class PfsService
 			actionUUID: client.AddonUUID
 		});
 
-		const accessKeyId="ASIA3SWCYKQBRZAAFUHV"
-		const secretAccessKey="lfHyODs4jjEBEk2K+LX5YHatkAisX87CuO2jOrj7"
-		const sessionToken="IQoJb3JpZ2luX2VjEL7//////////wEaDGV1LWNlbnRyYWwtMSJHMEUCIQCGYOzKvrvj5P6wXYMkrbrZ06bzgy1syUHLouWzHoTuDgIgA5GGj511iCHyGWK/Ae5E0D3Hv/zXk044+IaDwP22dz8qlwMI1///////////ARABGgw3OTYwNTExMzM0NDMiDO0q83KUw0XWhdDNCSrrAqJ1iqceTYUS91Uvygyek6m09P0noR7lG3XENDoBMq5ZaS2P1lGqtLnlAY10wnnmOaRwu7mQXB8wFiF6xSnuv71h5hGTKUxchQwxEvDscyIaE/hc91S1L0i1IIo4DCdmFaESiLNir4uTMBiPFIVSniPLJc8C2V3TEABu45sNI9kWy3D30++ksyY4t1hfVCjAjEyQovatd/KF7oNE6hzxYVFlrY95eKynVSvps/Zih0ueVf/ERwnXpDQx79DpJUIzGbSBdU7ujR8Wi+BBt01H3xthk9NhyzsyPBVmTYhK4Smxen6IpZzq4wRYNMWYyU0eMI0Fwr966G3JWqK/eVr9onC8va34IXCdEUARay4yXMVKff9pBaJmN3L8byhvlAOmCty2JDSeSUDsKJtFC9zPGlThR2babFlwxXQUK2J956U2wl6+z9kkQgmsn7sgeCrbFKquyXQK3fijacRhXc2uEfabMPm3tqVksTQsajDEkZuPBjqmAV6PeAbV4qMyUWkSMtpZCrcxFoMgwyv7k2qsYyr/1UWQ88BELCoY2cbuqUYSQSaEkFG31yBRC8XjxH978PX2DiqASpxVz2/PREr70rcztCTpE5bV9dfPcisnfsEYj05jFwNgdUXtBVBgogiVQPgrcLhiKtONW6YQoOW5E1Ex4Y0CFx+RIL2s68zV5/9Va6yJb49fUoCHTWPNIGk1QGr4MyjfjR9NU7s="
+		/*const accessKeyId=""
+		const secretAccessKey=""
+		const sessionToken=""
 		AWS.config.update({
 			accessKeyId,
 			secretAccessKey,
 			sessionToken
-		});
+		});*/
 				 
 				 
 		this.environment = jwtDecode(client.OAuthAccessToken)['pepperi.datacenter'];
