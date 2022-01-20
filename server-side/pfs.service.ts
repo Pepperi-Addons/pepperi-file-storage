@@ -3,10 +3,10 @@ import { Client, Request } from '@pepperi-addons/debug-server';
 import jwtDecode from 'jwt-decode';
 import { CdnServers, dataURLRegex, IPfsDownloadObjectResponse, IPfsListFilesResultObjects, S3Buckets } from './constants';
 import { mime } from 'mime-types';
-import { idText } from 'typescript';
+import { createTextChangeRange, idText } from 'typescript';
+import fetch from 'node-fetch';
 
 const AWS = require('aws-sdk'); // AWS is part of the lambda's environment. Importing it will result in it being rolled up redundently.
-const fetch = require('node-fetch');
 
 class PfsService 
 {
@@ -27,6 +27,7 @@ class PfsService
 			addonSecretKey: client.AddonSecretKey,
 			actionUUID: client.AddonUUID
 		});
+
 
 		/*const accessKeyId=""
 		const secretAccessKey=""
@@ -80,17 +81,16 @@ class PfsService
 
 			let entryname = this.getAbsolutePath(this.request.body.Key);
 
-			var file = await this.downloadFromAWS();
+			let file: any = await this.getFileIfExistsOnS3();
 
 			this.validateFieldsForUpload(file);
 
 			let params =  {
 				Bucket: S3Buckets[this.environment],
-				Key: entryname,
+				Key: entryname
 			};
 
-			if(this.request.body.Hidden != true) 
-			{
+			if(this.request.body.Hidden != true) {
 				if(this.request.body.Key.endsWith('/')) 
 				{ // if the key ends with '/' it means we are creating a folder 
 					res = await this.createFolder(params, entryname, res);
@@ -99,8 +99,10 @@ class PfsService
 				{
 					res = await this.postFile(file,params, res);
 				}
-			}else{ // update the hidden=true in the MetaData (and in the ADAL in the future) 
-
+			}
+			else{ // update the hidden=true in the MetaData (this part will be deleted when we will have adal support) 
+				file.Hidden = true;
+				res = file; 
 			}
 		}
 		catch (err) 
@@ -115,23 +117,31 @@ class PfsService
 	}
 
 
-	private async postFile(file:IPfsDownloadObjectResponse, params: any, res: any) {
-		
-		if(file){ // update
+	private async getFileIfExistsOnS3() {
+		let file: any = null;
 
-		}else{
-			
+		try {
+			file = await this.downloadFromAWS();
+
+		} catch (e) { // if file not exist on S3 it will throw exception
+			if (e instanceof Error) 
+			{
+				console.log(e.message);
+			}
 		}
+		return file;
+	}
+
+	private async postFile(file:IPfsDownloadObjectResponse, params: any, res: any) {
+
 		params["Metadata"] = this.getMetadata(file);
 
-		let preSignedURL = ""
+		let setPresignedURL = false;
 		if(!file && !this.request.body.URI){
-			// in case "URI" is not provided on Creation (that is why the check if file exists) a PresignedURL will be returned 
-			this.request.body.URI = `data:${this.request.body.MIME};base64,`; // creating an empty file to set all the metadata 
-			preSignedURL = await  this.generatePreSignedURL(24,params.Key); // creating presignedURL
+			 // in case "URI" is not provided on Creation (that is why the check if file exists) a PresignedURL will be returned 
+			 this.request.body.URI = `data:${this.request.body.MIME};base64,`; // creating an empty file to set all the metadata
+			 setPresignedURL = true;
 		}
-
-
 		if (this.request.body.URI){
 			let buf: Buffer;
 			if (this.isDataURL(this.request.body.URI)) { // dataURI get the base 64 part
@@ -147,13 +157,17 @@ class PfsService
 			params["ContentType"] = this.getMimeType();
 			params["ContentEncoding"] = 'base64';
 
-					// Uploading files to the bucket (sync)
+			// Uploading files to the bucket (sync)
 			const uploaded = await this.s3.upload(params).promise(); 
 			console.log(`File uploaded successfully to ${uploaded.Location}`);
 		}
 
 		res = await this.downloadFromAWS();
-		res["PresignedURL"] = preSignedURL;
+
+
+		if(setPresignedURL)
+			res["PresignedURL"] = await  this.generatePreSignedURL(params.Key); // creating presignedURL
+
 		return res;
 	}
 
@@ -188,7 +202,7 @@ class PfsService
 		
 	}
 
-	 async generatePreSignedURL(duration,entryName){
+	 async generatePreSignedURL(entryName){
 		let params =  {
 			Bucket: S3Buckets[this.environment],
 			Key: entryName,
@@ -196,9 +210,9 @@ class PfsService
 		let urlString = "";
 
 		var date = new Date();
-		params["Expires"] = new Date(new Date(date).setHours(date.getHours() + duration)).getUTCDate();
+		params["Expires"] = 24*60*60;
 			
-		urlString = await  this.s3. getSignedUrl('getObject',params);
+		urlString = await  this.s3. getSignedUrl('putObject',params);
 		return urlString;
 	 }
 		
@@ -232,10 +246,9 @@ class PfsService
 
 	private async validatAddonSecretKey() {
 
-		//if (!this.request.header["X-Pepperi-SecretKey"] || !await this.isValidRequestedAddon(this.client, this.request.header["X-Pepperi-SecretKey"], this.AddonUUID)) {
-			if (!this.request.header["x-pepperi-secretkey"] || !await this.isValidRequestedAddon(this.client, this.request.header["x-pepperi-secretkey"], this.AddonUUID)) {
+		if (!this.request.header["X-Pepperi-SecretKey"] || !await this.isValidRequestedAddon(this.client, this.request.header["X-Pepperi-SecretKey"], this.AddonUUID)) {
 
-			let err: any = new Error("Authorization request denied. check secret key");
+			let err: any = new Error(`Authorization request denied. ${this.request.header["X-Pepperi-SecretKey"]? "check secret key" : "Missing secret key header"} `);
 			err.code = 401;
 			throw err;
 		}
@@ -310,8 +323,8 @@ class PfsService
 		let metadata:any =
 		{
 			Sync :this.request.body.Sync ? this.request.body.Sync : (file? file.Sync: "None"),
-			Hidden : this.request.body.Hidden ? this.request.body.Hidden : (file? file.Hidden: false),
-			CreationDateTime : file ? file.CreationDateTime : (new Date()).toISOString(),
+			Hidden : (this.request.body.Hidden ? this.request.body.Hidden : (file? file.Hidden: false)) + "",
+			CreationDateTime : file && file.CreationDateTime? file.CreationDateTime : (new Date()).toISOString(),
 			ModificationDateTime : (new Date()).toISOString(),
 			Description:this.request.body.Description? this.request.body.Description: (file? file.Description :"")
 		};  
@@ -468,13 +481,14 @@ class PfsService
 		{
 			const relativePath: string = this.getRelativePath(object.Key ? object.Key : "");
 			const splitFileKey = relativePath.split('/');
-			response.push({
-				Key: relativePath,
-				Name: `${splitFileKey.pop()}`,
-				Folder: splitFileKey.join('/'),
-				URL: `${CdnServers[this.environment]}/${object.Key}`,
-				ModificationDateTime: object.LastModified?.toISOString()
-			});
+			if(splitFileKey[splitFileKey.length - 1]) // dont push the hidden file (it doesnt have name) that is being created when creating a folder withot file
+				response.push({
+					Key: relativePath,
+					Name: `${splitFileKey.pop()}`,
+					Folder: splitFileKey.join('/'),
+					URL: `${CdnServers[this.environment]}/${object.Key}`,
+					ModificationDateTime: object.LastModified?.toISOString()
+				});
 		});
 
 		objectList.CommonPrefixes?.forEach(object => 
