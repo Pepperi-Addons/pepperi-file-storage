@@ -29,14 +29,14 @@ class PfsService
 		});
 
 
-		/*const accessKeyId=""
-		const secretAccessKey=""
-		const sessionToken=""
-		AWS.config.update({
-			accessKeyId,
-			secretAccessKey,
-			sessionToken
-		});*/
+		// const accessKeyId=""
+		// const secretAccessKey=""
+		// const sessionToken=""
+		// AWS.config.update({
+		// 	accessKeyId,
+		// 	secretAccessKey,
+		// 	sessionToken
+		// });
 				 
 				 
 		this.environment = jwtDecode(client.OAuthAccessToken)['pepperi.datacenter'];
@@ -162,7 +162,7 @@ class PfsService
 			console.log(`File uploaded successfully to ${uploaded.Location}`);
 		}
 
-		res = await this.downloadFromAWS();
+		res = await this.downloadFromAWS(this.request.body.Key);
 
 
 		if(setPresignedURL)
@@ -182,9 +182,8 @@ class PfsService
 			const relativePath: string = this.getRelativePath(entryname);
 			const splitFileKey = relativePath.split('/');
 			splitFileKey.pop(); // folders look like "folder/sub_folder/sub_subfolder/", so splitting by '/' results in a trailing "" 
-
-
-			// which we need to pop in order ot get the actual folder name.
+								// which we need to pop in order ot get the actual folder name.
+								
 			res = {
 				Key: this.request.body.Key,
 				Name: `${splitFileKey.pop()}/`,
@@ -252,7 +251,6 @@ class PfsService
 			err.code = 401;
 			throw err;
 		}
-		
 	}
 
 	private async  isValidRequestedAddon(client: Client, secretKey, addonUUID){
@@ -332,13 +330,19 @@ class PfsService
 		return metadata;
 	}
 
-	async downloadFromAWS(): Promise<IPfsDownloadObjectResponse> 
+	/**
+	 * Download the file from AWS.
+	 * @param Key Optional Key to download. Otherwise, this.request.query.Key will be used. 
+	 * @returns 
+	 */
+	async downloadFromAWS(Key? : string): Promise<IPfsDownloadObjectResponse> 
 	{
+		const downloadKey = Key ?? this.request.query.Key; 
 		try 
 		{
 			let response:any = null;
 
-			const entryname: string = this.getAbsolutePath(this.request.body.Key);
+			const entryname: string = this.getAbsolutePath(downloadKey);
 
 			const params = {
 				Bucket: S3Buckets[this.environment],
@@ -348,10 +352,10 @@ class PfsService
 			// Downloading files from the bucket
 			const downloaded: any = await this.s3.headObject(params).promise();
 			 if(downloaded.Metadata.hidden != true){
-				const splitFileKey = this.request.body.Key.split('/');
+				const splitFileKey = downloadKey.split('/');
 
 				response = {
-					Key: this.request.body.Key,
+					Key: downloadKey,
 					Name: splitFileKey.pop(), //The last part of the path is the object name
 					Folder: splitFileKey.join('/'), // the rest of the path is its folder.
 					Sync: downloaded.Metadata.sync ? downloaded.Metadata.sync : "None",
