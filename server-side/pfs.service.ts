@@ -93,7 +93,7 @@ class PfsService
 			if(this.request.body.Hidden != true) {
 				if(this.request.body.Key.endsWith('/')) 
 				{ // if the key ends with '/' it means we are creating a folder 
-					res = await this.createFolder(params, entryname, res);
+					res = await this.createFolder(params);
 				}  
 				else //file post
 				{
@@ -171,7 +171,7 @@ class PfsService
 		return res;
 	}
 
-	private async createFolder(params: { Bucket: any; Key: string; }, entryname: string, res: any) {
+	private async createFolder(params: { Bucket: any; Key: string; }) {
 
 		if(this.request.body.MIME == 'pepperi/folder')
 		{
@@ -179,20 +179,17 @@ class PfsService
 			const created = await this.s3.putObject(params).promise();
 			console.log(`Folder uploaded successfully `);
 
-			const relativePath: string = this.getRelativePath(entryname);
+			const relativePath: string = this.request.body.Key;
 			const splitFileKey = relativePath.split('/');
 			splitFileKey.pop(); // folders look like "folder/sub_folder/sub_subfolder/", so splitting by '/' results in a trailing "" 
 								// which we need to pop in order ot get the actual folder name.
 								
-			res = {
-				Key: this.request.body.Key,
-				Name: `${splitFileKey.pop()}/`,
-				Folder: splitFileKey.join('/'),
-				MIME: "pepperi/folder",
-			};
-
-			res = await this.createFolder(params, entryname, res);
-			return res;
+			return {
+					Key: this.request.body.Key,
+					Name: `${splitFileKey.pop()}/`,
+					Folder: splitFileKey.join('/'),
+					MIME: "pepperi/folder",
+				};
 		}
 		else
 		{
