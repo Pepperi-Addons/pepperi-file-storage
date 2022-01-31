@@ -2,7 +2,6 @@
 /*
 The return object format MUST contain the field 'success':
 {success:true}
-
 If the result of your code is 'false' then return:
 {success:false, erroeMessage:{the reason why it is false}}
 The error Message is importent! it will be written in the audit log and help the user to understand what happen
@@ -40,6 +39,10 @@ async function createMetadataADALTable(papiClient: PapiClient) {
 				Type: 'String'
 			},
 			Folder: {
+				Type: 'String',
+				Indexed: true
+			},
+			Name: {
 				Type: 'String',
 				Indexed: true
 			}
