@@ -335,6 +335,7 @@ class PfsService
 	async downloadFromAWS(Key? : string): Promise<IPfsDownloadObjectResponse> 
 	{
 		const downloadKey = Key ?? this.request.query.Key; 
+		console.log(`Attempting to download the following key from AWS: ${downloadKey}`)
 		try 
 		{
 			let response:any = null;

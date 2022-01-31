@@ -32,6 +32,7 @@
         "@pepperi-addons/papi-sdk": "*",
         "@types/node-fetch": "^2.5.7",
         "aws-sdk": "^2.1045.0",
+        "encoding": "^0.1.13",
         "node-fetch": "^2.6.0"
     }
 }
