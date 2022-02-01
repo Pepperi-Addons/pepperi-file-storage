@@ -4,7 +4,8 @@ import { Client, Request } from '@pepperi-addons/debug-server'
 export async function file(client: Client, request: Request) 
 {
 	console.log(`Request received: ${JSON.stringify(request)}`);
-	if(request.query.key){
+	if(request.query.key)
+	{
 		request.query.Key = request.query.key;
 	}
 	

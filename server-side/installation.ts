@@ -11,7 +11,8 @@ import { Client, Request } from '@pepperi-addons/debug-server'
 import { PapiClient } from '@pepperi-addons/papi-sdk';
 import { METADATA_ADAL_TABLE_NAME } from './constants';
 
-export async function install(client: Client, request: Request): Promise<any> {
+export async function install(client: Client, request: Request): Promise<any> 
+{
 
 	const papiClient = createPapiClient(client);
 	await createMetadataADALTable(papiClient);
@@ -19,7 +20,8 @@ export async function install(client: Client, request: Request): Promise<any> {
 	return { success: true, resultObject: {} }
 }
 
-async function createMetadataADALTable(papiClient: PapiClient) {
+async function createMetadataADALTable(papiClient: PapiClient) 
+{
 	await papiClient.addons.data.schemes.post({
 		Name: METADATA_ADAL_TABLE_NAME,
 		Type: 'indexed_data',
@@ -29,7 +31,6 @@ async function createMetadataADALTable(papiClient: PapiClient) {
 			},
 			MIME: {
 				Type: 'String',
-				Indexed: true
 			},
 			Sync: {
 				Type: 'String',
@@ -50,15 +51,18 @@ async function createMetadataADALTable(papiClient: PapiClient) {
 	});
 }
 
-export async function uninstall(client: Client, request: Request): Promise<any> {
+export async function uninstall(client: Client, request: Request): Promise<any> 
+{
 	return { success: true, resultObject: {} }
 }
 
-export async function upgrade(client: Client, request: Request): Promise<any> {
+export async function upgrade(client: Client, request: Request): Promise<any> 
+{
 	return { success: true, resultObject: {} }
 }
 
-export async function downgrade(client: Client, request: Request): Promise<any> {
+export async function downgrade(client: Client, request: Request): Promise<any> 
+{
 	return { success: true, resultObject: {} }
 }
 
