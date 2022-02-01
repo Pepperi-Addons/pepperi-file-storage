@@ -43,7 +43,6 @@ class PfsService
 		this.DistributorUUID = jwtDecode(client.OAuthAccessToken)['pepperi.distributoruuid'];
 		this.AddonUUID = this.request.query.addon_uuid;
 		this.s3 = new AWS.S3();
-				
 	}
 
 	/**
@@ -123,7 +122,6 @@ class PfsService
 		return this.papiClient.addons.data.uuid(config.AddonUUID).table(METADATA_ADAL_TABLE_NAME).upsert(metadata);
 	}
 
-
 	private async getFileIfExistsOnS3() 
 	{
 		let file: any = null;
@@ -145,7 +143,6 @@ class PfsService
 
 	private async postFile(file:IPfsDownloadObjectResponse, params: any, res: any) 
 	{
-
 		let setPresignedURL = false;
 		if(!file && !this.request.body.URI)
 		{
@@ -190,7 +187,6 @@ class PfsService
 
 	private async createFolder(params: { Bucket: any; Key: string; }) 
 	{
-
 		if(this.request.body.MIME == 'pepperi/folder')
 		{
 			params["ContentType"] = "pepperi/folder";
@@ -202,16 +198,15 @@ class PfsService
 			splitFileKey.pop(); // folders look like "folder/sub_folder/sub_subfolder/", so splitting by '/' results in a trailing "" 
 			// which we need to pop in order ot get the actual folder name.
 			
-			return await this.upsertMetadataToAdal();;
+			return await this.upsertMetadataToAdal();
 		}
 		else
 		{
 			throw new Error("Folder MIME must be 'pepperi/folder'");
 		}
-		
 	}
 
-	 async generatePreSignedURL(entryName)
+	async generatePreSignedURL(entryName)
 	{
 		const params =  {
 			Bucket: S3Buckets[this.environment],
@@ -222,12 +217,10 @@ class PfsService
 		const date = new Date();
 		params["Expires"] = 24*60*60;
 			
-		urlString = await  this.s3. getSignedUrl('putObject',params);
+		urlString = await  this.s3.getSignedUrl('putObject',params);
 		return urlString;
-	 }
+	}
 		
-
-
 	isDataURL(s) 
 	{
 		return !!s.match(dataURLRegex);
@@ -262,7 +255,6 @@ class PfsService
 
 	private async validateAddonSecretKey() 
 	{
-
 		if (!this.request.header["X-Pepperi-SecretKey"] || !await this.isValidRequestedAddon(this.client, this.request.header["X-Pepperi-SecretKey"], this.AddonUUID)) 
 		{
 
@@ -298,7 +290,6 @@ class PfsService
 
 	}
 
-
 	private isValidURL(s): boolean 
 	{
 		let url: URL;
@@ -317,11 +308,6 @@ class PfsService
 	private getMimeType(): string 
 	{
 		let MIME = this.request.body.MIME;
-		/*if (this.isValidURL(this.request.body.URI)) ///-------> does not work
-		{
-			// Get mime type from received url
-			MIME =  mime.contentType(this.request.body.URI);
-		}*/
 		if(this.request.body.URI && this.isDataURL(this.request.body.URI))
 		{
 			// Get mime type from base64 data
@@ -331,7 +317,6 @@ class PfsService
 
 		return MIME;
 	}
-
 
 	/**
 	 * Returns a Metadata object representing the needed metadata.
@@ -403,56 +388,13 @@ class PfsService
 		}
 	}
 
-	
 	async listFiles()//: Promise<IPfsListFilesResultObjects> 
 	{
 		const response: IPfsListFilesResultObjects = [];
-		// const requestedPage: number = this.getQueryRequestedPageNumber();
-		// const pageSize: number = this.request.query.page_size ? parseInt(this.request.query.page_size) : 100;
-
-		// let currentPage = 0;
-		// const params: any = {
-		// 	Bucket: S3Buckets[this.environment],
-		// 	Prefix: this.getAbsolutePath(this.request.query.folder),
-		// 	Delimiter: '/',
-		// 	MaxKeys: pageSize
-		// };
-
 		try 
 		{
-		// 	do 
-		// 	{
-		// 		const objectList = await this.s3.listObjectsV2(params).promise();
-		// 		console.log(objectList);
-
-			// 		// Populate the response with the retrieved objects if all of the pages
-			// 		// were requested (requestedPage === -1), or if the current page
-			// 		// is the requested page.
-			// 		if (requestedPage === -1 || currentPage === requestedPage) 
-			// 		{
-			// 			this.populateListResponseWithObjects(objectList, response);
-			// 		}
-
-			// 		currentPage++;
-			// 		params.ContinuationToken = objectList.NextContinuationToken;
-			// 	}
-
-			// 	// The loop continues as long as the requested page was not yet reached, 
-			// 	// or there's a next page.
-			// 	while (this.shouldRetrieveNextObjectsListPage(currentPage, requestedPage, params.ContinuationToken));
-			// export interface FindOptions {
-			// 	fields?: string[];
-			// 	where?: string;
-			// 	order_by?: string;
-			// 	page?: number;
-			// 	page_size?: number;
-			// 	include_nested?: boolean;
-			// 	full_mode?: boolean;
-			// 	include_deleted?: boolean;
-			// 	is_distinct?: boolean;
-			// }
 			const findOptions: FindOptions = {
-				where: `Folder = ${this.getAbsolutePath(this.request.body.Key.slice(0, -1))} ${this.request.query.where ? "AND this.request.query.where" : ""}`,
+				where: `Folder=${this.request.query.folder.slice(0, -1)}${this.request.query.where ? "AND this.request.query.where" : ""}`,
 				...(this.request.query.page_size && {page_size: parseInt(this.request.query.page_size)}),
 				...(this.request.query.page && {page: parseInt(this.request.query.page)}),
 				...(this.request.query.fields && {fields: this.request.query.fields}),
@@ -472,65 +414,6 @@ class PfsService
 				throw err;
 			}
 		}
-
-		// }
-		// catch (err) 
-		// {
-		// 	if (err instanceof Error) 
-		// 	{
-		// 		console.error(`Could not list files in folder ${this.request.body.filename}. ${err.message}`);
-		// 		throw err;
-		// 	}
-		// }
-
-		// return response;
-	}
-
-	
-
-	getQueryRequestedPageNumber(): number 
-	{
-		let res: number = this.request.query.page ? parseInt(this.request.query.page) : 0;
-		
-		// Pagination first page is 0
-		if(res === 1)
-		{
-			res = 0;
-		}
-
-		return res;
-	}
-
-	private populateListResponseWithObjects(objectList, response: IPfsListFilesResultObjects) 
-	{
-		objectList.Contents?.forEach(object => 
-		{
-			const relativePath: string = this.getRelativePath(object.Key ? object.Key : "");
-			const splitFileKey = relativePath.split('/');
-			if(splitFileKey[splitFileKey.length - 1]) // dont push the hidden file (it doesnt have name) that is being created when creating a folder withot file
-				response.push({
-					Key: relativePath,
-					Name: `${splitFileKey.pop()}`,
-					Folder: splitFileKey.join('/'),
-					URL: `${CdnServers[this.environment]}/${object.Key}`,
-					ModificationDateTime: object.LastModified?.toISOString()
-				});
-		});
-
-		objectList.CommonPrefixes?.forEach(object => 
-		{
-			const relativePath: string = this.getRelativePath(object.Prefix ? object.Prefix : "");
-			const splitFileKey = relativePath.split('/');
-			splitFileKey.pop(); // folders look like "folder/sub_folder/sub_subfolder/", so splitting by '/' results in a trailing "" 
-
-			// which we need to pop in order ot get the actual folder name.
-			response.push({
-				Key: relativePath,
-				Name: `${splitFileKey.pop()}/`,
-				Folder: splitFileKey.join('/'),
-				MIME: "pepperi/folder",
-			});
-		});
 	}
 }
 
