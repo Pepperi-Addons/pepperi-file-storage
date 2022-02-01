@@ -77,7 +77,7 @@ class PfsService
 		let res:any = {};
 		try 
 		{
-			await this.validatAddonSecretKey();
+			await this.validateAddonSecretKey();
 
 			const entryname = this.getAbsolutePath(this.request.body.Key);
 
@@ -116,6 +116,7 @@ class PfsService
 		}
 		return res;
 	}
+
 	upsertMetadataToAdal() 
 	{
 		const metadata = this.getMetadata();	
@@ -201,14 +202,7 @@ class PfsService
 			splitFileKey.pop(); // folders look like "folder/sub_folder/sub_subfolder/", so splitting by '/' results in a trailing "" 
 			// which we need to pop in order ot get the actual folder name.
 			
-			await this.upsertMetadataToAdal();
-
-			return {
-				Key: this.request.body.Key,
-				Name: `${splitFileKey.pop()}/`,
-				Folder: splitFileKey.join('/'),
-				MIME: "pepperi/folder",
-			};
+			return await this.upsertMetadataToAdal();;
 		}
 		else
 		{
@@ -266,7 +260,7 @@ class PfsService
 
 	}
 
-	private async validatAddonSecretKey() 
+	private async validateAddonSecretKey() 
 	{
 
 		if (!this.request.header["X-Pepperi-SecretKey"] || !await this.isValidRequestedAddon(this.client, this.request.header["X-Pepperi-SecretKey"], this.AddonUUID)) 
@@ -328,7 +322,7 @@ class PfsService
 			// Get mime type from received url
 			MIME =  mime.contentType(this.request.body.URI);
 		}*/
-		if(this.isDataURL(this.request.body.URI))
+		if(this.request.body.URI && this.isDataURL(this.request.body.URI))
 		{
 			// Get mime type from base64 data
 			MIME = this.request.body.URI.match(/[^:]\w+\/[\w-+\d.]+(?=;|,)/)[0];
@@ -355,7 +349,7 @@ class PfsService
 		
 		const metadata = {
 			Key: this.getAbsolutePath(this.request.body.Key),
-			Name: fileName,
+			Name: `${fileName}${this.request.body.Key.endsWith('/') ? '/' :''}`,
 			Folder: containingFolder,
 			Sync: this.request.body.Sync ? this.request.body.Sync : "None",
 			Hidden: this.request.body.Hidden ? this.request.body.Hidden : false,
