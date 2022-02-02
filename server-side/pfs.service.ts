@@ -78,32 +78,17 @@ class PfsService
 		{
 			await this.validateAddonSecretKey();
 
-			const entryname = this.getAbsolutePath(this.request.body.Key);
+			const doesFileExist: boolean = !!(await this.getFileIfExistsOnS3());
+			this.validateFieldsForUpload(doesFileExist);
 
-			const file: any = await this.getFileIfExistsOnS3();
-
-			this.validateFieldsForUpload(file);
-
-			const params =  {
-				Bucket: S3Buckets[this.environment],
-				Key: entryname
-			};
-
-			if(this.request.body.Hidden != true) 
-			{
-				if(this.request.body.Key.endsWith('/')) 
-				{ // if the key ends with '/' it means we are creating a folder 
-					res = await this.createFolder(params);
-				}  
-				else //file post
-				{
-					res = await this.postFile(file,params, res);
-				}
+			if(this.request.body.Key.endsWith('/')) 
+			{ // if the key ends with '/' it means we are creating a folder 
+				res = await this.createFolder(doesFileExist);
 			}
-			// else{ // update the hidden=true in the MetaData (this part will be deleted when we will have adal support) 
-			// 	file.Hidden = true;
-			// 	res = file; 
-			// }
+			else //file post
+			{
+				res = await this.postFile(doesFileExist);
+			}
 		}
 		catch (err) 
 		{
@@ -116,23 +101,22 @@ class PfsService
 		return res;
 	}
 
-	upsertMetadataToAdal() 
+	upsertMetadataToAdal(doesFileExist: boolean) 
 	{
-		const metadata = this.getMetadata();	
+		const metadata = this.getMetadata(doesFileExist);	
 		return this.papiClient.addons.data.uuid(config.AddonUUID).table(METADATA_ADAL_TABLE_NAME).upsert(metadata);
 	}
 
 	private async getFileIfExistsOnS3() 
 	{
-		let file: any = null;
+		let file: any = {};
 
 		try 
 		{
 			file = await this.downloadFromAWS();
-
 		}
 		catch (e) 
-		{ // if file not exist on S3 it will throw exception
+		{ 
 			if (e instanceof Error) 
 			{
 				console.log(e.message);
@@ -141,10 +125,18 @@ class PfsService
 		return file;
 	}
 
-	private async postFile(file:IPfsDownloadObjectResponse, params: any, res: any) 
+	private async postFile(doesFileExist: boolean) 
 	{
-		let setPresignedURL = false;
-		if(!file && !this.request.body.URI)
+		let res: any = {};
+
+		let setPresignedURL: boolean = false;
+		const entryname: string = this.getAbsolutePath(this.request.body.Key);
+		const params =  {
+			Bucket: S3Buckets[this.environment],
+			Key: entryname
+		};
+		
+		if(!doesFileExist && !this.request.body.URI)
 		{
 			 // in case "URI" is not provided on Creation (that is why the check if file exists) a PresignedURL will be returned 
 			 this.request.body.URI = `data:${this.request.body.MIME};base64,`; // creating an empty file to set all the metadata
@@ -171,34 +163,25 @@ class PfsService
 			// Uploading files to the bucket (sync)
 			const uploaded = await this.s3.upload(params).promise();
 			console.log(`File uploaded successfully to ${uploaded.Location}`);
-
-			await this.upsertMetadataToAdal();
-			console.log(`File metadata successfuly uploaded to ADAL.`);
 		}
+
+		await this.upsertMetadataToAdal(doesFileExist);
+		console.log(`File metadata successfuly uploaded to ADAL.`);
 
 		res = await this.downloadFromAWS();
 
 
 		if(setPresignedURL)
-			res["PresignedURL"] = await  this.generatePreSignedURL(params.Key); // creating presignedURL
+			res["PresignedURL"] = await this.generatePreSignedURL(params.Key); // creating presignedURL
 
 		return res;
 	}
 
-	private async createFolder(params: { Bucket: any; Key: string; }) 
+	private async createFolder(doesFileExist:boolean) 
 	{
 		if(this.request.body.MIME == 'pepperi/folder')
 		{
-			params["ContentType"] = "pepperi/folder";
-			const created = await this.s3.putObject(params).promise();
-			console.log(`Folder uploaded successfully `);
-
-			const relativePath: string = this.request.body.Key;
-			const splitFileKey = relativePath.split('/');
-			splitFileKey.pop(); // folders look like "folder/sub_folder/sub_subfolder/", so splitting by '/' results in a trailing "" 
-			// which we need to pop in order ot get the actual folder name.
-			
-			const upload = await this.upsertMetadataToAdal();
+			const upload = await this.upsertMetadataToAdal(doesFileExist);
 			delete upload.BasePath;
 			return upload;
 		}
@@ -228,7 +211,7 @@ class PfsService
 		return !!s.match(dataURLRegex);
 	}
 
-	private validateFieldsForUpload(file) 
+	private validateFieldsForUpload(doesFileExist: boolean) 
 	{
 		if (!this.request.body.Key) 
 		{
@@ -247,7 +230,7 @@ class PfsService
 
 		}
 
-		if(!file && !this.request.body.MIME )
+		if(!doesFileExist && !this.request.body.MIME )
 		{
 			throw new Error("Missing mandatory field 'MIME'");
 
@@ -324,8 +307,9 @@ class PfsService
 	 * Returns a Metadata object representing the needed metadata.
 	 * @returns a dictionary representation of the metadata.
 	 */
-	protected getMetadata(): {Key: string, Sync: string, Hidden: boolean, MIME: string, Folder: string, Description?: string}
+	protected getMetadata(doesFileExist:boolean): {Key: string, Sync: string, Hidden: boolean, MIME: string, Folder: string, Description?: string}
 	{
+
 		const pathFoldersList = this.request.body.Key.split('/');
 		if (this.request.body.Key.endsWith('/')) 
 		{//This is a new folder being created...
@@ -336,14 +320,17 @@ class PfsService
 		
 		const metadata = {
 			Key: this.request.body.Key,
-			Name: `${fileName}${this.request.body.Key.endsWith('/') ? '/' :''}`,
-			Folder: containingFolder,
-			Sync: this.request.body.Sync ? this.request.body.Sync : "None",
-			Hidden: this.request.body.Hidden ? this.request.body.Hidden : false,
-			MIME: this.getMimeType(),
-			BasePath: `${this.DistributorUUID}/${this.AddonUUID}/`,
-			...(!this.request.body.Key.endsWith('/') && {URL: `${CdnServers[this.environment]}/${this.getAbsolutePath(this.request.body.Key)}`}), //Add URL if this isn't a folder.
-			...(this.request.body.Description && {Description: this.request.body.Description}) // Add a description if it was given.
+			...(!doesFileExist && { // These fields are static, and are derived from the files's Key, which is immutable.
+									// We need to create them only once, and they are never changed.
+				Name: `${fileName}${this.request.body.Key.endsWith('/') ? '/' :''}`,
+				Folder: containingFolder,
+				BasePath: `${this.DistributorUUID}/${this.AddonUUID}/`
+			}),
+			...(!doesFileExist && !this.request.body.Key.endsWith('/') && {URL: `${CdnServers[this.environment]}/${this.getAbsolutePath(this.request.body.Key)}`}), //Add URL if this isn't a folder and this file doesn't exist.
+			...((this.request.body.MIME || !doesFileExist) && {MIME: this.getMimeType()}), // Set MIME if it was passed, or if this file doesn't exist yet.
+			...(this.request.body.Sync && {Sync: this.request.body.Sync}), // Set Sync if it was passed
+			...(this.request.body.Hidden && {Hidden: this.request.body.Hidden}), // Set Hidden if it was passed
+			...(this.request.body.Description && {Description: this.request.body.Description}) // Add a description if it was passed.
 		};
 
 		return metadata;
@@ -356,11 +343,11 @@ class PfsService
 	async downloadFromAWS() 
 	{
 		const downloadKey = this.request.body && this.request.body.Key ? this.request.body.Key : this.request.query.Key; 
-		console.log(`Attempting to download the following key from AWS: ${downloadKey}`)
+		console.log(`Attempting to download the following key from ADAL: ${downloadKey}`)
 		try 
 		{
 	
-			let res: any = null;
+			let res: any = {};
 			// Downloading files from the bucket
 			const findOptions: FindOptions = {
 				where: `Key='${downloadKey}' AND BasePath='${this.DistributorUUID}/${this.AddonUUID}/'`
@@ -372,6 +359,12 @@ class PfsService
 				delete downloaded[0].BasePath
 				console.log(`File Downloaded`);
 				res = downloaded[0];
+			}
+			else if(downloaded.length > 1){
+				const err: any = new Error(`Internal error.`);
+				console.error(`Internal error. Found more than one file with the given key. Where clause: ${findOptions.where}`);
+				err.code = 500;
+				throw err;
 			}
 
 			return res;
