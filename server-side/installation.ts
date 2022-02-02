@@ -34,7 +34,6 @@ async function createMetadataADALTable(papiClient: PapiClient)
 			},
 			Sync: {
 				Type: 'String',
-				Indexed: true
 			},
 			Thumbnails: {
 				Type: 'String'
@@ -46,6 +45,13 @@ async function createMetadataADALTable(papiClient: PapiClient)
 			Name: {
 				Type: 'String',
 				Indexed: true
+			},
+			BasePath: {
+				Type: 'String',
+				Indexed: true
+			},
+			URL: {
+				Type: 'String'
 			}
 		} as any,
 	});

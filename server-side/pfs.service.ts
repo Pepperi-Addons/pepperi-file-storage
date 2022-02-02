@@ -198,7 +198,9 @@ class PfsService
 			splitFileKey.pop(); // folders look like "folder/sub_folder/sub_subfolder/", so splitting by '/' results in a trailing "" 
 			// which we need to pop in order ot get the actual folder name.
 			
-			return await this.upsertMetadataToAdal();
+			const upload = await this.upsertMetadataToAdal();
+			delete upload.BasePath;
+			return upload;
 		}
 		else
 		{
@@ -333,13 +335,15 @@ class PfsService
 		const containingFolder = pathFoldersList.join('/');
 		
 		const metadata = {
-			Key: this.getAbsolutePath(this.request.body.Key),
+			Key: this.request.body.Key,
 			Name: `${fileName}${this.request.body.Key.endsWith('/') ? '/' :''}`,
 			Folder: containingFolder,
 			Sync: this.request.body.Sync ? this.request.body.Sync : "None",
 			Hidden: this.request.body.Hidden ? this.request.body.Hidden : false,
 			MIME: this.getMimeType(),
-			...(this.request.body.Description && {Description: this.request.body.Description})
+			BasePath: `${this.DistributorUUID}/${this.AddonUUID}/`,
+			...(!this.request.body.Key.endsWith('/') && {URL: `${CdnServers[this.environment]}/${this.getAbsolutePath(this.request.body.Key)}`}), //Add URL if this isn't a folder.
+			...(this.request.body.Description && {Description: this.request.body.Description}) // Add a description if it was given.
 		};
 
 		return metadata;
@@ -349,34 +353,28 @@ class PfsService
 	 * Download the file from AWS.
 	 * @returns 
 	 */
-	async downloadFromAWS(): Promise<IPfsDownloadObjectResponse> 
+	async downloadFromAWS() 
 	{
 		const downloadKey = this.request.body && this.request.body.Key ? this.request.body.Key : this.request.query.Key; 
 		console.log(`Attempting to download the following key from AWS: ${downloadKey}`)
 		try 
 		{
-			let response:any = null;
-
-			const entryname: string = this.getAbsolutePath(downloadKey);
 	
+			let res: any = null;
 			// Downloading files from the bucket
 			const findOptions: FindOptions = {
-				where: `Key='${entryname}'`
+				where: `Key='${downloadKey}' AND BasePath='${this.DistributorUUID}/${this.AddonUUID}/'`
 			}
 
-			const downloaded =  await this.papiClient.addons.data.uuid(config.AddonUUID).table(METADATA_ADAL_TABLE_NAME).find(findOptions);
+			const downloaded = await this.papiClient.addons.data.uuid(config.AddonUUID).table(METADATA_ADAL_TABLE_NAME).find(findOptions);
 			if(downloaded.length === 1)
 			{
-
-				response = {
-					...downloaded[0],
-					URL: `${CdnServers[this.environment]}/${downloaded[0].Key}`
-				}
-
+				delete downloaded[0].BasePath
 				console.log(`File Downloaded`);
+				res = downloaded[0];
 			}
 
-			return response;
+			return res;
 		}
 		catch (err) 
 		{
@@ -394,13 +392,18 @@ class PfsService
 		try 
 		{
 			const findOptions: FindOptions = {
-				where: `Folder=${this.request.query.folder.slice(0, -1)}${this.request.query.where ? "AND this.request.query.where" : ""}`,
+				where: `Folder=${this.request.query.folder.slice(0, -1)} AND BasePath='${this.DistributorUUID}/${this.AddonUUID}/'${this.request.query.where ?? ""}`,
 				...(this.request.query.page_size && {page_size: parseInt(this.request.query.page_size)}),
 				...(this.request.query.page && {page: parseInt(this.request.query.page)}),
 				...(this.request.query.fields && {fields: this.request.query.fields}),
 			}
 
 			const res =  await this.papiClient.addons.data.uuid(config.AddonUUID).table(METADATA_ADAL_TABLE_NAME).find(findOptions);
+
+			res.map(file => {
+				delete file.BasePath;
+				return file
+			});
 
 			console.log(`Files listing done successfully.`);
 			return res;
