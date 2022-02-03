@@ -383,7 +383,9 @@ class PfsService
 			}
 			else 
 			{ //Couldn't find results
-				const err: any = new Error(`Could not find requested item: ${findOptions.where}`);
+				console.error(`Could not find requested item: '${downloadKey}'`);
+
+				const err: any = new Error(`Could not find requested item: '${this.getRelativePath(downloadKey)}'`);
 				err.code = 404;
 				throw err;
 			}
@@ -404,6 +406,14 @@ class PfsService
 	{
 		try 
 		{
+			await this.getDoesFileExist();
+			if(!this.doesFileExist && this.request.query.folder != '/'){ // The root folder is not created, and therefore isn't listed in the adal table. It is tere by default.
+				console.error(`Could not find requested folder: '${this.getAbsolutePath(this.request.query.folder)}'`);
+
+				const err: any = new Error(`Could not find requested folder: ${this.request.query.folder}`);
+				err.code = 404;
+				throw err;
+			}
 			const requestedFolder = this.request.query.folder.endsWith('/') ? this.request.query.folder.slice(0, -1) : this.request.query.folder; //handle trailing '/'
 			const requestedFolderAbsolutePath = this.getAbsolutePath(requestedFolder);
 
