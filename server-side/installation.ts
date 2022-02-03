@@ -46,10 +46,6 @@ async function createMetadataADALTable(papiClient: PapiClient)
 				Type: 'String',
 				Indexed: true
 			},
-			BasePath: {
-				Type: 'String',
-				Indexed: true
-			},
 			URL: {
 				Type: 'String'
 			}

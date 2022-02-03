@@ -1,7 +1,7 @@
 import { FindOptions, PapiClient } from '@pepperi-addons/papi-sdk'
 import { Client, Request } from '@pepperi-addons/debug-server';
 import jwtDecode from 'jwt-decode';
-import { CdnServers, dataURLRegex, IPfsDownloadObjectResponse, IPfsListFilesResultObjects, S3Buckets, METADATA_ADAL_TABLE_NAME } from './constants';
+import { CdnServers, dataURLRegex, IPfsListFilesResultObjects, S3Buckets, METADATA_ADAL_TABLE_NAME } from './constants';
 
 import fetch from 'node-fetch';
 import config from '../addon.config.json';
@@ -17,6 +17,7 @@ class PfsService
 	readonly environment: string;
 	readonly MIME_FIELD_IS_MISSING = "Missing mandatory field 'MIME'";
 	syncTypes = ["None", "Device", "DeviceThumbnail", "Always"];
+	doesFileExist?: boolean = undefined;
 
 	constructor(private client: Client, private request: Request) 
 	{
@@ -68,7 +69,9 @@ class PfsService
 	 */
 	private getRelativePath(absolutePath: string): string 
 	{
-		return absolutePath.split(`${this.DistributorUUID}/${this.AddonUUID}/`)[1];
+		const relativePath = absolutePath.split(`${this.DistributorUUID}/${this.AddonUUID}/`)[1]
+		const res = relativePath === '' ? '/' : relativePath; // Handle root folder case
+		return res;
 	}
 
 	async uploadToAWS(): Promise<boolean> 
@@ -76,18 +79,17 @@ class PfsService
 		let res:any = {};
 		try 
 		{
+			this.doesFileExist = await this.getDoesFileExist();
 			await this.validateAddonSecretKey();
-
-			const doesFileExist: boolean = !!(await this.getFileIfExistsOnS3());
-			this.validateFieldsForUpload(doesFileExist);
+			this.validateFieldsForUpload();
 
 			if(this.request.body.Key.endsWith('/')) 
 			{ // if the key ends with '/' it means we are creating a folder 
-				res = await this.createFolder(doesFileExist);
+				res = await this.createFolder();
 			}
 			else //file post
 			{
-				res = await this.postFile(doesFileExist);
+				res = await this.postFile();
 			}
 		}
 		catch (err) 
@@ -101,15 +103,28 @@ class PfsService
 		return res;
 	}
 
-	upsertMetadataToAdal(doesFileExist: boolean) 
+	async upsertMetadataToAdal() 
 	{
-		const metadata = this.getMetadata(doesFileExist);	
-		return this.papiClient.addons.data.uuid(config.AddonUUID).table(METADATA_ADAL_TABLE_NAME).upsert(metadata);
+		const metadata = this.getMetadata();	
+		const res =  await this.papiClient.addons.data.uuid(config.AddonUUID).table(METADATA_ADAL_TABLE_NAME).upsert(metadata);
+
+		if(res.Key)
+		{
+			res.Key = this.getRelativePath(res.Key);
+			res.Folder = this.getRelativePath(res.Folder);
+		}
+		
+		return res;
 	}
 
-	private async getFileIfExistsOnS3() 
+	private async getDoesFileExist() 
 	{
-		let file: any = {};
+		if(this.doesFileExist != undefined)
+		{
+			return this.doesFileExist;
+		}
+		
+		let file: any = null;
 
 		try 
 		{
@@ -122,21 +137,23 @@ class PfsService
 				console.log(e.message);
 			}
 		}
-		return file;
+
+		this.doesFileExist = !!file;
+		return this.doesFileExist;
 	}
 
-	private async postFile(doesFileExist: boolean) 
+	private async postFile() 
 	{
 		let res: any = {};
 
-		let setPresignedURL: boolean = false;
+		let setPresignedURL = false;
 		const entryname: string = this.getAbsolutePath(this.request.body.Key);
 		const params =  {
 			Bucket: S3Buckets[this.environment],
 			Key: entryname
 		};
 		
-		if(!doesFileExist && !this.request.body.URI)
+		if(!this.doesFileExist && !this.request.body.URI)
 		{
 			 // in case "URI" is not provided on Creation (that is why the check if file exists) a PresignedURL will be returned 
 			 this.request.body.URI = `data:${this.request.body.MIME};base64,`; // creating an empty file to set all the metadata
@@ -165,10 +182,9 @@ class PfsService
 			console.log(`File uploaded successfully to ${uploaded.Location}`);
 		}
 
-		await this.upsertMetadataToAdal(doesFileExist);
+		res = await this.upsertMetadataToAdal();
 		console.log(`File metadata successfuly uploaded to ADAL.`);
 
-		res = await this.downloadFromAWS();
 
 
 		if(setPresignedURL)
@@ -177,13 +193,11 @@ class PfsService
 		return res;
 	}
 
-	private async createFolder(doesFileExist:boolean) 
+	private async createFolder() 
 	{
 		if(this.request.body.MIME == 'pepperi/folder')
 		{
-			const upload = await this.upsertMetadataToAdal(doesFileExist);
-			delete upload.BasePath;
-			return upload;
+			return await this.upsertMetadataToAdal();			
 		}
 		else
 		{
@@ -211,7 +225,7 @@ class PfsService
 		return !!s.match(dataURLRegex);
 	}
 
-	private validateFieldsForUpload(doesFileExist: boolean) 
+	private validateFieldsForUpload() 
 	{
 		if (!this.request.body.Key) 
 		{
@@ -226,11 +240,11 @@ class PfsService
 		else if(this.request.body.MIME == 'pepperi/folder' && !this.request.body.Key.endsWith('/'))
 		{
 			// if 'pepperi/folder' is provided on creation and the key is not ending with '/' the POST should fail
-			throw new Error("On creation of a folder, the key must ends with '/'");
+			throw new Error("On creation of a folder, the key must end with '/'");
 
 		}
 
-		if(!doesFileExist && !this.request.body.MIME )
+		if(!this.doesFileExist && !this.request.body.MIME )
 		{
 			throw new Error("Missing mandatory field 'MIME'");
 
@@ -307,7 +321,7 @@ class PfsService
 	 * Returns a Metadata object representing the needed metadata.
 	 * @returns a dictionary representation of the metadata.
 	 */
-	protected getMetadata(doesFileExist:boolean): {Key: string, Sync: string, Hidden: boolean, MIME: string, Folder: string, Description?: string}
+	protected getMetadata()
 	{
 
 		const pathFoldersList = this.request.body.Key.split('/');
@@ -319,15 +333,14 @@ class PfsService
 		const containingFolder = pathFoldersList.join('/');
 		
 		const metadata = {
-			Key: this.request.body.Key,
-			...(!doesFileExist && { // These fields are static, and are derived from the files's Key, which is immutable.
-									// We need to create them only once, and they are never changed.
-				Name: `${fileName}${this.request.body.Key.endsWith('/') ? '/' :''}`,
-				Folder: containingFolder,
-				BasePath: `${this.DistributorUUID}/${this.AddonUUID}/`
+			Key: this.getAbsolutePath(this.request.body.Key),
+			...(!this.doesFileExist && {// These fields are static, and are derived from the files's Key, which is immutable.
+										// We need to create them only once, and they are never changed.
+				Name: `${fileName}${this.request.body.Key.endsWith('/') ? '/' :''}`, // Add the dropped '/' for folders.
+				Folder: this.getAbsolutePath(containingFolder),
 			}),
-			...(!doesFileExist && !this.request.body.Key.endsWith('/') && {URL: `${CdnServers[this.environment]}/${this.getAbsolutePath(this.request.body.Key)}`}), //Add URL if this isn't a folder and this file doesn't exist.
-			...((this.request.body.MIME || !doesFileExist) && {MIME: this.getMimeType()}), // Set MIME if it was passed, or if this file doesn't exist yet.
+			...(!this.doesFileExist && !this.request.body.Key.endsWith('/') && {URL: `${CdnServers[this.environment]}/${this.getAbsolutePath(this.request.body.Key)}`}), //Add URL if this isn't a folder and this file doesn't exist.
+			...((this.request.body.MIME || !this.doesFileExist) && {MIME: this.getMimeType()}), // Set MIME if it was passed, or if this file doesn't exist yet.
 			...(this.request.body.Sync && {Sync: this.request.body.Sync}), // Set Sync if it was passed
 			...(this.request.body.Hidden && {Hidden: this.request.body.Hidden}), // Set Hidden if it was passed
 			...(this.request.body.Description && {Description: this.request.body.Description}) // Add a description if it was passed.
@@ -342,28 +355,36 @@ class PfsService
 	 */
 	async downloadFromAWS() 
 	{
-		const downloadKey = this.request.body && this.request.body.Key ? this.request.body.Key : this.request.query.Key; 
+		const downloadKey = this.getAbsolutePath(this.request.body && this.request.body.Key ? this.request.body.Key : this.request.query.Key); 
 		console.log(`Attempting to download the following key from ADAL: ${downloadKey}`)
 		try 
 		{
 	
-			let res: any = {};
+			let res: any = null;
 			// Downloading files from the bucket
 			const findOptions: FindOptions = {
-				where: `Key='${downloadKey}' AND BasePath='${this.DistributorUUID}/${this.AddonUUID}/'`
+				where: `Key='${downloadKey}'`
 			}
 
 			const downloaded = await this.papiClient.addons.data.uuid(config.AddonUUID).table(METADATA_ADAL_TABLE_NAME).find(findOptions);
 			if(downloaded.length === 1)
 			{
-				delete downloaded[0].BasePath
 				console.log(`File Downloaded`);
 				res = downloaded[0];
+				res.Key = this.getRelativePath(res.Key);
+				res.Folder = this.getRelativePath(res.Folder);
 			}
-			else if(downloaded.length > 1){
+			else if(downloaded.length > 1)
+			{
 				const err: any = new Error(`Internal error.`);
 				console.error(`Internal error. Found more than one file with the given key. Where clause: ${findOptions.where}`);
 				err.code = 500;
+				throw err;
+			}
+			else 
+			{ //Couldn't find results
+				const err: any = new Error(`Could not find requested item: ${findOptions.where}`);
+				err.code = 404;
 				throw err;
 			}
 
@@ -379,13 +400,15 @@ class PfsService
 		}
 	}
 
-	async listFiles()//: Promise<IPfsListFilesResultObjects> 
+	async listFiles()
 	{
-		const response: IPfsListFilesResultObjects = [];
 		try 
 		{
+			const requestedFolder = this.request.query.folder.endsWith('/') ? this.request.query.folder.slice(0, -1) : this.request.query.folder; //handle trailing '/'
+			const requestedFolderAbsolutePath = this.getAbsolutePath(requestedFolder);
+
 			const findOptions: FindOptions = {
-				where: `Folder=${this.request.query.folder.slice(0, -1)} AND BasePath='${this.DistributorUUID}/${this.AddonUUID}/'${this.request.query.where ?? ""}`,
+				where: `Folder='${requestedFolderAbsolutePath}'${this.request.query.where ?? ""}`,
 				...(this.request.query.page_size && {page_size: parseInt(this.request.query.page_size)}),
 				...(this.request.query.page && {page: parseInt(this.request.query.page)}),
 				...(this.request.query.fields && {fields: this.request.query.fields}),
@@ -393,8 +416,14 @@ class PfsService
 
 			const res =  await this.papiClient.addons.data.uuid(config.AddonUUID).table(METADATA_ADAL_TABLE_NAME).find(findOptions);
 
-			res.map(file => {
-				delete file.BasePath;
+			res.map(file => 
+			{
+				if(file.Key)
+				{
+					file.Key = this.getRelativePath(file.Key);
+					file.Folder = this.getRelativePath(file.Folder);
+				}
+
 				return file
 			});
 
