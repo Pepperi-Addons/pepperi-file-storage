@@ -418,9 +418,9 @@ class PfsService
 			const requestedFolderAbsolutePath = this.getAbsolutePath(requestedFolder);
 
 			const findOptions: FindOptions = {
-				where: `Folder='${requestedFolderAbsolutePath}'${this.request.query.where ?? ""}`,
+				where: `Folder='${requestedFolderAbsolutePath}'${this.request.query.where ? "AND(" + this.request.query.where + ")" :""}`,
 				...(this.request.query.page_size && {page_size: parseInt(this.request.query.page_size)}),
-				...(this.request.query.page && {page: parseInt(this.request.query.page)}),
+				...(this.request.query.page && {page: this.getRequestedPageNumber()}),
 				...(this.request.query.fields && {fields: this.request.query.fields}),
 			}
 
@@ -449,6 +449,16 @@ class PfsService
 				throw err;
 			}
 		}
+	}
+	
+	private getRequestedPageNumber(): number{
+		let res = parseInt(this.request.query.page);
+		if(res === 0){
+			res++;
+		}
+
+		return res;
+		
 	}
 }
 
