@@ -231,25 +231,15 @@ class PfsService
 		{
 			throw new Error("Missing mandatory field 'Key'");
 		}
-		else if (this.request.body.Key.endsWith('/') && !this.request.body.MIME) 
-		{ 
-			// if the key ends with '/' it means we are creating a folder,so MIME is mandatory because it is mandatory on creation
-			//(need to check in other place if it is not folder creation, if the file exists anf if not then it is creation and MIME id mandatory also)
+		else if(!this.doesFileExist && !this.request.body.MIME )
+		{
 			throw new Error(this.MIME_FIELD_IS_MISSING);
 		}
 		else if(this.request.body.MIME == 'pepperi/folder' && !this.request.body.Key.endsWith('/'))
 		{
 			// if 'pepperi/folder' is provided on creation and the key is not ending with '/' the POST should fail
 			throw new Error("On creation of a folder, the key must end with '/'");
-
 		}
-
-		if(!this.doesFileExist && !this.request.body.MIME )
-		{
-			throw new Error("Missing mandatory field 'MIME'");
-
-		}
-
 	}
 
 	private async validateAddonSecretKey() 
@@ -407,7 +397,8 @@ class PfsService
 		try 
 		{
 			await this.getDoesFileExist();
-			if(!this.doesFileExist && this.request.query.folder != '/'){ // The root folder is not created, and therefore isn't listed in the adal table. It is tere by default.
+			if(!this.doesFileExist && this.request.query.folder != '/') // The root folder is not created, and therefore isn't listed in the adal table. It is tere by default.
+			{
 				console.error(`Could not find requested folder: '${this.getAbsolutePath(this.request.query.folder)}'`);
 
 				const err: any = new Error(`Could not find requested folder: ${this.request.query.folder}`);
@@ -435,7 +426,8 @@ class PfsService
 				{
 					file.Key = this.getRelativePath(file.Key);
 				}
-				if(file.Folder){ // the Fields parameter might cause adal to reutrn objects without a Folder field.
+				if(file.Folder) // the Fields parameter might cause adal to reutrn objects without a Folder field.
+				{
 					file.Folder = this.getRelativePath(file.Folder);
 				}
 
@@ -456,9 +448,11 @@ class PfsService
 		}
 	}
 	
-	private getRequestedPageNumber(): number{
+	private getRequestedPageNumber(): number
+	{
 		let res = parseInt(this.request.query.page);
-		if(res === 0){
+		if(res === 0)
+		{
 			res++;
 		}
 

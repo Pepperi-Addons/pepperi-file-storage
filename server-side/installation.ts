@@ -10,6 +10,7 @@ The error Message is importent! it will be written in the audit log and help the
 import { Client, Request } from '@pepperi-addons/debug-server'
 import { PapiClient } from '@pepperi-addons/papi-sdk';
 import { METADATA_ADAL_TABLE_NAME } from './constants';
+import semver from 'semver';
 
 export async function install(client: Client, request: Request): Promise<any> 
 {
@@ -18,6 +19,37 @@ export async function install(client: Client, request: Request): Promise<any>
 	await createMetadataADALTable(papiClient);
 
 	return { success: true, resultObject: {} }
+}
+
+export async function uninstall(client: Client, request: Request): Promise<any> 
+{
+	return { success: true, resultObject: {} }
+}
+
+export async function upgrade(client: Client, request: Request): Promise<any> 
+{
+	if (request.body.FromVersion && semver.compare(request.body.FromVersion, '0.0.39') < 0)
+	{
+		const papiClient = createPapiClient(client);
+		await createMetadataADALTable(papiClient);
+	}
+	return { success: true, resultObject: {} }
+}
+
+export async function downgrade(client: Client, request: Request): Promise<any> 
+{
+	return { success: true, resultObject: {} }
+}
+
+function createPapiClient(Client: Client)
+{
+	return new PapiClient({
+		token: Client.OAuthAccessToken,
+		baseURL: Client.BaseURL,
+		addonUUID: Client.AddonUUID,
+		addonSecretKey: Client.AddonSecretKey,
+		actionUUID: Client.ActionUUID,
+	});
 }
 
 async function createMetadataADALTable(papiClient: PapiClient) 
@@ -50,31 +82,5 @@ async function createMetadataADALTable(papiClient: PapiClient)
 				Type: 'String'
 			}
 		} as any,
-	});
-}
-
-export async function uninstall(client: Client, request: Request): Promise<any> 
-{
-	return { success: true, resultObject: {} }
-}
-
-export async function upgrade(client: Client, request: Request): Promise<any> 
-{
-	return { success: true, resultObject: {} }
-}
-
-export async function downgrade(client: Client, request: Request): Promise<any> 
-{
-	return { success: true, resultObject: {} }
-}
-
-function createPapiClient(Client: Client)
-{
-	return new PapiClient({
-		token: Client.OAuthAccessToken,
-		baseURL: Client.BaseURL,
-		addonUUID: Client.AddonUUID,
-		addonSecretKey: Client.AddonSecretKey,
-		actionUUID: Client.ActionUUID,
 	});
 }
