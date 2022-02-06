@@ -422,6 +422,9 @@ class PfsService
 				...(this.request.query.page_size && {page_size: parseInt(this.request.query.page_size)}),
 				...(this.request.query.page && {page: this.getRequestedPageNumber()}),
 				...(this.request.query.fields && {fields: this.request.query.fields}),
+				...(this.request.query.order_by && {order_by: this.request.query.order_by}),
+				...(this.request.query.include_count && {include_count: this.request.query.include_count}),
+				...(this.request.query.include_deleted && {include_deleted: this.request.query.include_deleted}),
 			}
 
 			const res =  await this.papiClient.addons.data.uuid(config.AddonUUID).table(METADATA_ADAL_TABLE_NAME).find(findOptions);
@@ -431,6 +434,8 @@ class PfsService
 				if(file.Key)
 				{
 					file.Key = this.getRelativePath(file.Key);
+				}
+				if(file.Folder){ // the Fields parameter might cause adal to reutrn objects without a Folder field.
 					file.Folder = this.getRelativePath(file.Folder);
 				}
 
