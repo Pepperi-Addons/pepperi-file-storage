@@ -42,3 +42,9 @@ export const dataURLRegex = /^\s*data:([a-z]+\/[a-z]+(;[a-z\-]+\=[a-z\-]+)?)?(;b
 
 export const METADATA_ADAL_TABLE_NAME = "S3ObjectsMetadata";
 
+export interface IPfsDal{
+    uploadFileData(Key: string, Body: Buffer): Promise<any>;
+    uploadFileMetadata(metadata: any, doesFileExist: boolean): Promise<any>;
+    downloadFileMetadata(Key: string): Promise<any>;
+    listFolderContents(FolderName: string): Promise<any>;
+}

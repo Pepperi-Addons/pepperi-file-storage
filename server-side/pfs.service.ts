@@ -1,8 +1,7 @@
 import { FindOptions, PapiClient } from '@pepperi-addons/papi-sdk'
 import { Client, Request } from '@pepperi-addons/debug-server';
 import jwtDecode from 'jwt-decode';
-import { CdnServers, dataURLRegex, IPfsListFilesResultObjects, S3Buckets, METADATA_ADAL_TABLE_NAME } from './constants';
-
+import { dataURLRegex, S3Buckets, IPfsDal } from './constants';
 import fetch from 'node-fetch';
 import config from '../addon.config.json';
 
@@ -19,7 +18,7 @@ class PfsService
 	syncTypes = ["None", "Device", "DeviceThumbnail", "Always"];
 	doesFileExist?: boolean = undefined;
 
-	constructor(private client: Client, private request: Request) 
+	constructor(private client: Client, private request: Request, private dal: IPfsDal) 
 	{
 		this.papiClient = new PapiClient({
 			baseURL: client.BaseURL,
@@ -74,7 +73,7 @@ class PfsService
 		return res;
 	}
 
-	async uploadToAWS(): Promise<boolean> 
+	async uploadFile(): Promise<boolean> 
 	{
 		let res:any = {};
 		try 
@@ -96,24 +95,18 @@ class PfsService
 		{
 			if (err instanceof Error) 
 			{
-				console.error(`Could not upload file ${this.request.body.Key} to S3. ${err.message}`);
+				console.error(`Could not upload file ${this.request.body.Key}. ${err.message}`);
 			}
 			throw err;
 		}
 		return res;
 	}
 
-	async upsertMetadataToAdal() 
+	async uploadFileMetadata() 
 	{
 		const metadata = this.getMetadata();	
-		const res =  await this.papiClient.addons.data.uuid(config.AddonUUID).table(METADATA_ADAL_TABLE_NAME).upsert(metadata);
+		const res = await this.dal.uploadFileMetadata(metadata, await this.getDoesFileExist());
 
-		if(res.Key)
-		{
-			res.Key = this.getRelativePath(res.Key);
-			res.Folder = this.getRelativePath(res.Folder);
-		}
-		
 		return res;
 	}
 
@@ -128,7 +121,7 @@ class PfsService
 
 		try 
 		{
-			file = await this.downloadFromAWS();
+			file = await this.downloadFile();
 		}
 		catch (e) 
 		{ 
@@ -146,63 +139,57 @@ class PfsService
 	{
 		let res: any = {};
 
-		let setPresignedURL = false;
-		const entryname: string = this.getAbsolutePath(this.request.body.Key);
-		const params =  {
-			Bucket: S3Buckets[this.environment],
-			Key: entryname
-		};
+		const setPresignedURL = false;
 		
-		if(!this.doesFileExist && !this.request.body.URI)
-		{
-			 // in case "URI" is not provided on Creation (that is why the check if file exists) a PresignedURL will be returned 
-			 this.request.body.URI = `data:${this.request.body.MIME};base64,`; // creating an empty file to set all the metadata
-			 setPresignedURL = true;
-		}
+		// Using ADAL, I think this IF is now redundant. Metdata can be uploaded whether or not data is uploaded to S3.
+		// if(!this.doesFileExist && !this.request.body.URI)
+		// {
+		// 	 // in case "URI" is not provided on Creation (that is why the check if file exists) a PresignedURL will be returned 
+		// 	 this.request.body.URI = `data:${this.request.body.MIME};base64,`; // creating an empty file to set all the metadata
+		// 	 setPresignedURL = true;
+		// }
 		if (this.request.body.URI)
 		{
-			let buf: Buffer;
-			if (this.isDataURL(this.request.body.URI)) 
-			{ // dataURI get the base 64 part
-				buf = Buffer.from(this.request.body.URI.match(dataURLRegex)[4], 'base64');
-			}
-			else 
-			{ //the URI is URL - downalod the data
-				const respons = await fetch(this.request.body.URI, { method: `GET` });
-				const arrayData = await respons.arrayBuffer();
-				buf = Buffer.from(arrayData);
-			}
-	
-			params["Body"] = buf;
-			params["ContentType"] = this.getMimeType();
-			params["ContentEncoding"] = 'base64';
-
-			// Uploading files to the bucket (sync)
-			const uploaded = await this.s3.upload(params).promise();
-			console.log(`File uploaded successfully to ${uploaded.Location}`);
+			await this.uploadFileData();
 		}
 
-		res = await this.upsertMetadataToAdal();
+		res = await this.uploadFileMetadata();
 		console.log(`File metadata successfuly uploaded to ADAL.`);
 
-
-
 		if(setPresignedURL)
-			res["PresignedURL"] = await this.generatePreSignedURL(params.Key); // creating presignedURL
+			res["PresignedURL"] = await this.generatePreSignedURL(this.getAbsolutePath(this.request.body.Key)); // creating presignedURL
 
 		return res;
 	}
 
+	private async uploadFileData() 
+	{
+		let buf: Buffer;
+
+		if (this.isDataURL(this.request.body.URI)) // dataURI get the base 64 part
+		{ 
+			buf = Buffer.from(this.request.body.URI.match(dataURLRegex)[4], 'base64');
+		}
+		else //the URI is URL - downalod the data
+		{
+			buf = await this.downloadFileBufferFromURL();
+		}
+
+		await this.dal.uploadFileData(this.request.body.Key, buf);
+	}
+
+	private async downloadFileBufferFromURL() 
+	{
+		const respons = await fetch(this.request.body.URI, { method: `GET` });
+		const arrayData = await respons.arrayBuffer();
+		const buf = Buffer.from(arrayData);
+
+		return buf;
+	}
+
 	private async createFolder() 
 	{
-		if(this.request.body.MIME == 'pepperi/folder')
-		{
-			return await this.upsertMetadataToAdal();			
-		}
-		else
-		{
-			throw new Error("Folder MIME must be 'pepperi/folder'");
-		}
+		return await this.uploadFileMetadata();			
 	}
 
 	async generatePreSignedURL(entryName)
@@ -235,10 +222,15 @@ class PfsService
 		{
 			throw new Error(this.MIME_FIELD_IS_MISSING);
 		}
-		else if(this.request.body.MIME == 'pepperi/folder' && !this.request.body.Key.endsWith('/'))
+		else if(!this.doesFileExist && this.request.body.MIME == 'pepperi/folder' && !this.request.body.Key.endsWith('/'))
 		{
-			// if 'pepperi/folder' is provided on creation and the key is not ending with '/' the POST should fail
+			// if 'pepperi/folder' is provided on creation and the key is not ending with '/', the POST should fail
 			throw new Error("On creation of a folder, the key must end with '/'");
+		}
+		else if(this.request.body.MIME != 'pepperi/folder' && this.request.body.Key.endsWith('/'))
+		{
+			// a folder's MIME type should always be 'pepperi/folder', otherwise the POST should fail
+			throw new Error("A filename cannot contain a '/'.");
 		}
 	}
 
@@ -279,21 +271,6 @@ class PfsService
 
 	}
 
-	private isValidURL(s): boolean 
-	{
-		let url: URL;
-		try 
-		{
-			url = new URL(s);
-		}
-		catch (e) 
-		{
-			return false;
-		}
-
-		return url.protocol === "http:" || url.protocol === "https:";
-	}
-
 	private getMimeType(): string 
 	{
 		let MIME = this.request.body.MIME;
@@ -315,23 +292,23 @@ class PfsService
 	{
 
 		const pathFoldersList = this.request.body.Key.split('/');
-		if (this.request.body.Key.endsWith('/')) 
-		{//This is a new folder being created...
+		if (this.request.body.Key.endsWith('/'))  //This is a new folder being created. We need to pop the trailing '' after splitting.
+		{
 			pathFoldersList.pop();
 		}
 		const fileName = pathFoldersList.pop();
 		const containingFolder = pathFoldersList.join('/');
 		
 		const metadata = {
-			Key: this.getAbsolutePath(this.request.body.Key),
+			Key: this.request.body.Key,
 			...(!this.doesFileExist && {// These fields are static, and are derived from the files's Key, which is immutable.
-										// We need to create them only once, and they are never changed.
+				// We need to create them only once, and they are never changed.
 				Name: `${fileName}${this.request.body.Key.endsWith('/') ? '/' :''}`, // Add the dropped '/' for folders.
-				Folder: this.getAbsolutePath(containingFolder),
+				Folder: containingFolder,
 			}),
-			...(!this.doesFileExist && !this.request.body.Key.endsWith('/') && {URL: `${CdnServers[this.environment]}/${this.getAbsolutePath(this.request.body.Key)}`}), //Add URL if this isn't a folder and this file doesn't exist.
 			...((this.request.body.MIME || !this.doesFileExist) && {MIME: this.getMimeType()}), // Set MIME if it was passed, or if this file doesn't exist yet.
 			...(this.request.body.Sync && {Sync: this.request.body.Sync}), // Set Sync if it was passed
+			...(!this.doesFileExist && !this.request.body.Sync && {Sync: this.syncTypes[0]}), // If file doesn't exist, and Sync wasn't passed, default to 'None'
 			...(this.request.body.Hidden && {Hidden: this.request.body.Hidden}), // Set Hidden if it was passed
 			...(this.request.body.Description && {Description: this.request.body.Description}) // Add a description if it was passed.
 		};
@@ -340,56 +317,13 @@ class PfsService
 	}
 
 	/**
-	 * Download the file from AWS.
+	 * Download the file's metadata.
 	 * @returns 
 	 */
-	async downloadFromAWS() 
+	async downloadFile() 
 	{
-		const downloadKey = this.getAbsolutePath(this.request.body && this.request.body.Key ? this.request.body.Key : this.request.query.Key); 
-		console.log(`Attempting to download the following key from ADAL: ${downloadKey}`)
-		try 
-		{
-	
-			let res: any = null;
-			// Downloading files from the bucket
-			const findOptions: FindOptions = {
-				where: `Key='${downloadKey}'`
-			}
-
-			const downloaded = await this.papiClient.addons.data.uuid(config.AddonUUID).table(METADATA_ADAL_TABLE_NAME).find(findOptions);
-			if(downloaded.length === 1)
-			{
-				console.log(`File Downloaded`);
-				res = downloaded[0];
-				res.Key = this.getRelativePath(res.Key);
-				res.Folder = this.getRelativePath(res.Folder);
-			}
-			else if(downloaded.length > 1)
-			{
-				const err: any = new Error(`Internal error.`);
-				console.error(`Internal error. Found more than one file with the given key. Where clause: ${findOptions.where}`);
-				err.code = 500;
-				throw err;
-			}
-			else 
-			{ //Couldn't find results
-				console.error(`Could not find requested item: '${downloadKey}'`);
-
-				const err: any = new Error(`Could not find requested item: '${this.getRelativePath(downloadKey)}'`);
-				err.code = 404;
-				throw err;
-			}
-
-			return res;
-		}
-		catch (err) 
-		{
-			if (err instanceof Error) 
-			{
-				console.error(`${err.message}`);
-			}
-			throw (err);
-		}
+		const downloadKey = (this.request.body && this.request.body.Key) ? this.request.body.Key : this.request.query.Key; 
+		return await this.dal.downloadFileMetadata(downloadKey)
 	}
 
 	async listFiles()
@@ -397,7 +331,7 @@ class PfsService
 		try 
 		{
 			await this.getDoesFileExist();
-			if(!this.doesFileExist && this.request.query.folder != '/') // The root folder is not created, and therefore isn't listed in the adal table. It is tere by default.
+			if(!this.doesFileExist && this.request.query.folder != '/') // The root folder is not created, and therefore isn't listed in the adal table. It is there by default.
 			{
 				console.error(`Could not find requested folder: '${this.getAbsolutePath(this.request.query.folder)}'`);
 
@@ -406,36 +340,8 @@ class PfsService
 				throw err;
 			}
 			const requestedFolder = this.request.query.folder.endsWith('/') ? this.request.query.folder.slice(0, -1) : this.request.query.folder; //handle trailing '/'
-			const requestedFolderAbsolutePath = this.getAbsolutePath(requestedFolder);
 
-			const findOptions: FindOptions = {
-				where: `Folder='${requestedFolderAbsolutePath}'${this.request.query.where ? "AND(" + this.request.query.where + ")" :""}`,
-				...(this.request.query.page_size && {page_size: parseInt(this.request.query.page_size)}),
-				...(this.request.query.page && {page: this.getRequestedPageNumber()}),
-				...(this.request.query.fields && {fields: this.request.query.fields}),
-				...(this.request.query.order_by && {order_by: this.request.query.order_by}),
-				...(this.request.query.include_count && {include_count: this.request.query.include_count}),
-				...(this.request.query.include_deleted && {include_deleted: this.request.query.include_deleted}),
-			}
-
-			const res =  await this.papiClient.addons.data.uuid(config.AddonUUID).table(METADATA_ADAL_TABLE_NAME).find(findOptions);
-
-			res.map(file => 
-			{
-				if(file.Key)
-				{
-					file.Key = this.getRelativePath(file.Key);
-				}
-				if(file.Folder) // the Fields parameter might cause adal to reutrn objects without a Folder field.
-				{
-					file.Folder = this.getRelativePath(file.Folder);
-				}
-
-				return file
-			});
-
-			console.log(`Files listing done successfully.`);
-			return res;
+			return this.dal.listFolderContents(requestedFolder);
 
 		}
 		catch (err) 
@@ -448,17 +354,6 @@ class PfsService
 		}
 	}
 	
-	private getRequestedPageNumber(): number
-	{
-		let res = parseInt(this.request.query.page);
-		if(res === 0)
-		{
-			res++;
-		}
-
-		return res;
-		
-	}
 }
 
 export default PfsService;
