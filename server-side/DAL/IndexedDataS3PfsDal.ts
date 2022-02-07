@@ -1,34 +1,19 @@
 import { Client, Request } from '@pepperi-addons/debug-server';
-import { CdnServers, dataURLRegex, IPfsDal, METADATA_ADAL_TABLE_NAME, S3Buckets } from "./constants";
-import jwtDecode from 'jwt-decode';
+import { CdnServers, METADATA_ADAL_TABLE_NAME } from "../constants";
 import { PapiClient } from '@pepperi-addons/papi-sdk/dist/papi-client';
-import config from '../addon.config.json';
+import config from '../../addon.config.json';
 import { FindOptions } from '@pepperi-addons/papi-sdk';
-
+import { AbstractS3PfsDal } from './AbstractS3PfsDal';
 
 const AWS = require('aws-sdk'); // AWS is part of the lambda's environment. Importing it will result in it being rolled up redundently.
 
-
-export class IndexedDataS3DAL implements IPfsDal
+export class IndexedDataS3PfsDal extends AbstractS3PfsDal 
 {
-	private s3: any;
-	private environment: any;
-	private DistributorUUID: any;
-	private AddonUUID: any;
-	private S3Bucket: any;
 	private papiClient: PapiClient;
     
-	constructor(private client: Client, private request: Request)
+	constructor(client: Client, request: Request)
 	{
-
-		// const accessKeyId=""
-		// const secretAccessKey=""
-		// const sessionToken=""
-		// AWS.config.update({
-		// 	accessKeyId,
-		// 	secretAccessKey,
-		// 	sessionToken
-		// });
+        super(client, request);
 				 
 		this.papiClient = new PapiClient({
 			baseURL: client.BaseURL,
@@ -37,13 +22,6 @@ export class IndexedDataS3DAL implements IPfsDal
 			actionUUID: client.ActionUUID,
 			addonSecretKey: client.AddonSecretKey
 		});
-          
-		this.environment = jwtDecode(client.OAuthAccessToken)['pepperi.datacenter'];
-		this.DistributorUUID = jwtDecode(client.OAuthAccessToken)['pepperi.distributoruuid'];
-		this.AddonUUID = this.request.query.addon_uuid;
-		this.s3 = new AWS.S3();
-		this.S3Bucket = S3Buckets[this.environment];
-
 	}
 
 	async listFolderContents(folderName: string): Promise<any> 
@@ -80,41 +58,6 @@ export class IndexedDataS3DAL implements IPfsDal
 		return res;
 	}
 
-	async uploadFileData(Key: string, Body: Buffer): Promise<any> 
-	{
-		const params: any = {};
-
-		// Create S3 params
-		params.Bucket = this.S3Bucket;
-		params.Key = this.getAbsolutePath(Key);
-		params.Body = Body;
-		params.ContentType = this.getMimeType();
-		params.ContentEncoding = 'base64';
-
-		// Upload to S3 bucket.
-		const uploaded = await this.s3.upload(params).promise();
-		console.log(`File uploaded successfully to ${uploaded.Location}`);
-
-		return uploaded;
-	}
-
-	private getMimeType(): any 
-	{
-		let MIME = this.request.body.MIME;
-		if(this.request.body.URI && this.isDataURL(this.request.body.URI))
-		{
-			// Get mime type from base64 data
-			MIME = this.request.body.URI.match(/[^:]\w+\/[\w-+\d.]+(?=;|,)/)[0];
-		}
-
-		return MIME;
-	}
-
-	private isDataURL(s) 
-	{
-		return !!s.match(dataURLRegex);
-	}
-
 	async uploadFileMetadata(metadata: any, doesFileExist: boolean): Promise<any> 
 	{
 		// Set metdata to absolute paths
@@ -146,8 +89,8 @@ export class IndexedDataS3DAL implements IPfsDal
 		{
 			metadata.Folder = this.getAbsolutePath(metadata.Folder);
 
-			if (!metadata.Key.endsWith('/')) 
-			{ //Add URL if this isn't a folder and this file doesn't exist.
+			if (!metadata.Key.endsWith('/')) //Add URL if this isn't a folder and this file doesn't exist.
+			{
 				metadata.URL = `${CdnServers[this.environment]}/${this.getAbsolutePath(this.request.body.Key)}`;
 			}
 		}
@@ -189,8 +132,6 @@ export class IndexedDataS3DAL implements IPfsDal
 				err.code = 404;
 				throw err;
 			}
-
-			return res;
 		}
 		catch (err) 
 		{
@@ -200,33 +141,5 @@ export class IndexedDataS3DAL implements IPfsDal
 			}
 			throw (err);
 		}
-	}
-
-	/**
-	 * Each distributor is given its own folder, and each addon has its own folder within the distributor's folder.
-	 * Addons place objects in their folder. An absolute path is a path that includes the Distributor's UUID, 
-	 * the Addon's UUID and the trailing requested path.
-	 * @param relativePath the path relative to the addon's folder
-	 * @returns a string in the format ${this.DistributorUUID}/${this.AddonUUID}/${relativePath}
-	 */
-	private getAbsolutePath(relativePath: string): string 
-	{
-		if(relativePath.startsWith('/'))
-			relativePath = relativePath.slice(1);
-
-		return `${this.DistributorUUID}/${this.AddonUUID}/${relativePath}`;
-	}
-
-	/**
-	 * Each distributor is given its own folder, and each addon has its own folder within the distributor's folder.
-	 * Addons place objects in their folder. A relative path is a path that's relative to the addon's folder.
-	 * @param absolutePath the original path the addon requested
-	 * @returns a relative path string
-	 */
-	private getRelativePath(absolutePath: string): string 
-	{
-		const relativePath = absolutePath.split(`${this.DistributorUUID}/${this.AddonUUID}/`)[1]
-		const res = relativePath === '' ? '/' : relativePath; // Handle root folder case
-		return res;
 	}
 }

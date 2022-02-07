@@ -1,16 +1,15 @@
-import { FindOptions, PapiClient } from '@pepperi-addons/papi-sdk'
+import { PapiClient } from '@pepperi-addons/papi-sdk'
 import { Client, Request } from '@pepperi-addons/debug-server';
 import jwtDecode from 'jwt-decode';
-import { dataURLRegex, S3Buckets, IPfsDal } from './constants';
+import { dataURLRegex } from './constants';
 import fetch from 'node-fetch';
-import config from '../addon.config.json';
+import { IPfsDal } from './DAL/IPfsDal';
 
 const AWS = require('aws-sdk'); // AWS is part of the lambda's environment. Importing it will result in it being rolled up redundently.
 
 class PfsService 
 {
 	papiClient: PapiClient;
-	s3: any;
 	DistributorUUID: string;
 	AddonUUID: string;
 	readonly environment: string;
@@ -28,7 +27,6 @@ class PfsService
 			actionUUID: client.AddonUUID
 		});
 
-
 		// const accessKeyId=""
 		// const secretAccessKey=""
 		// const sessionToken=""
@@ -38,39 +36,9 @@ class PfsService
 		// 	sessionToken
 		// });
 				 
-
 		this.environment = jwtDecode(client.OAuthAccessToken)['pepperi.datacenter'];
 		this.DistributorUUID = jwtDecode(client.OAuthAccessToken)['pepperi.distributoruuid'];
 		this.AddonUUID = this.request.query.addon_uuid;
-		this.s3 = new AWS.S3();
-	}
-
-	/**
-	 * Each distributor is given its own folder, and each addon has its own folder within the distributor's folder.
-	 * Addons place objects in their folder. An absolute path is a path that includes the Distributor's UUID, 
-	 * the Addon's UUID and the trailing requested path.
-	 * @param relativePath the path relative to the addon's folder
-	 * @returns a string in the format ${this.DistributorUUID}/${this.AddonUUID}/${relativePath}
-	 */
-	private getAbsolutePath(relativePath: string): string 
-	{
-		if(relativePath.startsWith('/'))
-			relativePath = relativePath.slice(1);
-
-		return `${this.DistributorUUID}/${this.AddonUUID}/${relativePath}`;
-	}
-
-	/**
-	 * Each distributor is given its own folder, and each addon has its own folder within the distributor's folder.
-	 * Addons place objects in their folder. A relative path is a path that's relative to the addon's folder.
-	 * @param absolutePath the original path the addon requested
-	 * @returns a relative path string
-	 */
-	private getRelativePath(absolutePath: string): string 
-	{
-		const relativePath = absolutePath.split(`${this.DistributorUUID}/${this.AddonUUID}/`)[1]
-		const res = relativePath === '' ? '/' : relativePath; // Handle root folder case
-		return res;
 	}
 
 	async uploadFile(): Promise<boolean> 
@@ -139,30 +107,26 @@ class PfsService
 	{
 		let res: any = {};
 
-		const setPresignedURL = false;
-		
-		// Using ADAL, I think this IF is now redundant. Metdata can be uploaded whether or not data is uploaded to S3.
-		// if(!this.doesFileExist && !this.request.body.URI)
-		// {
-		// 	 // in case "URI" is not provided on Creation (that is why the check if file exists) a PresignedURL will be returned 
-		// 	 this.request.body.URI = `data:${this.request.body.MIME};base64,`; // creating an empty file to set all the metadata
-		// 	 setPresignedURL = true;
-		// }
 		if (this.request.body.URI)
 		{
-			await this.uploadFileData();
+			const buffer: Buffer = await this.getFileDataBuffer();
+			await this.dal.uploadFileData(this.request.body.Key, buffer);
+		}
+		else if(!this.request.body.URI && !this.doesFileExist)
+		{ // in case "URI" is not provided on Creation (that is why the check if file exists) a PresignedURL will be returned 
+			res["PresignedURL"] = await this.dal.generatePreSignedURL(this.request.body.Key); // creating presignedURL
 		}
 
-		res = await this.uploadFileMetadata();
+		res = {
+			...res,
+			...await this.uploadFileMetadata()
+		};
 		console.log(`File metadata successfuly uploaded to ADAL.`);
-
-		if(setPresignedURL)
-			res["PresignedURL"] = await this.generatePreSignedURL(this.getAbsolutePath(this.request.body.Key)); // creating presignedURL
 
 		return res;
 	}
 
-	private async uploadFileData() 
+	private async getFileDataBuffer() 
 	{
 		let buf: Buffer;
 
@@ -175,7 +139,7 @@ class PfsService
 			buf = await this.downloadFileBufferFromURL();
 		}
 
-		await this.dal.uploadFileData(this.request.body.Key, buf);
+		return buf;
 	}
 
 	private async downloadFileBufferFromURL() 
@@ -190,21 +154,6 @@ class PfsService
 	private async createFolder() 
 	{
 		return await this.uploadFileMetadata();			
-	}
-
-	async generatePreSignedURL(entryName)
-	{
-		const params =  {
-			Bucket: S3Buckets[this.environment],
-			Key: entryName,
-		};
-		let urlString = "";
-
-		const date = new Date();
-		params["Expires"] = 24*60*60;
-			
-		urlString = await  this.s3.getSignedUrl('putObject',params);
-		return urlString;
 	}
 		
 	isDataURL(s) 
@@ -268,7 +217,6 @@ class PfsService
 			}
 			return false;
 		}
-
 	}
 
 	private getMimeType(): string 
@@ -279,7 +227,6 @@ class PfsService
 			// Get mime type from base64 data
 			MIME = this.request.body.URI.match(/[^:]\w+\/[\w-+\d.]+(?=;|,)/)[0];
 		}
-
 
 		return MIME;
 	}
@@ -333,7 +280,7 @@ class PfsService
 			await this.getDoesFileExist();
 			if(!this.doesFileExist && this.request.query.folder != '/') // The root folder is not created, and therefore isn't listed in the adal table. It is there by default.
 			{
-				console.error(`Could not find requested folder: '${this.getAbsolutePath(this.request.query.folder)}'`);
+				console.error(`Could not find requested folder: '${this.request.query.folder}'.`);
 
 				const err: any = new Error(`Could not find requested folder: ${this.request.query.folder}`);
 				err.code = 404;
@@ -342,7 +289,6 @@ class PfsService
 			const requestedFolder = this.request.query.folder.endsWith('/') ? this.request.query.folder.slice(0, -1) : this.request.query.folder; //handle trailing '/'
 
 			return this.dal.listFolderContents(requestedFolder);
-
 		}
 		catch (err) 
 		{
@@ -353,7 +299,6 @@ class PfsService
 			}
 		}
 	}
-	
 }
 
 export default PfsService;
