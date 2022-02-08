@@ -74,7 +74,8 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		const params =  {
 			Bucket: S3Buckets[this.environment],
 			Key: entryName,
-			Expires: 24*60*60
+			Expires: 24*60*60, //PUT presigned URL will expire after 24 hours = 60 sec * 60 min * 24 hrs
+			ContentType: this.getMimeType()
 		};
 			
 		const urlString = await  this.s3.getSignedUrl('putObject',params);
