@@ -22,7 +22,9 @@ export interface IPfsDownloadObjectResponse{
     URL: string,
 	Hidden: boolean,
     CreationDateTime: string,
-	Description?: string
+    ModificationDateTime: string,
+	Description?: string,
+    PresignedURL?: string
 }
 
 export interface IPfsListFilesResultObject{
@@ -34,4 +36,9 @@ export interface IPfsListFilesResultObject{
     ModificationDateTime?: string // Folders don't have a ModificationDateTime, only files do.
 }
 
-export type IPfsListFilesResultObjects = Array<IPfsListFilesResultObject>
+export  type IPfsListFilesResultObjects = Array<IPfsListFilesResultObject>
+
+export const dataURLRegex = /^\s*data:([a-z]+\/[a-z]+(;[a-z\-]+\=[a-z\-]+)?)?(;base64)?,([a-z0-9\!\$\&\'\,\(\)\*\+\,\;\=\-\.\_\~\:\@\/\?\%\s]*\s*)$/i;
+
+export const METADATA_ADAL_TABLE_NAME = "S3ObjectsMetadata";
+

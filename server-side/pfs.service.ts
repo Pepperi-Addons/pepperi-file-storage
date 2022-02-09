@@ -1,8 +1,10 @@
 import { PapiClient } from '@pepperi-addons/papi-sdk'
 import { Client, Request } from '@pepperi-addons/debug-server';
 import jwtDecode from 'jwt-decode';
-import { CdnServers, IPfsDownloadObjectResponse, IPfsListFilesResultObjects, S3Buckets } from './constants';
+import { CdnServers, dataURLRegex, IPfsDownloadObjectResponse, IPfsListFilesResultObjects, S3Buckets } from './constants';
 import { mime } from 'mime-types';
+import { createTextChangeRange, idText } from 'typescript';
+import fetch from 'node-fetch';
 
 const AWS = require('aws-sdk'); // AWS is part of the lambda's environment. Importing it will result in it being rolled up redundently.
 
@@ -13,6 +15,8 @@ class PfsService
 	DistributorUUID: string;
 	AddonUUID: string;
 	readonly environment: string;
+	readonly MIME_FIELD_IS_MISSING = "Missing mandatory field 'MIME'";
+	syncTypes = ["None", "Device", "DeviceThumbnail", "Always"];
 
 	constructor(private client: Client, private request: Request) 
 	{
@@ -24,10 +28,10 @@ class PfsService
 			actionUUID: client.AddonUUID
 		});
 
-		// const accessKeyId = "";
-		// const secretAccessKey = "";
-		// const sessionToken = "";
 
+		// const accessKeyId=""
+		// const secretAccessKey=""
+		// const sessionToken=""
 		// AWS.config.update({
 		// 	accessKeyId,
 		// 	secretAccessKey,
@@ -70,43 +74,36 @@ class PfsService
 
 	async uploadToAWS(): Promise<boolean> 
 	{
-		const res = true;
+		let res:any = {};
 		try 
 		{
 			await this.validatAddonSecretKey();
-			
+
 			let entryname = this.getAbsolutePath(this.request.body.Key);
 
-			const metadata: {} = this.getMetada();
+			let file: any = await this.getFileIfExistsOnS3();
+
+			this.validateFieldsForUpload(file);
 
 			let params =  {
-					Bucket: S3Buckets[this.environment],
-					Key: entryname,
-					Metadata: metadata,
-				};
+				Bucket: S3Buckets[this.environment],
+				Key: entryname
+			};
 
-			if(this.request.body.URI){ 
-				const buf = Buffer.from(this.request.body.URI.split(/base64,/)[1], 'base64');
-			
-				params["Body"]= buf;
-				params["ContentType"]= this.getMimeType();
-				params["ContentEncoding"]= 'base64';
-							// Uploading files to the bucket (sync)
-				const uploaded = await this.s3.upload(params).promise();
-				console.log(`File uploaded successfully to ${uploaded.Location}`);
-
+			if(this.request.body.Hidden != true) {
+				if(this.request.body.Key.endsWith('/')) 
+				{ // if the key ends with '/' it means we are creating a folder 
+					res = await this.createFolder(params);
+				}  
+				else //file post
+				{
+					res = await this.postFile(file,params, res);
+				}
 			}
-			else{ // if URI == "" then it is creation of a folde
-				if(!entryname.endsWith('/'))
-					params["Key"]= `${entryname}/`;
-
-				params["ContentType"]= "pepperi/folder";
-				const created =  await this.s3.putObject(params).promise()
-				console.log(`Folder uploaded successfully `);
-
+			else{ // update the hidden=true in the MetaData (this part will be deleted when we will have adal support) 
+				file.Hidden = true;
+				res = file; 
 			}
-			
-
 		}
 		catch (err) 
 		{
@@ -119,14 +116,138 @@ class PfsService
 		return res;
 	}
 
+
+	private async getFileIfExistsOnS3() {
+		let file: any = null;
+
+		try {
+			file = await this.downloadFromAWS();
+
+		} catch (e) { // if file not exist on S3 it will throw exception
+			if (e instanceof Error) 
+			{
+				console.log(e.message);
+			}
+		}
+		return file;
+	}
+
+	private async postFile(file:IPfsDownloadObjectResponse, params: any, res: any) {
+
+		params["Metadata"] = this.getMetadata(file);
+
+		let setPresignedURL = false;
+		if(!file && !this.request.body.URI){
+			 // in case "URI" is not provided on Creation (that is why the check if file exists) a PresignedURL will be returned 
+			 this.request.body.URI = `data:${this.request.body.MIME};base64,`; // creating an empty file to set all the metadata
+			 setPresignedURL = true;
+		}
+		if (this.request.body.URI){
+			let buf: Buffer;
+			if (this.isDataURL(this.request.body.URI)) { // dataURI get the base 64 part
+				buf = Buffer.from(this.request.body.URI.match(dataURLRegex)[4], 'base64');
+			}
+			else { //the URI is URL - downalod the data
+				let respons = await fetch(this.request.body.URI, { method: `GET` });
+				var arrayData = await respons.arrayBuffer();;
+				buf = Buffer.from(arrayData);
+			}
+	
+			params["Body"] = buf;
+			params["ContentType"] = this.getMimeType();
+			params["ContentEncoding"] = 'base64';
+
+			// Uploading files to the bucket (sync)
+			const uploaded = await this.s3.upload(params).promise(); 
+			console.log(`File uploaded successfully to ${uploaded.Location}`);
+		}
+
+		res = await this.downloadFromAWS(this.request.body.Key);
+
+
+		if(setPresignedURL)
+			res["PresignedURL"] = await  this.generatePreSignedURL(params.Key); // creating presignedURL
+
+		return res;
+	}
+
+	private async createFolder(params: { Bucket: any; Key: string; }) {
+
+		if(this.request.body.MIME == 'pepperi/folder')
+		{
+			params["ContentType"] = "pepperi/folder";
+			const created = await this.s3.putObject(params).promise();
+			console.log(`Folder uploaded successfully `);
+
+			const relativePath: string = this.request.body.Key;
+			const splitFileKey = relativePath.split('/');
+			splitFileKey.pop(); // folders look like "folder/sub_folder/sub_subfolder/", so splitting by '/' results in a trailing "" 
+								// which we need to pop in order ot get the actual folder name.
+								
+			return {
+					Key: this.request.body.Key,
+					Name: `${splitFileKey.pop()}/`,
+					Folder: splitFileKey.join('/'),
+					MIME: "pepperi/folder",
+				};
+		}
+		else
+		{
+			throw new Error("Folder MIME must be 'pepperi/folder'");
+		}
+		
+	}
+
+	 async generatePreSignedURL(entryName){
+		let params =  {
+			Bucket: S3Buckets[this.environment],
+			Key: entryName,
+		};
+		let urlString = "";
+
+		var date = new Date();
+		params["Expires"] = 24*60*60;
+			
+		urlString = await  this.s3. getSignedUrl('putObject',params);
+		return urlString;
+	 }
+		
+
+
+    isDataURL(s) {
+        return !!s.match(dataURLRegex);
+    }
+
+	private validateFieldsForUpload(file) {
+		if (!this.request.body.Key) {
+			throw new Error("Missing mandatory field 'Key'");
+		}
+		else if (this.request.body.Key.endsWith('/') && !this.request.body.MIME) { 
+			// if the key ends with '/' it means we are creating a folder,so MIME is mandatory because it is mandatory on creation
+			//(need to check in other place if it is not folder creation, if the file exists anf if not then it is creation and MIME id mandatory also)
+			throw new Error(this.MIME_FIELD_IS_MISSING);
+		}
+		else if(this.request.body.MIME == 'pepperi/folder' && !this.request.body.Key.endsWith('/')){
+			// if 'pepperi/folder' is provided on creation and the key is not ending with '/' the POST should fail
+			throw new Error("On creation of a folder, the key must ends with '/'");
+
+		}
+
+		if(!file && !this.request.body.MIME ){
+			throw new Error("Missing mandatory field 'MIME'");
+
+		}
+
+	}
+
 	private async validatAddonSecretKey() {
 
 		if (!this.request.header["X-Pepperi-SecretKey"] || !await this.isValidRequestedAddon(this.client, this.request.header["X-Pepperi-SecretKey"], this.AddonUUID)) {
-			let err: any = new Error("Authorization request denied. check secret key");
+
+			let err: any = new Error(`Authorization request denied. ${this.request.header["X-Pepperi-SecretKey"]? "check secret key" : "Missing secret key header"} `);
 			err.code = 401;
 			throw err;
 		}
-		
 	}
 
 	private async  isValidRequestedAddon(client: Client, secretKey, addonUUID){
@@ -171,16 +292,20 @@ class PfsService
 
 	private getMimeType(): string 
 	{
-		if (this.isValidURL(this.request.body.URI)) 
+		var MIME = this.request.body.MIME;
+		/*if (this.isValidURL(this.request.body.URI)) ///-------> does not work
 		{
 			// Get mime type from received url
-			return mime.contentType(this.request.body.URI);
-		}
-		else 
+			MIME =  mime.contentType(this.request.body.URI);
+		}*/
+		if(this.isDataURL(this.request.body.URI))
 		{
 			// Get mime type from base64 data
-			return this.request.body.URI.match(/[^:]\w+\/[\w-+\d.]+(?=;|,)/)[0];
+			MIME = this.request.body.URI.match(/[^:]\w+\/[\w-+\d.]+(?=;|,)/)[0];
 		}
+
+
+		return MIME;
 	}
 
 
@@ -188,52 +313,60 @@ class PfsService
 	 * Returns a Metadata object representing the needed metadata.
 	 * @returns a dictionary representation of the metadata.
 	 */
-	protected getMetada(): {}
+	protected getMetadata(file:IPfsDownloadObjectResponse): {}
 	{
-		const metadata = {};
-
-		metadata["Sync"] = this.request.body.Sync ? this.request.body.Sync : "None";
-		metadata["Hidden"] = this.request.body.Hidden ? this.request.body.Hidden : "None";
-		metadata["CreationDateTime"] = this.request.body.CreationDateTime ? this.request.body.CreationDateTime : (new Date()).toISOString();
-
-		if (this.request.body.Description) 
+		let metadata:any =
 		{
-			metadata["Description"] = this.request.body.Description;
-		}
+			Sync :this.request.body.Sync ? this.request.body.Sync : (file? file.Sync: "None"),
+			Hidden : (this.request.body.Hidden ? this.request.body.Hidden : (file? file.Hidden: false)) + "",
+			CreationDateTime : file && file.CreationDateTime? file.CreationDateTime : (new Date()).toISOString(),
+			ModificationDateTime : (new Date()).toISOString(),
+			Description:this.request.body.Description? this.request.body.Description: (file? file.Description :"")
+		};  
 
 		return metadata;
 	}
 
-	async downloadFromAWS(): Promise<IPfsDownloadObjectResponse> 
+	/**
+	 * Download the file from AWS.
+	 * @param Key Optional Key to download. Otherwise, this.request.query.Key will be used. 
+	 * @returns 
+	 */
+	async downloadFromAWS(Key? : string): Promise<IPfsDownloadObjectResponse> 
 	{
+		const downloadKey = Key ?? this.request.query.Key; 
+		console.log(`Attempting to download the following key from AWS: ${downloadKey}`)
 		try 
 		{
+			let response:any = null;
 
-			const entryname: string = this.getAbsolutePath(this.request.query.key);
+			const entryname: string = this.getAbsolutePath(downloadKey);
 
 			const params = {
 				Bucket: S3Buckets[this.environment],
 				Key: entryname,
 			};
-
-			const splitFileKey = this.request.query.key.split('/');
-
+	
 			// Downloading files from the bucket
 			const downloaded: any = await this.s3.headObject(params).promise();
+			 if(downloaded.Metadata.hidden != true){
+				const splitFileKey = downloadKey.split('/');
 
-			const response: IPfsDownloadObjectResponse = {
-				Key: this.request.query.key,
-				Name: splitFileKey.pop(), //The last part of the path is the object name
-				Folder: splitFileKey.join('/'), // the rest of the path is its folder.
-				Sync: downloaded.Metadata.sync ? downloaded.Metadata.sync : "None",
-				MIME: downloaded.ContentType,
-				URL: `${CdnServers[this.environment]}/${entryname}`,
-				Hidden: downloaded.Metadata.hidden ? downloaded.Metadata.hidden : false,
-				CreationDateTime: downloaded.Metadata.creationDateTime,
-				...(downloaded.Metadata.description && { Description: downloaded.Metadata.description }),
-			}
+				response = {
+					Key: downloadKey,
+					Name: splitFileKey.pop(), //The last part of the path is the object name
+					Folder: splitFileKey.join('/'), // the rest of the path is its folder.
+					Sync: downloaded.Metadata.sync ? downloaded.Metadata.sync : "None",
+					MIME: downloaded.ContentType,
+					URL: `${CdnServers[this.environment]}/${entryname}`,
+					Hidden: downloaded.Metadata.hidden ? downloaded.Metadata.hidden : false,
+					CreationDateTime: downloaded.Metadata.creationDateTime,
+					...(downloaded.Metadata.description && { Description: downloaded.Metadata.description }),
+				}
+	
+				console.log(`File Downloaded`);
+			 }
 
-			console.log(`File Downloaded`);
 
 			return response;
 		}
@@ -248,6 +381,17 @@ class PfsService
 	}
 
 	
+	private async getFromS3(fullPath: string) {
+		const params = {
+			Bucket: S3Buckets[this.environment],
+			Key: fullPath,
+		};
+
+		// Downloading files from the bucket
+		const downloaded: any = await this.s3.headObject(params).promise();
+		return downloaded;
+	}
+
 	async listFiles(): Promise<IPfsListFilesResultObjects> 
 	{
 		const response: IPfsListFilesResultObjects = [];
@@ -283,7 +427,6 @@ class PfsService
 				{
 					this.populateListResponseWithObjects(objectList, response);
 				}
-
 				currentPage++;
 				params.ContinuationToken = objectList.NextContinuationToken;
 			}
@@ -340,13 +483,14 @@ class PfsService
 		{
 			const relativePath: string = this.getRelativePath(object.Key ? object.Key : "");
 			const splitFileKey = relativePath.split('/');
-			response.push({
-				Key: relativePath,
-				Name: `${splitFileKey.pop()}`,
-				Folder: splitFileKey.join('/'),
-				URL: `${CdnServers[this.environment]}/${object.Key}`,
-				ModificationDateTime: object.LastModified?.toISOString()
-			});
+			if(splitFileKey[splitFileKey.length - 1]) // dont push the hidden file (it doesnt have name) that is being created when creating a folder withot file
+				response.push({
+					Key: relativePath,
+					Name: `${splitFileKey.pop()}`,
+					Folder: splitFileKey.join('/'),
+					URL: `${CdnServers[this.environment]}/${object.Key}`,
+					ModificationDateTime: object.LastModified?.toISOString()
+				});
 		});
 
 		objectList.CommonPrefixes?.forEach(object => 
