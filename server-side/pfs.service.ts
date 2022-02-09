@@ -79,8 +79,8 @@ class PfsService
 		let res:any = {};
 		try 
 		{
-			this.doesFileExist = await this.getDoesFileExist();
 			await this.validateAddonSecretKey();
+			this.doesFileExist = await this.getDoesFileExist();
 			this.validateFieldsForUpload();
 
 			if(this.request.body.Key.endsWith('/')) 
@@ -322,19 +322,33 @@ class PfsService
 		const fileName = pathFoldersList.pop();
 		const containingFolder = pathFoldersList.join('/');
 		
-		const metadata = {
-			Key: this.getAbsolutePath(this.request.body.Key),
-			...(!this.doesFileExist && {// These fields are static, and are derived from the files's Key, which is immutable.
-										// We need to create them only once, and they are never changed.
-				Name: `${fileName}${this.request.body.Key.endsWith('/') ? '/' :''}`, // Add the dropped '/' for folders.
-				Folder: this.getAbsolutePath(containingFolder),
-			}),
-			...(!this.doesFileExist && !this.request.body.Key.endsWith('/') && {URL: `${CdnServers[this.environment]}/${this.getAbsolutePath(this.request.body.Key)}`}), //Add URL if this isn't a folder and this file doesn't exist.
-			...((this.request.body.MIME || !this.doesFileExist) && {MIME: this.getMimeType()}), // Set MIME if it was passed, or if this file doesn't exist yet.
-			...(this.request.body.Sync && {Sync: this.request.body.Sync}), // Set Sync if it was passed
-			...(this.request.body.Hidden && {Hidden: this.request.body.Hidden}), // Set Hidden if it was passed
-			...(this.request.body.Description && {Description: this.request.body.Description}) // Add a description if it was passed.
+		const metadata: any = {
+			Key: this.getAbsolutePath(this.request.body.Key)
 		};
+
+		if(!this.doesFileExist){
+			metadata.Name = `${fileName}${this.request.body.Key.endsWith('/') ? '/' :''}`; // Add the dropped '/' for folders.
+			metadata.Folder = this.getAbsolutePath(containingFolder);
+			metadata.MIME = this.getMimeType();
+			metadata.Hidden = this.request.body.Hidden ?? false;
+			if(!this.request.body.Key.endsWith('/')) // This is not a folder
+			{
+				metadata.Sync = this.request.body.Sync ?? this.syncTypes[0];
+				metadata.Description = this.request.body.Description ?? "";
+			}
+			
+		}
+		else // The file does exist, there's no need to set Folder and Name fields
+		{
+			if(!this.request.body.Key.endsWith('/')) // This is not a folder
+			{
+				if(this.request.body.MIME) metadata.MIME = this.getMimeType();
+				if(this.request.body.Sync) metadata.Sync = this.request.body.Sync;
+				if(this.request.body.Description) metadata.Description = this.request.body.Description;
+			}
+			
+			if(this.request.body.Hidden) metadata.Hidden = this.request.body.Hidden;
+		}
 
 		return metadata;
 	}
