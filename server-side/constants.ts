@@ -13,24 +13,24 @@ export const CdnServers = {
 	"dev": "https://d3jagocnvgzx6w.cloudfront.net"
 }
 
-export interface IPfsDownloadObjectResponse{
+export interface IPfsDownloadObjectResponse {
     Key: string,
     Name: string,
     Folder: string,
     Sync: "None" | "Device" | "DeviceThumbnail" | "Always",
     MIME: string,
     URL: string,
-	Hidden: boolean,
+    Hidden: boolean,
     CreationDateTime: string,
     ModificationDateTime: string,
 	Description?: string,
     PresignedURL?: string
 }
 
-export interface IPfsListFilesResultObject{
+export interface IPfsListFilesResultObject {
     Key: string,
     Name: string,
-    Folder:string,
+    Folder: string,
     URL?: string, // Folders don't have a URL, only files do.
     MIME?: string, // Folders return a MIME of type "pepperi/folder"
     ModificationDateTime?: string // Folders don't have a ModificationDateTime, only files do.

@@ -1,10 +1,10 @@
-import { PapiClient } from '@pepperi-addons/papi-sdk'
+import { FindOptions, PapiClient } from '@pepperi-addons/papi-sdk'
 import { Client, Request } from '@pepperi-addons/debug-server';
 import jwtDecode from 'jwt-decode';
-import { CdnServers, dataURLRegex, IPfsDownloadObjectResponse, IPfsListFilesResultObjects, S3Buckets } from './constants';
-import { mime } from 'mime-types';
-import { createTextChangeRange, idText } from 'typescript';
+import { CdnServers, dataURLRegex, IPfsListFilesResultObjects, S3Buckets, METADATA_ADAL_TABLE_NAME } from './constants';
+
 import fetch from 'node-fetch';
+import config from '../addon.config.json';
 
 const AWS = require('aws-sdk'); // AWS is part of the lambda's environment. Importing it will result in it being rolled up redundently.
 
@@ -17,6 +17,7 @@ class PfsService
 	readonly environment: string;
 	readonly MIME_FIELD_IS_MISSING = "Missing mandatory field 'MIME'";
 	syncTypes = ["None", "Device", "DeviceThumbnail", "Always"];
+	doesFileExist?: boolean = undefined;
 
 	constructor(private client: Client, private request: Request) 
 	{
@@ -38,12 +39,11 @@ class PfsService
 		// 	sessionToken
 		// });
 				 
-				 
+
 		this.environment = jwtDecode(client.OAuthAccessToken)['pepperi.datacenter'];
 		this.DistributorUUID = jwtDecode(client.OAuthAccessToken)['pepperi.distributoruuid'];
 		this.AddonUUID = this.request.query.addon_uuid;
 		this.s3 = new AWS.S3();
-				
 	}
 
 	/**
@@ -56,7 +56,7 @@ class PfsService
 	private getAbsolutePath(relativePath: string): string 
 	{
 		if(relativePath.startsWith('/'))
-			relativePath = relativePath.slice(1);;
+			relativePath = relativePath.slice(1);
 
 		return `${this.DistributorUUID}/${this.AddonUUID}/${relativePath}`;
 	}
@@ -69,7 +69,9 @@ class PfsService
 	 */
 	private getRelativePath(absolutePath: string): string 
 	{
-		return absolutePath.split(`${this.DistributorUUID}/${this.AddonUUID}/`)[1];
+		const relativePath = absolutePath.split(`${this.DistributorUUID}/${this.AddonUUID}/`)[1]
+		const res = relativePath === '' ? '/' : relativePath; // Handle root folder case
+		return res;
 	}
 
 	async uploadToAWS(): Promise<boolean> 
@@ -77,32 +79,17 @@ class PfsService
 		let res:any = {};
 		try 
 		{
-			await this.validatAddonSecretKey();
+			await this.validateAddonSecretKey();
+			this.doesFileExist = await this.getDoesRequestedFileExist();
+			this.validateFieldsForUpload();
 
-			let entryname = this.getAbsolutePath(this.request.body.Key);
-
-			let file: any = await this.getFileIfExistsOnS3();
-
-			this.validateFieldsForUpload(file);
-
-			let params =  {
-				Bucket: S3Buckets[this.environment],
-				Key: entryname
-			};
-
-			if(this.request.body.Hidden != true) {
-				if(this.request.body.Key.endsWith('/')) 
-				{ // if the key ends with '/' it means we are creating a folder 
-					res = await this.createFolder(params);
-				}  
-				else //file post
-				{
-					res = await this.postFile(file,params, res);
-				}
+			if(this.request.body.Key.endsWith('/')) 
+			{ // if the key ends with '/' it means we are creating a folder 
+				res = await this.createFolder();
 			}
-			else{ // update the hidden=true in the MetaData (this part will be deleted when we will have adal support) 
-				file.Hidden = true;
-				res = file; 
+			else //file post
+			{
+				res = await this.postFile();
 			}
 		}
 		catch (err) 
@@ -116,40 +103,82 @@ class PfsService
 		return res;
 	}
 
+	async upsertMetadataToAdal() 
+	{
+		const metadata = this.getMetadata();	
+		const res =  await this.papiClient.addons.data.uuid(config.AddonUUID).table(METADATA_ADAL_TABLE_NAME).upsert(metadata);
 
-	private async getFileIfExistsOnS3() {
+		if(res.Key)
+		{
+			res.Key = this.getRelativePath(res.Key);
+			res.Folder = this.getRelativePath(res.Folder);
+		}
+		
+		return res;
+	}
+
+	private async getDoesRequestedFileExist() 
+	{
+		if(this.doesFileExist != undefined)
+		{
+			return this.doesFileExist;
+		}
+
+		this.doesFileExist = await this.getDoesFileExist();
+		return this.doesFileExist;
+	}
+
+	/**
+	 * Returns wether or not a file exist. If fileKey is provided, returns whether it exists. Otherwise returns whther or not the Key in this.request exists.
+	 */
+	private async getDoesFileExist(fileKey?: string) 
+	{
 		let file: any = null;
 
-		try {
-			file = await this.downloadFromAWS();
-
-		} catch (e) { // if file not exist on S3 it will throw exception
+		try 
+		{
+			file = await this.downloadFromAWS(fileKey);
+		}
+		catch (e) 
+		{ 
 			if (e instanceof Error) 
 			{
 				console.log(e.message);
 			}
 		}
-		return file;
+
+		const res = !!file;
+		return res;
 	}
 
-	private async postFile(file:IPfsDownloadObjectResponse, params: any, res: any) {
-
-		params["Metadata"] = this.getMetadata(file);
+	private async postFile() 
+	{
+		let res: any = {};
 
 		let setPresignedURL = false;
-		if(!file && !this.request.body.URI){
+		const entryname: string = this.getAbsolutePath(this.request.body.Key);
+		const params =  {
+			Bucket: S3Buckets[this.environment],
+			Key: entryname
+		};
+		
+		if(!this.doesFileExist && !this.request.body.URI)
+		{
 			 // in case "URI" is not provided on Creation (that is why the check if file exists) a PresignedURL will be returned 
 			 this.request.body.URI = `data:${this.request.body.MIME};base64,`; // creating an empty file to set all the metadata
 			 setPresignedURL = true;
 		}
-		if (this.request.body.URI){
+		if (this.request.body.URI)
+		{
 			let buf: Buffer;
-			if (this.isDataURL(this.request.body.URI)) { // dataURI get the base 64 part
+			if (this.isDataURL(this.request.body.URI)) 
+			{ // dataURI get the base 64 part
 				buf = Buffer.from(this.request.body.URI.match(dataURLRegex)[4], 'base64');
 			}
-			else { //the URI is URL - downalod the data
-				let respons = await fetch(this.request.body.URI, { method: `GET` });
-				var arrayData = await respons.arrayBuffer();;
+			else 
+			{ //the URI is URL - downalod the data
+				const respons = await fetch(this.request.body.URI, { method: `GET` });
+				const arrayData = await respons.arrayBuffer();
 				buf = Buffer.from(arrayData);
 			}
 	
@@ -158,99 +187,83 @@ class PfsService
 			params["ContentEncoding"] = 'base64';
 
 			// Uploading files to the bucket (sync)
-			const uploaded = await this.s3.upload(params).promise(); 
+			const uploaded = await this.s3.upload(params).promise();
 			console.log(`File uploaded successfully to ${uploaded.Location}`);
 		}
 
-		res = await this.downloadFromAWS(this.request.body.Key);
+		res = await this.upsertMetadataToAdal();
+		console.log(`File metadata successfuly uploaded to ADAL.`);
+
 
 
 		if(setPresignedURL)
-			res["PresignedURL"] = await  this.generatePreSignedURL(params.Key); // creating presignedURL
+			res["PresignedURL"] = await this.generatePreSignedURL(params.Key); // creating presignedURL
 
 		return res;
 	}
 
-	private async createFolder(params: { Bucket: any; Key: string; }) {
-
+	private async createFolder() 
+	{
 		if(this.request.body.MIME == 'pepperi/folder')
 		{
-			params["ContentType"] = "pepperi/folder";
-			const created = await this.s3.putObject(params).promise();
-			console.log(`Folder uploaded successfully `);
-
-			const relativePath: string = this.request.body.Key;
-			const splitFileKey = relativePath.split('/');
-			splitFileKey.pop(); // folders look like "folder/sub_folder/sub_subfolder/", so splitting by '/' results in a trailing "" 
-								// which we need to pop in order ot get the actual folder name.
-								
-			return {
-					Key: this.request.body.Key,
-					Name: `${splitFileKey.pop()}/`,
-					Folder: splitFileKey.join('/'),
-					MIME: "pepperi/folder",
-				};
+			return await this.upsertMetadataToAdal();			
 		}
 		else
 		{
 			throw new Error("Folder MIME must be 'pepperi/folder'");
 		}
-		
 	}
 
-	 async generatePreSignedURL(entryName){
-		let params =  {
+	async generatePreSignedURL(entryName)
+	{
+		const params =  {
 			Bucket: S3Buckets[this.environment],
 			Key: entryName,
 		};
 		let urlString = "";
 
-		var date = new Date();
+		const date = new Date();
 		params["Expires"] = 24*60*60;
 			
-		urlString = await  this.s3. getSignedUrl('putObject',params);
+		urlString = await  this.s3.getSignedUrl('putObject',params);
 		return urlString;
-	 }
+	}
 		
-
-
-    isDataURL(s) {
-        return !!s.match(dataURLRegex);
-    }
-
-	private validateFieldsForUpload(file) {
-		if (!this.request.body.Key) {
-			throw new Error("Missing mandatory field 'Key'");
-		}
-		else if (this.request.body.Key.endsWith('/') && !this.request.body.MIME) { 
-			// if the key ends with '/' it means we are creating a folder,so MIME is mandatory because it is mandatory on creation
-			//(need to check in other place if it is not folder creation, if the file exists anf if not then it is creation and MIME id mandatory also)
-			throw new Error(this.MIME_FIELD_IS_MISSING);
-		}
-		else if(this.request.body.MIME == 'pepperi/folder' && !this.request.body.Key.endsWith('/')){
-			// if 'pepperi/folder' is provided on creation and the key is not ending with '/' the POST should fail
-			throw new Error("On creation of a folder, the key must ends with '/'");
-
-		}
-
-		if(!file && !this.request.body.MIME ){
-			throw new Error("Missing mandatory field 'MIME'");
-
-		}
-
+	isDataURL(s) 
+	{
+		return !!s.match(dataURLRegex);
 	}
 
-	private async validatAddonSecretKey() {
+	private validateFieldsForUpload() 
+	{
+		if (!this.request.body.Key) 
+		{
+			throw new Error("Missing mandatory field 'Key'");
+		}
+		else if(!this.doesFileExist && !this.request.body.MIME )
+		{
+			throw new Error(this.MIME_FIELD_IS_MISSING);
+		}
+		else if(this.request.body.MIME == 'pepperi/folder' && !this.request.body.Key.endsWith('/'))
+		{
+			// if 'pepperi/folder' is provided on creation and the key is not ending with '/' the POST should fail
+			throw new Error("On creation of a folder, the key must end with '/'");
+		}
+	}
 
-		if (!this.request.header["X-Pepperi-SecretKey"] || !await this.isValidRequestedAddon(this.client, this.request.header["X-Pepperi-SecretKey"], this.AddonUUID)) {
+	private async validateAddonSecretKey() 
+	{
+		if (!this.request.header["X-Pepperi-SecretKey"] || !await this.isValidRequestedAddon(this.client, this.request.header["X-Pepperi-SecretKey"], this.AddonUUID)) 
+		{
 
-			let err: any = new Error(`Authorization request denied. ${this.request.header["X-Pepperi-SecretKey"]? "check secret key" : "Missing secret key header"} `);
+			const err: any = new Error(`Authorization request denied. ${this.request.header["X-Pepperi-SecretKey"]? "check secret key" : "Missing secret key header"} `);
 			err.code = 401;
 			throw err;
 		}
 	}
 
-	private async  isValidRequestedAddon(client: Client, secretKey, addonUUID){
+	private async  isValidRequestedAddon(client: Client, secretKey, addonUUID)
+	{
 		const papiClient = new PapiClient({
 		  baseURL: client.BaseURL,
 		  token: client.OAuthAccessToken,
@@ -259,8 +272,9 @@ class PfsService
 		  addonSecretKey: secretKey
 		});
 
-		try{
-			var res = await papiClient.get(`/var/sk/addons/${addonUUID}/validate`);
+		try
+		{
+			const res = await papiClient.get(`/var/sk/addons/${addonUUID}/validate`);
 			return true;
 		}
 		catch (err) 
@@ -273,7 +287,6 @@ class PfsService
 		}
 
 	}
-
 
 	private isValidURL(s): boolean 
 	{
@@ -292,13 +305,8 @@ class PfsService
 
 	private getMimeType(): string 
 	{
-		var MIME = this.request.body.MIME;
-		/*if (this.isValidURL(this.request.body.URI)) ///-------> does not work
-		{
-			// Get mime type from received url
-			MIME =  mime.contentType(this.request.body.URI);
-		}*/
-		if(this.isDataURL(this.request.body.URI))
+		let MIME = this.request.body.MIME;
+		if(this.request.body.URI && this.isDataURL(this.request.body.URI))
 		{
 			// Get mime type from base64 data
 			MIME = this.request.body.URI.match(/[^:]\w+\/[\w-+\d.]+(?=;|,)/)[0];
@@ -308,67 +316,103 @@ class PfsService
 		return MIME;
 	}
 
-
 	/**
 	 * Returns a Metadata object representing the needed metadata.
 	 * @returns a dictionary representation of the metadata.
 	 */
-	protected getMetadata(file:IPfsDownloadObjectResponse): {}
+	protected getMetadata()
 	{
-		let metadata:any =
+
+		const pathFoldersList = this.request.body.Key.split('/');
+		if (this.request.body.Key.endsWith('/')) 
+		{//This is a new folder being created...
+			pathFoldersList.pop();
+		}
+		const fileName = pathFoldersList.pop();
+		const containingFolder = pathFoldersList.join('/');
+		
+		const metadata: any = {
+			Key: this.getAbsolutePath(this.request.body.Key)
+		};
+
+		if(!this.doesFileExist)
 		{
-			Sync :this.request.body.Sync ? this.request.body.Sync : (file? file.Sync: "None"),
-			Hidden : (this.request.body.Hidden ? this.request.body.Hidden : (file? file.Hidden: false)) + "",
-			CreationDateTime : file && file.CreationDateTime? file.CreationDateTime : (new Date()).toISOString(),
-			ModificationDateTime : (new Date()).toISOString(),
-			Description:this.request.body.Description? this.request.body.Description: (file? file.Description :"")
-		};  
+			metadata.Name = `${fileName}${this.request.body.Key.endsWith('/') ? '/' :''}`; // Add the dropped '/' for folders.
+			metadata.Folder = this.getAbsolutePath(containingFolder);
+			metadata.MIME = this.getMimeType();
+			metadata.Hidden = this.request.body.Hidden ?? false;
+
+			if(!this.request.body.Key.endsWith('/')) // This is not a folder
+			{
+				metadata.URL = `${CdnServers[this.environment]}/${this.getAbsolutePath(this.request.body.Key)}`;
+				metadata.Sync = this.request.body.Sync ?? this.syncTypes[0];
+				metadata.Description = this.request.body.Description ?? "";
+			}
+			else //this is a folder
+			{
+				metadata.URL = "";
+				metadata.Sync = this.syncTypes[0];
+				metadata.Description = "";
+			}
+			
+		}
+		else // The file does exist, there's no need to set Folder, Name and URL fields
+		{
+			if(!this.request.body.Key.endsWith('/')) // This is not a folder
+			{
+				if(this.request.body.MIME) metadata.MIME = this.getMimeType();
+				if(this.request.body.Sync) metadata.Sync = this.request.body.Sync;
+				if(this.request.body.Description) metadata.Description = this.request.body.Description;
+			}
+			
+			if(this.request.body.Hidden) metadata.Hidden = this.request.body.Hidden;
+		}
 
 		return metadata;
 	}
 
 	/**
-	 * Download the file from AWS.
-	 * @param Key Optional Key to download. Otherwise, this.request.query.Key will be used. 
+	 * Download a file. If downloadKey is provided, downloads the downloadKey. Otherwise downloads the Key in this.request.
 	 * @returns 
 	 */
-	async downloadFromAWS(Key? : string): Promise<IPfsDownloadObjectResponse> 
+	async downloadFromAWS(downloadKey? : string) 
 	{
-		const downloadKey = Key ?? this.request.query.Key; 
-		console.log(`Attempting to download the following key from AWS: ${downloadKey}`)
+		downloadKey = downloadKey ?? this.getAbsolutePath(this.request.body && this.request.body.Key ? this.request.body.Key : this.request.query.Key); 
+		console.log(`Attempting to download the following key from ADAL: ${downloadKey}`)
 		try 
 		{
-			let response:any = null;
-
-			const entryname: string = this.getAbsolutePath(downloadKey);
-
-			const params = {
-				Bucket: S3Buckets[this.environment],
-				Key: entryname,
-			};
 	
+			let res: any = null;
 			// Downloading files from the bucket
-			const downloaded: any = await this.s3.headObject(params).promise();
-			 if(downloaded.Metadata.hidden != true){
-				const splitFileKey = downloadKey.split('/');
+			const findOptions: FindOptions = {
+				where: `Key='${downloadKey}'`
+			}
 
-				response = {
-					Key: downloadKey,
-					Name: splitFileKey.pop(), //The last part of the path is the object name
-					Folder: splitFileKey.join('/'), // the rest of the path is its folder.
-					Sync: downloaded.Metadata.sync ? downloaded.Metadata.sync : "None",
-					MIME: downloaded.ContentType,
-					URL: `${CdnServers[this.environment]}/${entryname}`,
-					Hidden: downloaded.Metadata.hidden ? downloaded.Metadata.hidden : false,
-					CreationDateTime: downloaded.Metadata.creationDateTime,
-					...(downloaded.Metadata.description && { Description: downloaded.Metadata.description }),
-				}
-	
+			const downloaded = await this.papiClient.addons.data.uuid(config.AddonUUID).table(METADATA_ADAL_TABLE_NAME).find(findOptions);
+			if(downloaded.length === 1)
+			{
 				console.log(`File Downloaded`);
-			 }
+				res = downloaded[0];
+				res.Key = this.getRelativePath(res.Key);
+				res.Folder = this.getRelativePath(res.Folder);
+			}
+			else if(downloaded.length > 1)
+			{
+				const err: any = new Error(`Internal error.`);
+				console.error(`Internal error. Found more than one file with the given key. Where clause: ${findOptions.where}`);
+				err.code = 500;
+				throw err;
+			}
+			else 
+			{ //Couldn't find results
+				console.error(`Could not find requested item: '${downloadKey}'`);
 
+				const err: any = new Error(`Could not find requested item: '${this.getRelativePath(downloadKey)}'`);
+				err.code = 404;
+				throw err;
+			}
 
-			return response;
+			return res;
 		}
 		catch (err) 
 		{
@@ -380,62 +424,53 @@ class PfsService
 		}
 	}
 
-	
-	private async getFromS3(fullPath: string) {
-		const params = {
-			Bucket: S3Buckets[this.environment],
-			Key: fullPath,
-		};
-
-		// Downloading files from the bucket
-		const downloaded: any = await this.s3.headObject(params).promise();
-		return downloaded;
-	}
-
-	async listFiles(): Promise<IPfsListFilesResultObjects> 
+	async listFiles()
 	{
-		const response: IPfsListFilesResultObjects = [];
-		const requestedPage: number = this.getQueryRequestedPageNumber();
-		const pageSize: number = this.request.query.page_size ? parseInt(this.request.query.page_size) : 100;
-
-		let currentPage = 0;
-		let prefix = "";
-		let folder :string = this.request.query.folder;
-		folder = folder.split("'").join("");
-		if(folder != '/'){ //  '/' means root folder, so no need to add more '/' in AbsolutePath path  - we will send "";
-			prefix = folder.endsWith('/') ? folder : `${folder}/`;
-
-		}
-			const params: any = {
-			Bucket: S3Buckets[this.environment],
-			Prefix: this.getAbsolutePath(prefix),
-			Delimiter: '/',
-			MaxKeys: pageSize
-		};
-
 		try 
 		{
-			do 
-			{
-				const objectList = await this.s3.listObjectsV2(params).promise();
-				console.log(objectList);
+			const requestedFolder = this.request.query.folder.endsWith('/') ? this.request.query.folder : this.request.query.folder + '/'; //handle trailing '/'
+			const requestedFolderAbsolutePath = this.getAbsolutePath(requestedFolder);
 
-				// Populate the response with the retrieved objects if all of the pages
-				// were requested (requestedPage === -1), or if the current page
-				// is the requested page.
-				if (requestedPage === -1 || currentPage === requestedPage) 
-				{
-					this.populateListResponseWithObjects(objectList, response);
-				}
-				currentPage++;
-				params.ContinuationToken = objectList.NextContinuationToken;
+			const doesFolderExist = await this.getDoesFileExist(requestedFolderAbsolutePath);
+			if(!doesFolderExist && this.request.query.folder != '/') // The root folder is not created, and therefore isn't listed in the adal table. It is tere by default.
+			{
+				console.error(`Could not find requested folder: '${this.getAbsolutePath(this.request.query.folder)}'`);
+
+				const err: any = new Error(`Could not find requested folder: ${this.request.query.folder}`);
+				err.code = 404;
+				throw err;
+			}
+			
+
+			const findOptions: FindOptions = {
+				where: `Folder='${requestedFolder == '/' ? requestedFolderAbsolutePath : requestedFolderAbsolutePath.slice(0, -1)}'${this.request.query.where ? "AND(" + this.request.query.where + ")" :""}`,
+				...(this.request.query.page_size && {page_size: parseInt(this.request.query.page_size)}),
+				...(this.request.query.page && {page: this.getRequestedPageNumber()}),
+				...(this.request.query.fields && {fields: this.request.query.fields}),
+				...(this.request.query.order_by && {order_by: this.request.query.order_by}),
+				...(this.request.query.include_count && {include_count: this.request.query.include_count}),
+				...(this.request.query.include_deleted && {include_deleted: this.request.query.include_deleted}),
 			}
 
-			// The loop continues as long as the requested page was not yet reached, 
-			// or there's a next page.
-			while (this.shouldRetrieveNextObjectsListPage(currentPage, requestedPage, params.ContinuationToken));
+			const res =  await this.papiClient.addons.data.uuid(config.AddonUUID).table(METADATA_ADAL_TABLE_NAME).find(findOptions);
+
+			res.map(file => 
+			{
+				if(file.Key)
+				{
+					file.Key = this.getRelativePath(file.Key);
+				}
+				if(file.Folder) // the Fields parameter might cause adal to reutrn objects without a Folder field.
+				{
+					file.Folder = this.getRelativePath(file.Folder);
+				}
+
+				return file
+			});
 
 			console.log(`Files listing done successfully.`);
+			return res;
+
 		}
 		catch (err) 
 		{
@@ -445,68 +480,18 @@ class PfsService
 				throw err;
 			}
 		}
-
-		return response;
 	}
-
-	/**
-	 * Returns true if there is a next page (a continuationToken was sent), and 
-	 * either all pages were requested or the currentPage is not the requestedPage.
-	 * @param currentPage the page that was currently retrueved.
-	 * @param requestedPage the page that was requested.
-	 * @param continuationToken the continuationToken retrieved in the last page.
-	 * @returns boolean
-	 */
-	private shouldRetrieveNextObjectsListPage(currentPage: number, requestedPage: number, continuationToken: string | undefined) 
+	
+	private getRequestedPageNumber(): number
 	{
-		const areAllPagesRequested: boolean = requestedPage === -1;
-		const res = (continuationToken && (currentPage <= requestedPage || areAllPagesRequested));
-		return res;
-	}
-
-	getQueryRequestedPageNumber(): number 
-	{
-		let res: number = this.request.query.page ? parseInt(this.request.query.page) : 0;
-		
-		// Pagination first page is 0
-		if(res === 1)
+		let res = parseInt(this.request.query.page);
+		if(res === 0)
 		{
-			res = 0;
+			res++;
 		}
 
 		return res;
-	}
-
-	private populateListResponseWithObjects(objectList, response: IPfsListFilesResultObjects) 
-	{
-		objectList.Contents?.forEach(object => 
-		{
-			const relativePath: string = this.getRelativePath(object.Key ? object.Key : "");
-			const splitFileKey = relativePath.split('/');
-			if(splitFileKey[splitFileKey.length - 1]) // dont push the hidden file (it doesnt have name) that is being created when creating a folder withot file
-				response.push({
-					Key: relativePath,
-					Name: `${splitFileKey.pop()}`,
-					Folder: splitFileKey.join('/'),
-					URL: `${CdnServers[this.environment]}/${object.Key}`,
-					ModificationDateTime: object.LastModified?.toISOString()
-				});
-		});
-
-		objectList.CommonPrefixes?.forEach(object => 
-		{
-			const relativePath: string = this.getRelativePath(object.Prefix ? object.Prefix : "");
-			const splitFileKey = relativePath.split('/');
-			splitFileKey.pop(); // folders look like "folder/sub_folder/sub_subfolder/", so splitting by '/' results in a trailing "" 
-
-			// which we need to pop in order ot get the actual folder name.
-			response.push({
-				Key: relativePath,
-				Name: `${splitFileKey.pop()}/`,
-				Folder: splitFileKey.join('/'),
-				MIME: "pepperi/folder",
-			});
-		});
+		
 	}
 }
 
