@@ -41,4 +41,3 @@ export  type IPfsListFilesResultObjects = Array<IPfsListFilesResultObject>
 export const dataURLRegex = /^\s*data:([a-z]+\/[a-z]+(;[a-z\-]+\=[a-z\-]+)?)?(;base64)?,([a-z0-9\!\$\&\'\,\(\)\*\+\,\;\=\-\.\_\~\:\@\/\?\%\s]*\s*)$/i;
 
 export const METADATA_ADAL_TABLE_NAME = "S3ObjectsMetadata";
-

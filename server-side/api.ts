@@ -1,5 +1,6 @@
 import PfsService from './pfs.service'
 import { Client, Request } from '@pepperi-addons/debug-server'
+import { IndexedDataS3PfsDal } from './DAL/IndexedDataS3PfsDal';
 
 export async function file(client: Client, request: Request) 
 {
@@ -12,8 +13,10 @@ export async function file(client: Client, request: Request)
 	switch (request.method) 
 	{
 	case "GET": {
-		const pfs = new PfsService(client, request);
-		return pfs.downloadFromAWS();
+		const dal = getDalInstance(client, request);
+		const pfs = new PfsService(client, request, dal);
+
+		return pfs.downloadFile();
 	}
 	default: {
 		throw new Error(`Unsupported method: ${request.method}`);
@@ -35,7 +38,8 @@ export async function files(client: Client, request: Request)
 	case "GET": {
 		if (request.query.folder) 
 		{
-			const pfs = new PfsService(client, request);
+			const dal = getDalInstance(client, request);
+			const pfs = new PfsService(client, request, dal);
 				
 			return pfs.listFiles();
 		}
@@ -45,13 +49,18 @@ export async function files(client: Client, request: Request)
 		}
 	}
 	case "POST": {
+		const dal = getDalInstance(client, request);
+		const pfs = new PfsService(client, request, dal);
 
-			
-		const pfs = new PfsService(client, request);
-		return pfs.uploadToAWS();
+		return pfs.uploadFile();
 	}
 	default: {
 		throw new Error(`Unsupported method: ${request.method}`);
 	}
 	}
+}
+
+function getDalInstance(client: Client, request: Request) 
+{
+	return new IndexedDataS3PfsDal(client, request);
 }
