@@ -26,15 +26,6 @@ class PfsService
 			addonSecretKey: client.AddonSecretKey,
 			actionUUID: client.AddonUUID
 		});
-
-		// const accessKeyId=""
-		// const secretAccessKey=""
-		// const sessionToken=""
-		// AWS.config.update({
-		// 	accessKeyId,
-		// 	secretAccessKey,
-		// 	sessionToken
-		// });
 				 
 		this.environment = jwtDecode(client.OAuthAccessToken)['pepperi.datacenter'];
 		this.DistributorUUID = jwtDecode(client.OAuthAccessToken)['pepperi.distributoruuid'];
@@ -46,8 +37,8 @@ class PfsService
 		let res:any = {};
 		try 
 		{
-			this.doesFileExist = await this.getDoesFileExist();
 			await this.validateAddonSecretKey();
+			this.doesFileExist = await this.getDoesRequestedFileExist();
 			this.validateFieldsForUpload();
 
 			if(this.request.body.Key.endsWith('/')) 
@@ -78,18 +69,27 @@ class PfsService
 		return res;
 	}
 
-	private async getDoesFileExist() 
+	private async getDoesRequestedFileExist() 
 	{
 		if(this.doesFileExist != undefined)
 		{
 			return this.doesFileExist;
 		}
-		
+
+		this.doesFileExist = await this.getDoesFileExist();
+		return this.doesFileExist;
+	}
+
+	/**
+	 * Returns wether or not a file exist. If fileKey is provided, returns whether it exists. Otherwise returns whther or not the Key in this.request exists.
+	 */
+	private async getDoesFileExist(fileKey?: string) 
+	{
 		let file: any = null;
 
 		try 
 		{
-			file = await this.downloadFile();
+			file = await this.downloadFile(fileKey);
 		}
 		catch (e) 
 		{ 
@@ -99,8 +99,8 @@ class PfsService
 			}
 		}
 
-		this.doesFileExist = !!file;
-		return this.doesFileExist;
+		const res = !!file;
+		return res;
 	}
 
 	private async postFile() 
@@ -246,19 +246,40 @@ class PfsService
 		const fileName = pathFoldersList.pop();
 		const containingFolder = pathFoldersList.join('/');
 		
-		const metadata = {
-			Key: this.request.body.Key,
-			...(!this.doesFileExist && {// These fields are static, and are derived from the files's Key, which is immutable.
-				// We need to create them only once, and they are never changed.
-				Name: `${fileName}${this.request.body.Key.endsWith('/') ? '/' :''}`, // Add the dropped '/' for folders.
-				Folder: containingFolder,
-			}),
-			...((this.request.body.MIME || !this.doesFileExist) && {MIME: this.getMimeType()}), // Set MIME if it was passed, or if this file doesn't exist yet.
-			...(this.request.body.Sync && {Sync: this.request.body.Sync}), // Set Sync if it was passed
-			...(!this.doesFileExist && !this.request.body.Sync && {Sync: this.syncTypes[0]}), // If file doesn't exist, and Sync wasn't passed, default to 'None'
-			...(this.request.body.Hidden && {Hidden: this.request.body.Hidden}), // Set Hidden if it was passed
-			...(this.request.body.Description && {Description: this.request.body.Description}) // Add a description if it was passed.
+		const metadata: any = {
+			Key: this.request.body.Key
 		};
+
+		if(!this.doesFileExist)
+		{
+			metadata.Name = `${fileName}${this.request.body.Key.endsWith('/') ? '/' :''}`; // Add the dropped '/' for folders.
+			metadata.Folder = containingFolder;
+			metadata.MIME = this.getMimeType();
+			metadata.Hidden = this.request.body.Hidden ?? false;
+
+			if(!this.request.body.Key.endsWith('/')) // This is not a folder
+			{
+				metadata.Sync = this.request.body.Sync ?? this.syncTypes[0];
+				metadata.Description = this.request.body.Description ?? "";
+			}
+			else //this is a folder
+			{
+				metadata.Sync = this.syncTypes[0];
+				metadata.Description = "";
+			}
+			
+		}
+		else // The file does exist, there's no need to set Folder and Name fields
+		{
+			if(!this.request.body.Key.endsWith('/')) // This is not a folder
+			{
+				if(this.request.body.MIME) metadata.MIME = this.getMimeType();
+				if(this.request.body.Sync) metadata.Sync = this.request.body.Sync;
+				if(this.request.body.Description) metadata.Description = this.request.body.Description;
+			}
+			
+			if(this.request.body.Hidden) metadata.Hidden = this.request.body.Hidden;
+		}
 
 		return metadata;
 	}
@@ -267,18 +288,20 @@ class PfsService
 	 * Download the file's metadata.
 	 * @returns 
 	 */
-	async downloadFile() 
+	async downloadFile(downloadKey? : string) 
 	{
-		const downloadKey = (this.request.body && this.request.body.Key) ? this.request.body.Key : this.request.query.Key; 
-		return await this.dal.downloadFileMetadata(downloadKey)
+		const downloadKeyRes: string = downloadKey ?? ((this.request.body && this.request.body.Key) ? this.request.body.Key : this.request.query.Key); 
+		return await this.dal.downloadFileMetadata(downloadKeyRes)
 	}
 
 	async listFiles()
 	{
 		try 
 		{
-			await this.getDoesFileExist();
-			if(!this.doesFileExist && this.request.query.folder != '/') // The root folder is not created, and therefore isn't listed in the adal table. It is there by default.
+			const requestedFolder = this.request.query.folder.endsWith('/') ? this.request.query.folder : this.request.query.folder + '/'; //handle trailing '/'
+
+			const doesFolderExist = await this.getDoesFileExist(requestedFolder);
+			if(!doesFolderExist && this.request.query.folder != '/') // The root folder is not created, and therefore isn't listed in the adal table. It is tere by default.
 			{
 				console.error(`Could not find requested folder: '${this.request.query.folder}'.`);
 
@@ -286,7 +309,6 @@ class PfsService
 				err.code = 404;
 				throw err;
 			}
-			const requestedFolder = this.request.query.folder.endsWith('/') ? this.request.query.folder.slice(0, -1) : this.request.query.folder; //handle trailing '/'
 
 			return this.dal.listFolderContents(requestedFolder);
 		}
