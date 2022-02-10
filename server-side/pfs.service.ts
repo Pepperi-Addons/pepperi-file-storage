@@ -80,7 +80,7 @@ class PfsService
 		try 
 		{
 			await this.validateAddonSecretKey();
-			this.doesFileExist = await this.getDoesFileExist();
+			this.doesFileExist = await this.getDoesRequestedFileExist();
 			this.validateFieldsForUpload();
 
 			if(this.request.body.Key.endsWith('/')) 
@@ -117,18 +117,27 @@ class PfsService
 		return res;
 	}
 
-	private async getDoesFileExist() 
+	private async getDoesRequestedFileExist() 
 	{
 		if(this.doesFileExist != undefined)
 		{
 			return this.doesFileExist;
 		}
-		
+
+		this.doesFileExist = await this.getDoesFileExist();
+		return this.doesFileExist;
+	}
+
+	/**
+	 * Returns wether or not a file exist. If fileKey is provided, returns whether it exists. Otherwise returns whther or not the Key in this.request exists.
+	 */
+	private async getDoesFileExist(fileKey?: string) 
+	{
 		let file: any = null;
 
 		try 
 		{
-			file = await this.downloadFromAWS();
+			file = await this.downloadFromAWS(fileKey);
 		}
 		catch (e) 
 		{ 
@@ -138,8 +147,8 @@ class PfsService
 			}
 		}
 
-		this.doesFileExist = !!file;
-		return this.doesFileExist;
+		const res = !!file;
+		return res;
 	}
 
 	private async postFile() 
@@ -326,19 +335,28 @@ class PfsService
 			Key: this.getAbsolutePath(this.request.body.Key)
 		};
 
-		if(!this.doesFileExist){
+		if(!this.doesFileExist)
+		{
 			metadata.Name = `${fileName}${this.request.body.Key.endsWith('/') ? '/' :''}`; // Add the dropped '/' for folders.
 			metadata.Folder = this.getAbsolutePath(containingFolder);
 			metadata.MIME = this.getMimeType();
 			metadata.Hidden = this.request.body.Hidden ?? false;
+
 			if(!this.request.body.Key.endsWith('/')) // This is not a folder
 			{
+				metadata.URL = `${CdnServers[this.environment]}/${this.getAbsolutePath(this.request.body.Key)}`;
 				metadata.Sync = this.request.body.Sync ?? this.syncTypes[0];
 				metadata.Description = this.request.body.Description ?? "";
 			}
+			else //this is a folder
+			{
+				metadata.URL = "";
+				metadata.Sync = this.syncTypes[0];
+				metadata.Description = "";
+			}
 			
 		}
-		else // The file does exist, there's no need to set Folder and Name fields
+		else // The file does exist, there's no need to set Folder, Name and URL fields
 		{
 			if(!this.request.body.Key.endsWith('/')) // This is not a folder
 			{
@@ -354,12 +372,12 @@ class PfsService
 	}
 
 	/**
-	 * Download the file from AWS.
+	 * Download a file. If downloadKey is provided, downloads the downloadKey. Otherwise downloads the Key in this.request.
 	 * @returns 
 	 */
-	async downloadFromAWS() 
+	async downloadFromAWS(downloadKey? : string) 
 	{
-		const downloadKey = this.getAbsolutePath(this.request.body && this.request.body.Key ? this.request.body.Key : this.request.query.Key); 
+		downloadKey = downloadKey ?? this.getAbsolutePath(this.request.body && this.request.body.Key ? this.request.body.Key : this.request.query.Key); 
 		console.log(`Attempting to download the following key from ADAL: ${downloadKey}`)
 		try 
 		{
@@ -410,8 +428,11 @@ class PfsService
 	{
 		try 
 		{
-			await this.getDoesFileExist();
-			if(!this.doesFileExist && this.request.query.folder != '/') // The root folder is not created, and therefore isn't listed in the adal table. It is tere by default.
+			const requestedFolder = this.request.query.folder.endsWith('/') ? this.request.query.folder : this.request.query.folder + '/'; //handle trailing '/'
+			const requestedFolderAbsolutePath = this.getAbsolutePath(requestedFolder);
+
+			const doesFolderExist = await this.getDoesFileExist(requestedFolderAbsolutePath);
+			if(!doesFolderExist && this.request.query.folder != '/') // The root folder is not created, and therefore isn't listed in the adal table. It is tere by default.
 			{
 				console.error(`Could not find requested folder: '${this.getAbsolutePath(this.request.query.folder)}'`);
 
@@ -419,11 +440,10 @@ class PfsService
 				err.code = 404;
 				throw err;
 			}
-			const requestedFolder = this.request.query.folder.endsWith('/') ? this.request.query.folder.slice(0, -1) : this.request.query.folder; //handle trailing '/'
-			const requestedFolderAbsolutePath = this.getAbsolutePath(requestedFolder);
+			
 
 			const findOptions: FindOptions = {
-				where: `Folder='${requestedFolderAbsolutePath}'${this.request.query.where ? "AND(" + this.request.query.where + ")" :""}`,
+				where: `Folder='${requestedFolder == '/' ? requestedFolderAbsolutePath : requestedFolderAbsolutePath.slice(0, -1)}'${this.request.query.where ? "AND(" + this.request.query.where + ")" :""}`,
 				...(this.request.query.page_size && {page_size: parseInt(this.request.query.page_size)}),
 				...(this.request.query.page && {page: this.getRequestedPageNumber()}),
 				...(this.request.query.fields && {fields: this.request.query.fields}),
