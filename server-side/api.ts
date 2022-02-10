@@ -8,15 +8,6 @@ export async function file(client: Client, request: Request)
 	{
 		request.query.Key = request.query.key;
 	}
-	
-	// Handle nginx mapping issues
-	if(request.query.addon_uuid.indexOf('/') !== -1)
-	{
-		console.log(`Key before handeling: ${request.query.Key}. Addon_uuid before handeling: ${request.query.addon_uuid}`);
-		request.query.Key = `${request.query.addon_uuid.substring(request.query.addon_uuid.indexOf('/') + 1, request.query.addon_uuid.length)}/${request.query.key}`;
-		request.query.addon_uuid = request.query.addon_uuid.substring(0, request.query.addon_uuid.indexOf('/'));
-		console.log(`Key after handeling: ${request.query.Key}. Addon_uuid after handeling: ${request.query.addon_uuid}`);
-	}
 
 	switch (request.method) 
 	{
@@ -38,9 +29,6 @@ export async function files(client: Client, request: Request)
 	{
 		throw new Error(`Missing necessary parameter: addon_uuid`);
 	}
-
-	// Handle nginx mapping issues
-	request.query.addon_uuid = request.query.addon_uuid.startsWith('/') ? request.query.addon_uuid.substring(1) : request.query.addon_uuid;
 
 	switch (request.method) 
 	{
