@@ -26,8 +26,10 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 
 	async listFolderContents(folderName: string): Promise<any> 
 	{
+		const folderNameAbsolutePath = this.getAbsolutePath(folderName);
+
 		const findOptions: FindOptions = {
-			where: `Folder='${this.getAbsolutePath(folderName)}'${this.request.query.where ? "AND(" + this.request.query.where + ")" :""}`,
+			where: `Folder='${folderName == '/' ? folderNameAbsolutePath : folderNameAbsolutePath.slice(0, -1)}'${this.request.query.where ? "AND(" + this.request.query.where + ")" :""}`,
 			...(this.request.query.page_size && {page_size: parseInt(this.request.query.page_size)}),
 			...(this.request.query.page && {page: this.getRequestedPageNumber()}),
 			...(this.request.query.fields && {fields: this.request.query.fields}),
@@ -92,6 +94,11 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 			if (!metadata.Key.endsWith('/')) //Add URL if this isn't a folder and this file doesn't exist.
 			{
 				metadata.URL = `${CdnServers[this.environment]}/${this.getAbsolutePath(this.request.body.Key)}`;
+			}
+			else
+			{
+				metadata.URL = ``;
+
 			}
 		}
 	}
