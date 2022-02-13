@@ -1,4 +1,4 @@
-import PfsService from './pfs.service'
+import { PfsService } from './pfs.service'
 import { Client, Request } from '@pepperi-addons/debug-server'
 import { IndexedDataS3PfsDal } from './DAL/IndexedDataS3PfsDal';
 

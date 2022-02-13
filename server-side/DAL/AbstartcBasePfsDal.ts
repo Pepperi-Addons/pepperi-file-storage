@@ -23,6 +23,8 @@ export abstract class AbstractBasePfsDal implements IPfsDal
 
 	abstract uploadFileData(Key: string, Body: Buffer): Promise<any>;
 
+	abstract uploadThumbnail(Key: string, size: string,  Body: Buffer): Promise<any>;
+
     abstract generatePreSignedURL(Key: string): Promise<any>;
 	
 	/**

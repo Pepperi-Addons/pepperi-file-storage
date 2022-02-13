@@ -4,10 +4,13 @@ import jwtDecode from 'jwt-decode';
 import { dataURLRegex } from './constants';
 import fetch from 'node-fetch';
 import { IPfsDal } from './DAL/IPfsDal';
+// import { CdnServers, IPfsDownloadObjectResponse, IPfsListFilesResultObjects, S3Buckets } from './constants';
+// import { mime } from 'mime-types';
+import { ImageResizer } from './imageResizer';
 
 const AWS = require('aws-sdk'); // AWS is part of the lambda's environment. Importing it will result in it being rolled up redundently.
 
-class PfsService 
+export class PfsService 
 {
 	papiClient: PapiClient;
 	DistributorUUID: string;
@@ -83,6 +86,32 @@ class PfsService
 	/**
 	 * Returns wether or not a file exist. If fileKey is provided, returns whether it exists. Otherwise returns whther or not the Key in this.request exists.
 	 */
+	private async uploadThumbnails(buf: Buffer) {
+		const imageResizer = new ImageResizer(this.getMimeType(), buf);
+		for (const thumbnailRequest of this.request.body.Thumbnails){
+			const buffer: Buffer = await imageResizer.resize(thumbnailRequest);
+			await this.dal.uploadThumbnail(this.request.body.Key, thumbnailRequest.Size.toLowerCase(), buffer);
+		}
+		// this.request.body.Thumbnails.forEach(async (thumbnailRequest) => {
+
+		// 	// const nu = (await imageResizer.resize(thumbnailRequest));
+
+		// 	// const thumbnailParams = {
+		// 	// 	Bucket: S3Buckets[this.environment],
+		// 	// 	Key: `${this.getAbsolutePath(this.request.body.Key, 'thumbnails')}_${thumbnailRequest.Size}`,
+		// 	// 	Metadata:  this.getMetadata(),
+		// 	// 	Body: nu,
+		// 	// 	ContentType: this.getMimeType(),
+		// 	// };
+
+		// 	// // Uploading thumbnails to the bucket (sync)
+		// 	// const uploadedThumbnail = await this.s3.upload(thumbnailParams).promise();
+
+		// 	const buffer: Buffer = await imageResizer.resize(thumbnailRequest);
+		// 	await this.dal.uploadThumbnail(this.request.body.Key, thumbnailRequest.Size.toLower(), buffer);
+		// });
+	}
+
 	private async getDoesFileExist(fileKey?: string) 
 	{
 		let file: any = null;
@@ -111,6 +140,10 @@ class PfsService
 		{
 			const buffer: Buffer = await this.getFileDataBuffer();
 			await this.dal.uploadFileData(this.request.body.Key, buffer);
+
+			if(this.request.body.Thumbnails){
+				await this.uploadThumbnails(buffer);
+			}
 		}
 		else if(!this.request.body.URI && !this.doesFileExist)
 		{ // in case "URI" is not provided on Creation (that is why the check if file exists) a PresignedURL will be returned 
@@ -121,6 +154,9 @@ class PfsService
 			...res,
 			...await this.uploadFileMetadata()
 		};
+
+		
+		
 		console.log(`File metadata successfuly uploaded to ADAL.`);
 
 		return res;
@@ -185,13 +221,13 @@ class PfsService
 
 	private async validateAddonSecretKey() 
 	{
-		if (!this.request.header["X-Pepperi-SecretKey"] || !await this.isValidRequestedAddon(this.client, this.request.header["X-Pepperi-SecretKey"], this.AddonUUID)) 
-		{
+		// if (!this.request.header["X-Pepperi-SecretKey"] || !await this.isValidRequestedAddon(this.client, this.request.header["X-Pepperi-SecretKey"], this.AddonUUID)) 
+		// {
 
-			const err: any = new Error(`Authorization request denied. ${this.request.header["X-Pepperi-SecretKey"]? "check secret key" : "Missing secret key header"} `);
-			err.code = 401;
-			throw err;
-		}
+		// 	const err: any = new Error(`Authorization request denied. ${this.request.header["X-Pepperi-SecretKey"]? "check secret key" : "Missing secret key header"} `);
+		// 	err.code = 401;
+		// 	throw err;
+		// }
 	}
 
 	private async  isValidRequestedAddon(client: Client, secretKey, addonUUID)

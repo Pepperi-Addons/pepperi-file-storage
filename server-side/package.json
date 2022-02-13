@@ -24,7 +24,6 @@
         "nodemon": "^2.0.4",
         "rollup": "^2.10.9",
         "rollup-plugin-typescript2": "^0.27.1",
-        "ts-node": "^8.10.1",
         "typescript": "~3.8.0"
     },
     "dependencies": {
@@ -34,6 +33,7 @@
         "aws-sdk": "^2.1045.0",
         "encoding": "^0.1.13",
         "node-fetch": "^2.6.0",
-        "semver": "^7.3.5"
+        "semver": "^7.3.5",
+        "sharp": "^0.29.3"
     }
 }

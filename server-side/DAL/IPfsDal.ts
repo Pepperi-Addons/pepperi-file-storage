@@ -2,6 +2,8 @@ export interface IPfsDal
 {
     uploadFileData(Key: string, Body: Buffer): Promise<any>;
 
+    uploadThumbnail(Key: string, size: string, Body: Buffer): Promise<any>;
+
     uploadFileMetadata(metadata: any, doesFileExist: boolean): Promise<any>;
 
     downloadFileMetadata(Key: string): Promise<any>;
