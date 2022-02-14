@@ -98,7 +98,12 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 			else
 			{
 				metadata.URL = ``;
+			}
 
+			if(metadata.Thumbnails){
+				metadata.Thumbnails.forEach(thumbnail => {
+					thumbnail.URL = `${CdnServers[this.environment]}/thumbnails/${this.getAbsolutePath(this.request.body.Key)}_${thumbnail.Size}`;
+				});
 			}
 		}
 	}
