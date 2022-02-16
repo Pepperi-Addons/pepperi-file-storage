@@ -24,6 +24,9 @@ export abstract class AbstractBasePfsDal implements IPfsDal
 	abstract uploadFileData(Key: string, Body: Buffer): Promise<any>;
 
     abstract generatePreSignedURL(Key: string): Promise<any>;
+
+    abstract deleteFileData(Key: string): Promise<any>;
+
 	
 	/**
 	 * Each distributor is given its own folder, and each addon has its own folder within the distributor's folder.

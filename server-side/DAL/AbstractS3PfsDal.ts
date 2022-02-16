@@ -32,6 +32,22 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 
 	abstract downloadFileMetadata(Key: string): Promise<any>;
 
+	public async deleteFileData(removedKey: string): Promise<any> 
+	{
+		console.log(`Trying to delete Key: ${removedKey}`)
+		const params: any = {};
+
+		// Create S3 params
+		params.Bucket = this.S3Bucket;
+		params.Key = removedKey;
+		
+		// Delete from S3 bucket.
+		const deletedFile = await this.s3.deleteObject(params).promise();
+		console.log(`Successfully deleted Key ${removedKey}: ${JSON.stringify(deletedFile)}`);
+
+		return deletedFile;
+	}
+
 	public async uploadFileData(Key: string, Body: Buffer): Promise<any> 
 	{
 		const params: any = {};

@@ -281,6 +281,13 @@ class PfsService
 			if(this.request.body.Hidden) metadata.Hidden = this.request.body.Hidden;
 		}
 
+		// TODO Remove this debug logic
+		if(this.request.body.ExpirationDateTime){
+			metadata.Hidden = this.request.body.Hidden ?? true
+			metadata.ExpirationDateTime = this.request.body.ExpirationDateTime;
+
+		}
+
 		return metadata;
 	}
 
@@ -319,6 +326,13 @@ class PfsService
 				console.error(`Could not list files in folder ${this.request.query.folder}. ${err.message}`);
 				throw err;
 			}
+		}
+	}
+
+	async recordRemoved() {
+		const removedKeys: [string] = this.request.body.Message.ModifiedObjects.map(modifiedObject => modifiedObject.ObjectKey);
+		for(const removedKey of removedKeys){
+			await this.dal.deleteFileData(removedKey);
 		}
 	}
 }
