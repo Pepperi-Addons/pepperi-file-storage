@@ -13,14 +13,14 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 	{
 		super(client, request);
 
-		const accessKeyId="ASIA3SWCYKQBWVZCVPWT"
-		const secretAccessKey="08SvctIfp79XNepmXfoTS8TqDZMXLo1LYssDSzVv"
-		const sessionToken="IQoJb3JpZ2luX2VjEDAaDGV1LWNlbnRyYWwtMSJGMEQCIF8MaYH/nQIAmzm6jGmrjEO7B+GjXMC9QcfrDgqU4EkOAiBLO09EdpNzjxvh1Fme2kfq9fzXgJYduVeQ6FQyTs4ZlCqOAwh5EAEaDDc5NjA1MTEzMzQ0MyIM573LU6ZvaoW+TGS5KusC18+FQ/7O1wu8RNM4habngeboun2yPRrK92X0lC9u/NLD1zua9baRptQK1u8w9aSHbKa4iC+xF8GfuxofkUxUn9xsjVHySSAVQF00/MakqjvEpVq0mFszZwUImdXfXPSReYsxrIUwFjKBkuA2G0LMUauKQ5OBNMela8DVZ9EZJRRxVtoPT9UDmgJIojFtQDpLR/UOrS98rcWs9hVuwyVMoRzyWcTPMC9mpf1H6uz3ytp+dds/khJ8gy3vtUFaHricAiA9S2ZmzjU0Dn8DaMfevBnDDryL1K5PgC6vc/UwG4rme5UTSZtp/jv5LCLu61ckh1QnYeIHOsudYboGD8m6MHlir5gkM6igE0X+atlauXWxqe28mSvQVt7R0g+4rAQ5PkfPP/7cF3kIuCObBQ2L1qAUQMmxkQoOPdnbw6dIDuY4pY6oEDuQFH2ylSpQcfz1IJS2BArdsVTOxvxU6KFpo4gcdflkQHy+LnG7MJrQpJAGOqcBLPWB3OwZyE8N/sZmuOnylW2oU+9WIH1KASYRkEG/0uGCyt90tTI9vD9xhC+EQFk1rkN601TCDrdloEwNDO1LIqQWqHrKMJrln8nYvpBz+Ki5+E9U4MjQpx9HAf78BUgf20653vcRkZK63ip/zuSFAHMbkS3cYweV7x7GgalavefKA3RnJcni894x2meaK8QBfzTchaKpEnTG63XYd4s5hlAtx5S6nrk="
-		AWS.config.update({
-			accessKeyId,
-			secretAccessKey,
-			sessionToken
-		});
+		// const accessKeyId=""
+		// const secretAccessKey=""
+		// const sessionToken=""
+		// AWS.config.update({
+		// 	accessKeyId,
+		// 	secretAccessKey,
+		// 	sessionToken
+		// });
 
 		this.s3 = new AWS.S3();
 		this.S3Bucket = S3Buckets[this.environment];
