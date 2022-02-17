@@ -5,8 +5,6 @@ import config from '../../addon.config.json';
 import { FindOptions } from '@pepperi-addons/papi-sdk';
 import { AbstractS3PfsDal } from './AbstractS3PfsDal';
 
-const AWS = require('aws-sdk'); // AWS is part of the lambda's environment. Importing it will result in it being rolled up redundently.
-
 export class IndexedDataS3PfsDal extends AbstractS3PfsDal 
 {
 	private papiClient: PapiClient;
@@ -23,6 +21,8 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 			addonSecretKey: client.AddonSecretKey
 		});
 	}
+
+	//#region IPfsGetter
 
 	async listFolderContents(folderName: string): Promise<any> 
 	{
@@ -47,65 +47,6 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 
 		console.log(`Files listing done successfully.`);
 		return res;
-	}
-    
-	private getRequestedPageNumber(): number
-	{
-		let res = parseInt(this.request.query.page);
-		if(res === 0)
-		{
-			res++;
-		}
-
-		return res;
-	}
-
-	async uploadFileMetadata(metadata: any, doesFileExist: boolean): Promise<any> 
-	{
-		// Set metdata to absolute paths
-		this.setAbsolutePathsInMetadata(metadata, doesFileExist);
-		const res =  await this.papiClient.addons.data.uuid(config.AddonUUID).table(METADATA_ADAL_TABLE_NAME).upsert(metadata);
-
-		this.setRelativePathsInMetadata(res);
-
-		return res;
-	}
-
-	private setRelativePathsInMetadata(res) 
-	{
-		if(res.Key)
-		{
-			res.Key = this.getRelativePath(res.Key);
-		}
-		if(res.Folder)
-		{
-			res.Folder = this.getRelativePath(res.Folder);
-		}
-	}
-
-	private setAbsolutePathsInMetadata(metadata: any, doesFileExist: boolean) 
-	{
-		metadata.Key = this.getAbsolutePath(metadata.Key);
-
-		if (!doesFileExist) 
-		{
-			metadata.Folder = this.getAbsolutePath(metadata.Folder);
-
-			if (!metadata.Key.endsWith('/')) //Add URL if this isn't a folder and this file doesn't exist.
-			{
-				metadata.URL = `${CdnServers[this.environment]}/${this.getAbsolutePath(this.request.body.Key)}`;
-			}
-			else
-			{
-				metadata.URL = ``;
-			}
-
-			if(metadata.Thumbnails){
-				metadata.Thumbnails.forEach(thumbnail => {
-					thumbnail.URL = `${CdnServers[this.environment]}/thumbnails/${this.getAbsolutePath(this.request.body.Key)}_${thumbnail.Size}`;
-				});
-			}
-		}
 	}
 
 	async downloadFileMetadata(Key: string): Promise<any> 
@@ -154,4 +95,85 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 			throw (err);
 		}
 	}
+
+	//#endregion
+
+	//#region IPfsMutator
+	async mutateADAL(file: any) {
+		return await this.uploadFileMetadata(file);
+	}
+	//#endregion
+
+	//#region private methods
+    
+	private getRequestedPageNumber(): number
+	{
+		let res = parseInt(this.request.query.page);
+		if(res === 0)
+		{
+			res++;
+		}
+
+		return res;
+	}
+
+	private async uploadFileMetadata(metadata: any): Promise<any> 
+	{
+		// Set metdata to absolute paths
+		this.setAbsolutePathsInMetadata(metadata);
+		
+		const presignedURL = metadata.PresignedURL;
+		delete metadata.PresignedURL //Don't store PresignedURL in ADAL
+
+		delete metadata.doesFileExist;
+
+		const res =  await this.papiClient.addons.data.uuid(config.AddonUUID).table(METADATA_ADAL_TABLE_NAME).upsert(metadata);
+
+		if(presignedURL){ // Return PresignedURL if there was one
+			res.PresignedURL = presignedURL;
+		}
+
+		this.setRelativePathsInMetadata(res);
+
+		return res;
+	}
+
+	private setRelativePathsInMetadata(res) 
+	{
+		if(res.Key)
+		{
+			res.Key = this.getRelativePath(res.Key);
+		}
+		if(res.Folder)
+		{
+			res.Folder = this.getRelativePath(res.Folder);
+		}
+	}
+
+	private setAbsolutePathsInMetadata(file: any) 
+	{
+		file.Key = this.getAbsolutePath(file.Key);
+
+		if (!file.doesFileExist) 
+		{
+			file.Folder = this.getAbsolutePath(file.Folder);
+
+			if (!file.Key.endsWith('/')) //Add URL if this isn't a folder and this file doesn't exist.
+			{
+				file.URL = `${CdnServers[this.environment]}/${this.getAbsolutePath(this.request.body.Key)}`;
+			}
+			else
+			{
+				file.URL = ``;
+			}
+
+			if(file.Thumbnails){
+				file.Thumbnails.forEach(thumbnail => {
+					thumbnail.URL = `${CdnServers[this.environment]}/thumbnails/${this.getAbsolutePath(this.request.body.Key)}_${thumbnail.Size}`;
+				});
+			}
+		}
+	}
+
+	//#endregion
 }

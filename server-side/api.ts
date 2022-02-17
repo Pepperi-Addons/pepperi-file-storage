@@ -14,7 +14,7 @@ export async function file(client: Client, request: Request)
 	{
 	case "GET": {
 		const dal = getDalInstance(client, request);
-		const pfs = new PfsService(client, request, dal);
+		const pfs = new PfsService(client, request, dal, dal);
 
 		return pfs.downloadFile();
 	}
@@ -39,7 +39,7 @@ export async function files(client: Client, request: Request)
 		if (request.query.folder) 
 		{
 			const dal = getDalInstance(client, request);
-			const pfs = new PfsService(client, request, dal);
+			const pfs = new PfsService(client, request, dal, dal);
 				
 			return pfs.listFiles();
 		}
@@ -50,7 +50,7 @@ export async function files(client: Client, request: Request)
 	}
 	case "POST": {
 		const dal = getDalInstance(client, request);
-		const pfs = new PfsService(client, request, dal);
+		const pfs = new PfsService(client, request, dal, dal);
 
 		return pfs.uploadFile();
 	}

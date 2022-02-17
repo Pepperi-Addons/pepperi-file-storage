@@ -1,8 +1,9 @@
 import { Client, Request } from '@pepperi-addons/debug-server';
 import jwtDecode from 'jwt-decode';
-import { IPfsDal } from './IPfsDal';
+import { IPfsGetter } from './IPfsGetter';
+import { IPfsMutator } from './IPfsMutator';
 
-export abstract class AbstractBasePfsDal implements IPfsDal
+export abstract class AbstractBasePfsDal implements IPfsGetter, IPfsMutator
 {
 	protected environment: any;
     protected DistributorUUID: any;
@@ -14,19 +15,21 @@ export abstract class AbstractBasePfsDal implements IPfsDal
         this.DistributorUUID = jwtDecode(client.OAuthAccessToken)['pepperi.distributoruuid'];
 		this.AddonUUID = this.request.query.addon_uuid;
 	}
+	//#region IPfsMutator
+	abstract mutateS3(file: any);
 
+	abstract mutateADAL(file: any);
+	
+	//#endregion
+
+	//#region IPfsGetter
 	abstract listFolderContents(folderName: string): Promise<any>;
 
-	abstract uploadFileMetadata(metadata: any, doesFileExist: boolean): Promise<any>;
-
 	abstract downloadFileMetadata(Key: string): Promise<any>;
-
-	abstract uploadFileData(Key: string, Body: Buffer): Promise<any>;
-
-	abstract uploadThumbnail(Key: string, size: string,  Body: Buffer): Promise<any>;
-
-    abstract generatePreSignedURL(Key: string): Promise<any>;
+	//#endregion
 	
+
+	//#region protected methods
 	/**
 	 * Each distributor is given its own folder, and each addon has its own folder within the distributor's folder.
 	 * Addons place objects in their folder. An absolute path is a path that includes the Distributor's UUID, 
@@ -54,4 +57,6 @@ export abstract class AbstractBasePfsDal implements IPfsDal
 		const res = relativePath === '' ? '/' : relativePath; // Handle root folder case
 		return res;
 	}
+
+	//#endregion
 }

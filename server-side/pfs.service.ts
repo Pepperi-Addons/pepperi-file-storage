@@ -3,9 +3,9 @@ import { Client, Request } from '@pepperi-addons/debug-server';
 import jwtDecode from 'jwt-decode';
 import { dataURLRegex } from './constants';
 import fetch from 'node-fetch';
-import { IPfsDal } from './DAL/IPfsDal';
-
-const AWS = require('aws-sdk'); // AWS is part of the lambda's environment. Importing it will result in it being rolled up redundently.
+import { ImageResizer } from './imageResizer';
+import { IPfsMutator } from './DAL/IPfsMutator';
+import { IPfsGetter } from './DAL/IPfsGetter';
 
 export class PfsService 
 {
@@ -15,9 +15,9 @@ export class PfsService
 	readonly environment: string;
 	readonly MIME_FIELD_IS_MISSING = "Missing mandatory field 'MIME'";
 	syncTypes = ["None", "Device", "DeviceThumbnail", "Always"];
-	doesFileExist?: boolean = undefined;
+	existingFile: any;
 
-	constructor(private client: Client, private request: Request, private dal: IPfsDal) 
+	constructor(private client: Client, private request: Request, private pfsMutator: IPfsMutator, private pfsGetter: IPfsGetter ) 
 	{
 		this.papiClient = new PapiClient({
 			baseURL: client.BaseURL,
@@ -38,7 +38,15 @@ export class PfsService
 		try 
 		{
 			await this.validateAddonSecretKey();
-			this.doesFileExist = await this.getDoesRequestedFileExist();
+			try{
+				this.existingFile = await this.downloadFile();
+				this.existingFile.doesFileExist = true;
+			}
+			catch{
+				this.existingFile = {}
+				this.existingFile.doesFileExist = false;
+
+			}
 			this.validateFieldsForUpload();
 
 			if(this.request.body.Key.endsWith('/')) 
@@ -47,7 +55,7 @@ export class PfsService
 			}
 			else //file post
 			{
-				res = await this.postFile();
+				res = await this.createFile();
 			}
 		}
 		catch (err) 
@@ -61,29 +69,10 @@ export class PfsService
 		return res;
 	}
 
-	async uploadFileMetadata() 
-	{
-		const metadata = this.getMetadata();	
-		const res = await this.dal.uploadFileMetadata(metadata, await this.getDoesFileExist());
-
-		return res;
-	}
-
-	private async getDoesRequestedFileExist() 
-	{
-		if(this.doesFileExist != undefined)
-		{
-			return this.doesFileExist;
-		}
-
-		this.doesFileExist = await this.getDoesFileExist();
-		return this.doesFileExist;
-	}
-
 	/**
-	 * Returns wether or not a file exist. If fileKey is provided, returns whether it exists. Otherwise returns whther or not the Key in this.request exists.
+	 * Returns wether or not a file exist.
 	 */
-	private async getDoesFileExist(fileKey?: string) 
+	private async getDoesFileExist(fileKey: string) 
 	{
 		let file: any = null;
 
@@ -100,30 +89,40 @@ export class PfsService
 		}
 
 		const res = !!file;
+
 		return res;
 	}
 
-	private async postFile() 
+	private async createFile() 
 	{
 		let res: any = {};
 
+		this.getMetadata();	
+		
 		if (this.request.body.URI)
 		{
-			const buffer: Buffer = await this.getFileDataBuffer();
-			await this.dal.uploadFileData(this.request.body.Key, buffer);
+			this.existingFile.buffer = await this.getFileDataBuffer();
+			await this.createThumbnailsBuffers();
 		}
-		else if(!this.request.body.URI && !this.doesFileExist)
-		{ // in case "URI" is not provided on Creation (that is why the check if file exists) a PresignedURL will be returned 
-			res["PresignedURL"] = await this.dal.generatePreSignedURL(this.request.body.Key); // creating presignedURL
-		}
+		
+		await this.pfsMutator.mutateS3(this.existingFile)
+		res = await this.pfsMutator.mutateADAL(this.existingFile);
 
-		res = {
-			...res,
-			...await this.uploadFileMetadata()
-		};
-		console.log(`File metadata successfuly uploaded to ADAL.`);
+		console.log(`Successfuly created a file.`);
+
 
 		return res;
+	}
+
+	private async createThumbnailsBuffers() {
+		if (this.existingFile.Thumbnails && this.existingFile.Thumbnails.length > 0) {
+			const resizer = new ImageResizer(this.existingFile.MIME, this.existingFile.buffer);
+
+			this.existingFile.Thumbnails = await Promise.all(this.existingFile.Thumbnails.map(async thumbnail => {
+				thumbnail.buffer = await resizer.resize(thumbnail);
+				return thumbnail;
+			}));
+		}
 	}
 
 	private async getFileDataBuffer() 
@@ -153,7 +152,8 @@ export class PfsService
 
 	private async createFolder() 
 	{
-		return await this.uploadFileMetadata();			
+		this.getMetadata();	
+		return await this.pfsMutator.mutateADAL(this.existingFile);
 	}
 		
 	isDataURL(s) 
@@ -167,11 +167,11 @@ export class PfsService
 		{
 			throw new Error("Missing mandatory field 'Key'");
 		}
-		else if(!this.doesFileExist && !this.request.body.MIME )
+		else if(!this.existingFile.doesFileExist && !this.request.body.MIME )
 		{
 			throw new Error(this.MIME_FIELD_IS_MISSING);
 		}
-		else if(!this.doesFileExist && this.request.body.MIME == 'pepperi/folder' && !this.request.body.Key.endsWith('/'))
+		else if(!this.existingFile.doesFileExist && this.request.body.MIME == 'pepperi/folder' && !this.request.body.Key.endsWith('/'))
 		{
 			// if 'pepperi/folder' is provided on creation and the key is not ending with '/', the POST should fail
 			throw new Error("On creation of a folder, the key must end with '/'");
@@ -185,13 +185,13 @@ export class PfsService
 
 	private async validateAddonSecretKey() 
 	{
-		// if (!this.request.header["X-Pepperi-SecretKey"] || !await this.isValidRequestedAddon(this.client, this.request.header["X-Pepperi-SecretKey"], this.AddonUUID)) 
-		// {
+		if (!this.request.header["X-Pepperi-SecretKey"] || !await this.isValidRequestedAddon(this.client, this.request.header["X-Pepperi-SecretKey"], this.AddonUUID)) 
+		{
 
-		// 	const err: any = new Error(`Authorization request denied. ${this.request.header["X-Pepperi-SecretKey"]? "check secret key" : "Missing secret key header"} `);
-		// 	err.code = 401;
-		// 	throw err;
-		// }
+			const err: any = new Error(`Authorization request denied. ${this.request.header["X-Pepperi-SecretKey"]? "check secret key" : "Missing secret key header"} `);
+			err.code = 401;
+			throw err;
+		}
 	}
 
 	private async  isValidRequestedAddon(client: Client, secretKey, addonUUID)
@@ -245,27 +245,25 @@ export class PfsService
 		}
 		const fileName = pathFoldersList.pop();
 		const containingFolder = pathFoldersList.join('/');
-		
-		const metadata: any = {
-			Key: this.request.body.Key
-		};
 
-		if(!this.doesFileExist)
+		this.existingFile.Key = this.request.body.Key;
+
+		if(!this.existingFile.doesFileExist)
 		{
-			metadata.Name = `${fileName}${this.request.body.Key.endsWith('/') ? '/' :''}`; // Add the dropped '/' for folders.
-			metadata.Folder = containingFolder;
-			metadata.MIME = this.getMimeType();
-			metadata.Hidden = this.request.body.Hidden ?? false;
+			this.existingFile.Name = `${fileName}${this.request.body.Key.endsWith('/') ? '/' :''}`; // Add the dropped '/' for folders.
+			this.existingFile.Folder = containingFolder;
+			this.existingFile.MIME = this.getMimeType();
+			this.existingFile.Hidden = this.request.body.Hidden ?? false;
 
 			if(!this.request.body.Key.endsWith('/')) // This is not a folder
 			{
-				metadata.Sync = this.request.body.Sync ?? this.syncTypes[0];
-				metadata.Description = this.request.body.Description ?? "";
+				this.existingFile.Sync = this.request.body.Sync ?? this.syncTypes[0];
+				this.existingFile.Description = this.request.body.Description ?? "";
 			}
 			else //this is a folder
 			{
-				metadata.Sync = this.syncTypes[0];
-				metadata.Description = "";
+				this.existingFile.Sync = this.syncTypes[0];
+				this.existingFile.Description = "";
 			}
 			
 		}
@@ -273,21 +271,19 @@ export class PfsService
 		{
 			if(!this.request.body.Key.endsWith('/')) // This is not a folder
 			{
-				if(this.request.body.MIME) metadata.MIME = this.getMimeType();
-				if(this.request.body.Sync) metadata.Sync = this.request.body.Sync;
-				if(this.request.body.Description) metadata.Description = this.request.body.Description;
+				if(this.request.body.MIME) this.existingFile.MIME = this.getMimeType();
+				if(this.request.body.Sync) this.existingFile.Sync = this.request.body.Sync;
+				if(this.request.body.Description) this.existingFile.Description = this.request.body.Description;
 			}
 			
-			if(this.request.body.Hidden) metadata.Hidden = this.request.body.Hidden;
+			if(this.request.body.Hidden) this.existingFile.Hidden = this.request.body.Hidden;
 		}
 
 		if(this.request.body.Thumbnails && Array.isArray(this.request.body.Thumbnails)){
-				metadata.Thumbnails = this.request.body.Thumbnails.map(thumbnailRequest => {
+			this.existingFile.Thumbnails = this.request.body.Thumbnails.map(thumbnailRequest => {
 					return {Size: thumbnailRequest.Size.toLowerCase()}
 				});
 		}
-
-		return metadata;
 	}
 
 	/**
@@ -297,7 +293,7 @@ export class PfsService
 	async downloadFile(downloadKey? : string) 
 	{
 		const downloadKeyRes: string = downloadKey ?? ((this.request.body && this.request.body.Key) ? this.request.body.Key : this.request.query.Key); 
-		return await this.dal.downloadFileMetadata(downloadKeyRes)
+		return await this.pfsGetter.downloadFileMetadata(downloadKeyRes)
 	}
 
 	async listFiles()
@@ -306,8 +302,7 @@ export class PfsService
 		{
 			const requestedFolder = this.request.query.folder.endsWith('/') ? this.request.query.folder : this.request.query.folder + '/'; //handle trailing '/'
 
-			const doesFolderExist = await this.getDoesFileExist(requestedFolder);
-			if(!doesFolderExist && this.request.query.folder != '/') // The root folder is not created, and therefore isn't listed in the adal table. It is tere by default.
+			if(this.request.query.folder != '/' && !(await this.getDoesFileExist(requestedFolder))) // The root folder is not created, and therefore isn't listed in the adal table. It is there by default.
 			{
 				console.error(`Could not find requested folder: '${this.request.query.folder}'.`);
 
@@ -316,7 +311,7 @@ export class PfsService
 				throw err;
 			}
 
-			return this.dal.listFolderContents(requestedFolder);
+			return this.pfsGetter.listFolderContents(requestedFolder);
 		}
 		catch (err) 
 		{

@@ -26,20 +26,34 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		this.S3Bucket = S3Buckets[this.environment];
 	}
 
-	abstract listFolderContents(folderName: string): Promise<any>;
+	//#region IPfsMutator
+	public async mutateS3(file: any){
+		if(!this.request.body.URI && !file.doesFileExist) //The file does not yet exist, and no data was provided. Assign a presigned URL for data upload.
+		{ 
+			file.PresignedURL = await this.generatePreSignedURL(file);
+		}
+		else // The file already has data, or data was provided.
+		{ 
+			await this.uploadFileData(file);
+			for (const thumbnail of file.Thumbnails){
+				await this.uploadThumbnail(file.Key, thumbnail.Size, thumbnail.buffer);
+				delete thumbnail.buffer;
+			}
+			delete file.buffer;
+		}
+	}
 
-	abstract uploadFileMetadata(metadata: any, doesFileExist: boolean): Promise<any>;
+	//#endregion
 
-	abstract downloadFileMetadata(Key: string): Promise<any>;
-
-	public async uploadFileData(Key: string, Body: Buffer): Promise<any> 
+	//#region private methods
+	private async uploadFileData(file: any): Promise<any> 
 	{
 		const params: any = {};
 
 		// Create S3 params
 		params.Bucket = this.S3Bucket;
-		params.Key = this.getAbsolutePath(Key);
-		params.Body = Body;
+		params.Key = this.getAbsolutePath(file.Key);
+		params.Body = file.buffer;
 		params.ContentType = this.getMimeType();
 		params.ContentEncoding = 'base64';
 
@@ -50,7 +64,7 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		return uploaded;
 	}
 
-	public async uploadThumbnail(Key: string, size: string, Body: Buffer): Promise<any> 
+	private async uploadThumbnail(Key: string, size: string, Body: Buffer): Promise<any> 
 	{
 		const params: any = {};
 
@@ -85,9 +99,9 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		return !!s.match(dataURLRegex);
 	}
 
-	async generatePreSignedURL(entryName)
+	private async generatePreSignedURL(file)
 	{
-		entryName = this.getAbsolutePath(entryName);
+		const entryName = this.getAbsolutePath(file.Key);
 
 		const params =  {
 			Bucket: S3Buckets[this.environment],
@@ -99,4 +113,6 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		const urlString = await  this.s3.getSignedUrl('putObject',params);
 		return urlString;
 	}
+
+	//#endregion
 }
