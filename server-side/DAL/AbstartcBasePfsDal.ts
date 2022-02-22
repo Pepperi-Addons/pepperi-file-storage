@@ -16,9 +16,9 @@ export abstract class AbstractBasePfsDal implements IPfsGetter, IPfsMutator
 		this.AddonUUID = this.request.query.addon_uuid;
 	}
 	//#region IPfsMutator
-	abstract mutateS3(file: any);
+	abstract mutateS3(newFileFields: any, existingFile: any);
 
-	abstract mutateADAL(file: any);
+	abstract mutateADAL(newFileFields: any, existingFile: any);
 	
 	//#endregion
 

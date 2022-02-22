@@ -99,8 +99,8 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 	//#endregion
 
 	//#region IPfsMutator
-	async mutateADAL(file: any) {
-		return await this.uploadFileMetadata(file);
+	async mutateADAL(newFileFields: any, existingFile: any) {
+		return await this.uploadFileMetadata(newFileFields, existingFile);
 	}
 	//#endregion
 
@@ -117,17 +117,17 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 		return res;
 	}
 
-	private async uploadFileMetadata(metadata: any): Promise<any> 
+	private async uploadFileMetadata(newFileFields: any, existingFile: any): Promise<any> 
 	{
 		// Set metdata to absolute paths
-		this.setAbsolutePathsInMetadata(metadata);
+		this.setAbsolutePathsInMetadata(newFileFields, existingFile);
 		
-		const presignedURL = metadata.PresignedURL;
-		delete metadata.PresignedURL //Don't store PresignedURL in ADAL
+		const presignedURL = newFileFields.PresignedURL;
+		delete newFileFields.PresignedURL //Don't store PresignedURL in ADAL
 
-		delete metadata.doesFileExist;
+		delete existingFile.doesFileExist;
 
-		const res =  await this.papiClient.addons.data.uuid(config.AddonUUID).table(METADATA_ADAL_TABLE_NAME).upsert(metadata);
+		const res =  await this.papiClient.addons.data.uuid(config.AddonUUID).table(METADATA_ADAL_TABLE_NAME).upsert(newFileFields);
 
 		if(presignedURL){ // Return PresignedURL if there was one
 			res.PresignedURL = presignedURL;
@@ -150,28 +150,27 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 		}
 	}
 
-	private setAbsolutePathsInMetadata(file: any) 
+	private setAbsolutePathsInMetadata(newFileFields: any, existingFile: any) 
 	{
-		file.Key = this.getAbsolutePath(file.Key);
+		newFileFields.Key = this.getAbsolutePath(newFileFields.Key);
 
-		if (!file.doesFileExist) 
+		if (!existingFile.doesFileExist) 
 		{
-			file.Folder = this.getAbsolutePath(file.Folder);
+			newFileFields.Folder = this.getAbsolutePath(newFileFields.Folder);
 
-			if (!file.Key.endsWith('/')) //Add URL if this isn't a folder and this file doesn't exist.
+			if (!newFileFields.Key.endsWith('/')) //Add URL if this isn't a folder and this file doesn't exist.
 			{
-				file.URL = `${CdnServers[this.environment]}/${this.getAbsolutePath(this.request.body.Key)}`;
+				newFileFields.URL = `${CdnServers[this.environment]}/${newFileFields.Key}`;
 			}
 			else
 			{
-				file.URL = ``;
+				newFileFields.URL = ``;
 			}
-
-			if(file.Thumbnails){
-				file.Thumbnails.forEach(thumbnail => {
-					thumbnail.URL = `${CdnServers[this.environment]}/thumbnails/${this.getAbsolutePath(this.request.body.Key)}_${thumbnail.Size}`;
-				});
-			}
+		}
+		if(newFileFields.Thumbnails){
+			newFileFields.Thumbnails.forEach(thumbnail => {
+				thumbnail.URL = `${CdnServers[this.environment]}/thumbnails/${newFileFields.Key}_${thumbnail.Size}`;
+			});
 		}
 	}
 

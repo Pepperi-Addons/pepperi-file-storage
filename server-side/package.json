@@ -16,7 +16,7 @@
         "start": "tsc -w app.local.ts"
     },
     "devDependencies": {
-        "@rollup/plugin-commonjs": "^12.0.0",
+        "@rollup/plugin-commonjs": "^21.0.0",
         "@rollup/plugin-json": "^4.1.0",
         "@rollup/plugin-node-resolve": "^8.0.0",
         "@types/dotenv": "^8.2.0",
@@ -32,8 +32,8 @@
         "@types/node-fetch": "^2.5.7",
         "aws-sdk": "^2.1045.0",
         "encoding": "^0.1.13",
+        "jimp": "^0.10.3",
         "node-fetch": "^2.6.0",
-        "semver": "^7.3.5",
-        "sharp": "^0.29.3"
+        "semver": "^7.3.5"
     }
 }

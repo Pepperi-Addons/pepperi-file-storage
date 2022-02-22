@@ -27,20 +27,33 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 	}
 
 	//#region IPfsMutator
-	public async mutateS3(file: any){
-		if(!this.request.body.URI && !file.doesFileExist) //The file does not yet exist, and no data was provided. Assign a presigned URL for data upload.
+	public async mutateS3(newFileFields: any, existingFile: any){
+		if(!this.request.body.URI && !existingFile.doesFileExist) //The file does not yet exist, and no data was provided. Assign a presigned URL for data upload.
 		{ 
-			file.PresignedURL = await this.generatePreSignedURL(file);
+			newFileFields.PresignedURL = await this.generatePreSignedURL(newFileFields);
 		}
-		else // The file already has data, or data was provided.
+		else if (this.request.body.URI) // The file already has data, or data was provided.
 		{ 
-			await this.uploadFileData(file);
-			for (const thumbnail of file.Thumbnails){
-				await this.uploadThumbnail(file.Key, thumbnail.Size, thumbnail.buffer);
-				delete thumbnail.buffer;
-			}
-			delete file.buffer;
+			await this.uploadFileData(newFileFields);
+			delete newFileFields.buffer;
 		}
+
+		if(Array.isArray(newFileFields.Thumbnails)){
+            for (const thumbnail of newFileFields.Thumbnails) {
+                await this.uploadThumbnail(newFileFields.Key, thumbnail.Size, thumbnail.buffer);
+                delete thumbnail.buffer;
+            }
+            if (Array.isArray(existingFile.Thumbnails)) { //delete unnecessary thumbnails from S3.
+                const deletedThumbnails = existingFile.Thumbnails.filter(existingThumbnail => {
+                    return !newFileFields.Thumbnails.find(newThumbnail => {
+                        return existingThumbnail.Size == newThumbnail.Size;
+                    });
+                });
+                for (const thumbnail of deletedThumbnails) {
+                    await this.deleteThumbnail(newFileFields.Key, thumbnail.Size);
+                }
+            }
+        }
 	}
 
 	//#endregion
@@ -80,6 +93,20 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		console.log(`File uploaded successfully to ${uploaded.Location}`);
 
 		return uploaded;
+	}
+
+	private async deleteThumbnail(key: any, size: any) {
+		const params: any = {};
+
+		// Create S3 params
+		params.Bucket = this.S3Bucket;
+		params.Key = `thumbnails/${this.getAbsolutePath(key)}_${size}`;
+		
+		// delete thumbnail from S3 bucket.
+		const deleted = await this.s3.deleteObject(params).promise();
+		console.log(`Thumbnail successfully deleted:  ${deleted}`);
+
+		return deleted;
 	}
 
 	private getMimeType(): any 

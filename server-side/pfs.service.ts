@@ -16,6 +16,7 @@ export class PfsService
 	readonly MIME_FIELD_IS_MISSING = "Missing mandatory field 'MIME'";
 	syncTypes = ["None", "Device", "DeviceThumbnail", "Always"];
 	existingFile: any;
+	newFileFields: any = {};
 
 	constructor(private client: Client, private request: Request, private pfsMutator: IPfsMutator, private pfsGetter: IPfsGetter ) 
 	{
@@ -38,12 +39,14 @@ export class PfsService
 		try 
 		{
 			await this.validateAddonSecretKey();
-			try{
+			try
+			{
 				this.existingFile = await this.downloadFile();
 				this.existingFile.doesFileExist = true;
 			}
-			catch{
-				this.existingFile = {}
+			catch
+			{
+				this.existingFile = {};
 				this.existingFile.doesFileExist = false;
 
 			}
@@ -97,16 +100,27 @@ export class PfsService
 	{
 		let res: any = {};
 
-		this.getMetadata();	
-		
-		if (this.request.body.URI)
+		this.getMetadata();
+		if(this.request.body.URI && this.request.body.URI != "")
 		{
-			this.existingFile.buffer = await this.getFileDataBuffer();
-			await this.createThumbnailsBuffers();
+			this.newFileFields.buffer = await this.getFileDataBuffer(this.request.body.URI);
+		}
+		const shouldCreateThumbnails = (this.request.body.Thumbnails && this.request.body.Thumbnails.length > 0) ||  (this.existingFile.Thumbnails && this.request.body.URI); //The user asked for thumbnails, or the file already has thumbnails, and the file data is updated.
+		if (shouldCreateThumbnails)
+		{
+			const buffer = this.newFileFields.buffer ?? await this.getFileDataBuffer(this.existingFile.URL);
+			const MIME = this.newFileFields.MIME ?? this.existingFile.MIME;
+
+			if(!this.newFileFields.buffer)
+			{
+				this.existingFile.buffer = buffer;
+			}
+
+			await this.createThumbnailsBuffers(buffer, MIME);
 		}
 		
-		await this.pfsMutator.mutateS3(this.existingFile)
-		res = await this.pfsMutator.mutateADAL(this.existingFile);
+		await this.pfsMutator.mutateS3(this.newFileFields, this.existingFile)
+		res = await this.pfsMutator.mutateADAL(this.newFileFields, this.existingFile);
 
 		console.log(`Successfuly created a file.`);
 
@@ -114,36 +128,38 @@ export class PfsService
 		return res;
 	}
 
-	private async createThumbnailsBuffers() {
-		if (this.existingFile.Thumbnails && this.existingFile.Thumbnails.length > 0) {
-			const resizer = new ImageResizer(this.existingFile.MIME, this.existingFile.buffer);
-
-			this.existingFile.Thumbnails = await Promise.all(this.existingFile.Thumbnails.map(async thumbnail => {
-				thumbnail.buffer = await resizer.resize(thumbnail);
-				return thumbnail;
-			}));
-		}
+	private async createThumbnailsBuffers(buffer: Buffer, MIME: string) 
+	{
+		const resizer = new ImageResizer(MIME, buffer);
+		const thumbnails = this.newFileFields.Thumbnails ?? this.existingFile.Thumbnails;
+		this.newFileFields.Thumbnails = await Promise.all(thumbnails.map(async thumbnail => 
+		{
+			return {
+				buffer: await resizer.resize(thumbnail),
+				Size: thumbnail.Size
+			};
+		}));
 	}
 
-	private async getFileDataBuffer() 
+	private async getFileDataBuffer(url) 
 	{
 		let buf: Buffer;
 
-		if (this.isDataURL(this.request.body.URI)) // dataURI get the base 64 part
+		if (this.isDataURL(url)) // dataURI get the base 64 part
 		{ 
-			buf = Buffer.from(this.request.body.URI.match(dataURLRegex)[4], 'base64');
+			buf = Buffer.from(url.match(dataURLRegex)[4], 'base64');
 		}
 		else //the URI is URL - downalod the data
 		{
-			buf = await this.downloadFileBufferFromURL();
+			buf = await this.downloadFileBufferFromURL(url);
 		}
 
 		return buf;
 	}
 
-	private async downloadFileBufferFromURL() 
+	private async downloadFileBufferFromURL(url) 
 	{
-		const respons = await fetch(this.request.body.URI, { method: `GET` });
+		const respons = await fetch(url, { method: `GET` });
 		const arrayData = await respons.arrayBuffer();
 		const buf = Buffer.from(arrayData);
 
@@ -153,7 +169,7 @@ export class PfsService
 	private async createFolder() 
 	{
 		this.getMetadata();	
-		return await this.pfsMutator.mutateADAL(this.existingFile);
+		return await this.pfsMutator.mutateADAL(this.newFileFields, this.existingFile);
 	}
 		
 	isDataURL(s) 
@@ -246,24 +262,24 @@ export class PfsService
 		const fileName = pathFoldersList.pop();
 		const containingFolder = pathFoldersList.join('/');
 
-		this.existingFile.Key = this.request.body.Key;
+		this.newFileFields.Key = this.request.body.Key;
 
 		if(!this.existingFile.doesFileExist)
 		{
-			this.existingFile.Name = `${fileName}${this.request.body.Key.endsWith('/') ? '/' :''}`; // Add the dropped '/' for folders.
-			this.existingFile.Folder = containingFolder;
-			this.existingFile.MIME = this.getMimeType();
-			this.existingFile.Hidden = this.request.body.Hidden ?? false;
+			this.newFileFields.Name = `${fileName}${this.request.body.Key.endsWith('/') ? '/' :''}`; // Add the dropped '/' for folders.
+			this.newFileFields.Folder = containingFolder;
+			this.newFileFields.MIME = this.getMimeType();
+			this.newFileFields.Hidden = this.request.body.Hidden ?? false;
 
 			if(!this.request.body.Key.endsWith('/')) // This is not a folder
 			{
-				this.existingFile.Sync = this.request.body.Sync ?? this.syncTypes[0];
-				this.existingFile.Description = this.request.body.Description ?? "";
+				this.newFileFields.Sync = this.request.body.Sync ?? this.syncTypes[0];
+				this.newFileFields.Description = this.request.body.Description ?? "";
 			}
 			else //this is a folder
 			{
-				this.existingFile.Sync = this.syncTypes[0];
-				this.existingFile.Description = "";
+				this.newFileFields.Sync = this.syncTypes[0];
+				this.newFileFields.Description = "";
 			}
 			
 		}
@@ -271,18 +287,20 @@ export class PfsService
 		{
 			if(!this.request.body.Key.endsWith('/')) // This is not a folder
 			{
-				if(this.request.body.MIME) this.existingFile.MIME = this.getMimeType();
-				if(this.request.body.Sync) this.existingFile.Sync = this.request.body.Sync;
-				if(this.request.body.Description) this.existingFile.Description = this.request.body.Description;
+				if(this.request.body.MIME) this.newFileFields.MIME = this.getMimeType();
+				if(this.request.body.Sync) this.newFileFields.Sync = this.request.body.Sync;
+				if(this.request.body.Description) this.newFileFields.Description = this.request.body.Description;
 			}
 			
-			if(this.request.body.Hidden) this.existingFile.Hidden = this.request.body.Hidden;
+			if(this.request.body.Hidden) this.newFileFields.Hidden = this.request.body.Hidden;
 		}
 
-		if(this.request.body.Thumbnails && Array.isArray(this.request.body.Thumbnails)){
-			this.existingFile.Thumbnails = this.request.body.Thumbnails.map(thumbnailRequest => {
-					return {Size: thumbnailRequest.Size.toLowerCase()}
-				});
+		if(this.request.body.Thumbnails && Array.isArray(this.request.body.Thumbnails))
+		{
+			this.newFileFields.Thumbnails = this.request.body.Thumbnails.map(thumbnailRequest => 
+			{
+				return {Size: thumbnailRequest.Size.toLowerCase()}
+			});
 		}
 	}
 
