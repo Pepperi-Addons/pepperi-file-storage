@@ -60,9 +60,15 @@ async function createMetadataADALTable(papiClient: PapiClient)
 		Fields: {
 			Description: {
 				Type: 'String',
+				Indexed: true
+			},
+			ModificationDateTime:{
+				Type: "Integer",
+				Indexed: true
 			},
 			MIME: {
 				Type: 'String',
+				Indexed: true
 			},
 			Sync: {
 				Type: 'String',
@@ -75,8 +81,7 @@ async function createMetadataADALTable(papiClient: PapiClient)
 				Indexed: true
 			},
 			Name: {
-				Type: 'String',
-				Indexed: true
+				Type: 'String'
 			},
 			URL: {
 				Type: 'String'
