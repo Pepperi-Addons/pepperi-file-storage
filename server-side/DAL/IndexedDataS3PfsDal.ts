@@ -5,8 +5,6 @@ import config from '../../addon.config.json';
 import { FindOptions } from '@pepperi-addons/papi-sdk';
 import { AbstractS3PfsDal } from './AbstractS3PfsDal';
 
-const AWS = require('aws-sdk'); // AWS is part of the lambda's environment. Importing it will result in it being rolled up redundently.
-
 export class IndexedDataS3PfsDal extends AbstractS3PfsDal 
 {
 	private papiClient: PapiClient;
@@ -23,6 +21,8 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 			addonSecretKey: client.AddonSecretKey
 		});
 	}
+
+	//#region IPfsGetter
 
 	async listFolderContents(folderName: string): Promise<any> 
 	{
@@ -47,60 +47,6 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 
 		console.log(`Files listing done successfully.`);
 		return res;
-	}
-    
-	private getRequestedPageNumber(): number
-	{
-		let res = parseInt(this.request.query.page);
-		if(res === 0)
-		{
-			res++;
-		}
-
-		return res;
-	}
-
-	async uploadFileMetadata(metadata: any, doesFileExist: boolean): Promise<any> 
-	{
-		// Set metdata to absolute paths
-		this.setAbsolutePathsInMetadata(metadata, doesFileExist);
-		const res =  await this.papiClient.addons.data.uuid(config.AddonUUID).table(METADATA_ADAL_TABLE_NAME).upsert(metadata);
-
-		this.setRelativePathsInMetadata(res);
-
-		return res;
-	}
-
-	private setRelativePathsInMetadata(res) 
-	{
-		if(res.Key)
-		{
-			res.Key = this.getRelativePath(res.Key);
-		}
-		if(res.Folder)
-		{
-			res.Folder = this.getRelativePath(res.Folder);
-		}
-	}
-
-	private setAbsolutePathsInMetadata(metadata: any, doesFileExist: boolean) 
-	{
-		metadata.Key = this.getAbsolutePath(metadata.Key);
-
-		if (!doesFileExist) 
-		{
-			metadata.Folder = this.getAbsolutePath(metadata.Folder);
-
-			if (!metadata.Key.endsWith('/')) //Add URL if this isn't a folder and this file doesn't exist.
-			{
-				metadata.URL = `${CdnServers[this.environment]}/${this.getAbsolutePath(this.request.body.Key)}`;
-			}
-			else
-			{
-				metadata.URL = ``;
-
-			}
-		}
 	}
 
 	async downloadFileMetadata(Key: string): Promise<any> 
@@ -149,4 +95,84 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 			throw (err);
 		}
 	}
+
+	//#endregion
+
+	//#region IPfsMutator
+	async mutateADAL(newFileFields: any, existingFile: any) {
+		return await this.uploadFileMetadata(newFileFields, existingFile);
+	}
+	//#endregion
+
+	//#region private methods
+    
+	private getRequestedPageNumber(): number
+	{
+		let res = parseInt(this.request.query.page);
+		if(res === 0)
+		{
+			res++;
+		}
+
+		return res;
+	}
+
+	private async uploadFileMetadata(newFileFields: any, existingFile: any): Promise<any> 
+	{
+		// Set metdata to absolute paths
+		this.setAbsolutePathsInMetadata(newFileFields, existingFile);
+		
+		const presignedURL = newFileFields.PresignedURL;
+		delete newFileFields.PresignedURL //Don't store PresignedURL in ADAL
+
+		delete existingFile.doesFileExist;
+
+		const res =  await this.papiClient.addons.data.uuid(config.AddonUUID).table(METADATA_ADAL_TABLE_NAME).upsert(newFileFields);
+
+		if(presignedURL){ // Return PresignedURL if there was one
+			res.PresignedURL = presignedURL;
+		}
+
+		this.setRelativePathsInMetadata(res);
+
+		return res;
+	}
+
+	private setRelativePathsInMetadata(res) 
+	{
+		if(res.Key)
+		{
+			res.Key = this.getRelativePath(res.Key);
+		}
+		if(res.Folder)
+		{
+			res.Folder = this.getRelativePath(res.Folder);
+		}
+	}
+
+	private setAbsolutePathsInMetadata(newFileFields: any, existingFile: any) 
+	{
+		newFileFields.Key = this.getAbsolutePath(newFileFields.Key);
+
+		if (!existingFile.doesFileExist) 
+		{
+			newFileFields.Folder = this.getAbsolutePath(newFileFields.Folder);
+
+			if (!newFileFields.Key.endsWith('/')) //Add URL if this isn't a folder and this file doesn't exist.
+			{
+				newFileFields.URL = `${CdnServers[this.environment]}/${newFileFields.Key}`;
+			}
+			else
+			{
+				newFileFields.URL = ``;
+			}
+		}
+		if(newFileFields.Thumbnails){
+			newFileFields.Thumbnails.forEach(thumbnail => {
+				thumbnail.URL = `${CdnServers[this.environment]}/thumbnails/${newFileFields.Key}_${thumbnail.Size}`;
+			});
+		}
+	}
+
+	//#endregion
 }
