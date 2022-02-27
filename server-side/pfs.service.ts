@@ -101,7 +101,7 @@ export class PfsService
 		let res: any = {};
 
 		this.getMetadata();
-		if(this.request.body.URI && this.request.body.URI != "")
+		if(this.request.body.URI)
 		{
 			this.newFileFields.buffer = await this.getFileDataBuffer(this.request.body.URI);
 		}
@@ -132,6 +132,9 @@ export class PfsService
 	{
 		const resizer = new ImageResizer(MIME, buffer);
 		const thumbnails = this.newFileFields.Thumbnails ?? this.existingFile.Thumbnails;
+
+		this.validateThumbnailsRequest(thumbnails);
+
 		this.newFileFields.Thumbnails = await Promise.all(thumbnails.map(async thumbnail => 
 		{
 			return {
@@ -139,6 +142,23 @@ export class PfsService
 				Size: thumbnail.Size
 			};
 		}));
+	}
+
+	private validateThumbnailsRequest(thumbnails: any) {
+		if (thumbnails.length > 1) //Currently, only a single '200x200' thumbnail is supported.
+		{
+			const err: any = new Error(`A maximum of a single thumbnail is supported.`);
+			err.code = 400;
+			throw err;
+		}
+
+		const validThumbnailsSizes = thumbnails.all(thumbnail => thumbnail.Size.toLowerCase() === '200x200');
+		if (!validThumbnailsSizes) //Currently, only a single '200x200' thumbnail is supported.
+		{
+			const err: any = new Error(`Size of thumbnail should be '200x200'.`);
+			err.code = 400;
+			throw err;
+		}
 	}
 
 	private async getFileDataBuffer(url) 
