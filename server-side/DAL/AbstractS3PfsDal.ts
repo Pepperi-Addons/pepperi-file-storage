@@ -26,13 +26,61 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		this.S3Bucket = S3Buckets[this.environment];
 	}
 
-	abstract listFolderContents(folderName: string): Promise<any>;
+	//#region IPfsMutator
+	public async mutateS3(newFileFields: any, existingFile: any){
+		if(existingFile.isFileExpired){
+			this.deleteFileData(existingFile.Key);
+		}
+		if(!this.request.body.URI && !existingFile.doesFileExist) //The file does not yet exist, and no data was provided. Assign a presigned URL for data upload.
+		{ 
+			newFileFields.PresignedURL = await this.generatePreSignedURL(newFileFields);
+		}
+		else if (this.request.body.URI) // The file already has data, or data was provided.
+		{ 
+			await this.uploadFileData(newFileFields);
+			delete newFileFields.buffer;
+		}
 
-	abstract uploadFileMetadata(metadata: any, doesFileExist: boolean): Promise<any>;
+		if(Array.isArray(newFileFields.Thumbnails)){
+            for (const thumbnail of newFileFields.Thumbnails) {
+                await this.uploadThumbnail(newFileFields.Key, thumbnail.Size, thumbnail.buffer);
+                delete thumbnail.buffer;
+            }
+            if (Array.isArray(existingFile.Thumbnails)) { //delete unnecessary thumbnails from S3.
+                const deletedThumbnails = existingFile.Thumbnails.filter(existingThumbnail => {
+                    return !newFileFields.Thumbnails.find(newThumbnail => {
+                        return existingThumbnail.Size == newThumbnail.Size;
+                    });
+                });
+                for (const thumbnail of deletedThumbnails) {
+                    await this.deleteThumbnail(newFileFields.Key, thumbnail.Size);
+                }
+            }
+        }
+	}
 
-	abstract downloadFileMetadata(Key: string): Promise<any>;
+	//#endregion
 
-	public async deleteFileData(removedKey: string): Promise<any> 
+	//#region private methods
+	private async uploadFileData(file: any): Promise<any> 
+	{
+		const params: any = {};
+
+		// Create S3 params
+		params.Bucket = this.S3Bucket;
+		params.Key = this.getAbsolutePath(file.Key);
+		params.Body = file.buffer;
+		params.ContentType = this.getMimeType();
+		params.ContentEncoding = 'base64';
+
+		// Upload to S3 bucket.
+		const uploaded = await this.s3.upload(params).promise();
+		console.log(`File uploaded successfully to ${uploaded.Location}`);
+
+		return uploaded;
+	}
+
+	private async deleteFileData(removedKey: string): Promise<any> 
 	{
 		console.log(`Trying to delete Key: ${removedKey}`)
 		const params: any = {};
@@ -48,13 +96,13 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		return deletedFile;
 	}
 
-	public async uploadFileData(Key: string, Body: Buffer): Promise<any> 
+	private async uploadThumbnail(Key: string, size: string, Body: Buffer): Promise<any> 
 	{
 		const params: any = {};
 
 		// Create S3 params
 		params.Bucket = this.S3Bucket;
-		params.Key = this.getAbsolutePath(Key);
+		params.Key = `thumbnails/${this.getAbsolutePath(Key)}_${size}`;
 		params.Body = Body;
 		params.ContentType = this.getMimeType();
 		params.ContentEncoding = 'base64';
@@ -64,6 +112,20 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		console.log(`File uploaded successfully to ${uploaded.Location}`);
 
 		return uploaded;
+	}
+
+	private async deleteThumbnail(key: any, size: any) {
+		const params: any = {};
+
+		// Create S3 params
+		params.Bucket = this.S3Bucket;
+		params.Key = `thumbnails/${this.getAbsolutePath(key)}_${size}`;
+		
+		// delete thumbnail from S3 bucket.
+		const deleted = await this.s3.deleteObject(params).promise();
+		console.log(`Thumbnail successfully deleted:  ${deleted}`);
+
+		return deleted;
 	}
 
 	private getMimeType(): any 
@@ -83,9 +145,9 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		return !!s.match(dataURLRegex);
 	}
 
-	async generatePreSignedURL(entryName)
+	private async generatePreSignedURL(file)
 	{
-		entryName = this.getAbsolutePath(entryName);
+		const entryName = this.getAbsolutePath(file.Key);
 
 		const params =  {
 			Bucket: S3Buckets[this.environment],
@@ -94,7 +156,9 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 			ContentType: this.getMimeType()
 		};
 			
-		const urlString = await  this.s3.getSignedUrl('putObject',params);
+		const urlString = await this.s3.getSignedUrl('putObject',params);
 		return urlString;
 	}
+
+	//#endregion
 }
