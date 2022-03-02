@@ -67,10 +67,10 @@ async function createMetadataADALTable(papiClient: PapiClient)
 				Type: 'String',
 				Indexed: true
 			},
-			ModificationDateTime:{
-				Type: "Number",
-				Indexed: true
-			},
+			// ModificationDateTime:{
+			// 	Type: "Integer",
+			// 	Indexed: true // Indexing Date fields is currntly buggy in ADAL. 
+			// },
 			MIME: {
 				Type: 'String',
 				Indexed: true

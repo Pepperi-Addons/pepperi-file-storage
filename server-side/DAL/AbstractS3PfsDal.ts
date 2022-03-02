@@ -29,8 +29,9 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 	//#region IPfsMutator
 	public async mutateS3(newFileFields: any, existingFile: any){
 		if(existingFile.isFileExpired){
-			this.deleteFileData(existingFile.Key);
+			return await this.deleteFileData(existingFile.Key);
 		}
+
 		if(!this.request.body.URI && !existingFile.doesFileExist) //The file does not yet exist, and no data was provided. Assign a presigned URL for data upload.
 		{ 
 			newFileFields.PresignedURL = await this.generatePreSignedURL(newFileFields);
