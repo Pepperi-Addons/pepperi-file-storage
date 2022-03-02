@@ -323,13 +323,6 @@ export class PfsService
 				return {Size: thumbnailRequest.Size.toLowerCase()}
 			});
 		}
-
-		// TODO Remove this debug logic
-		if(this.request.body.ExpirationDateTime){
-			this.newFileFields.Hidden = this.request.body.Hidden ?? true
-			this.newFileFields.ExpirationDateTime = this.request.body.ExpirationDateTime;
-
-		}
 	}
 
 	/**
