@@ -222,10 +222,10 @@ export class PfsService
 
 	private async validateAddonSecretKey() 
 	{
-		if (!this.request.header["X-Pepperi-SecretKey"] || !await this.isValidRequestedAddon(this.client, this.request.header["X-Pepperi-SecretKey"], this.AddonUUID)) 
+		
+		if (!this.request.header["x-pepperi-secretkey"] || !await this.isValidRequestedAddon(this.client, this.request.header["x-pepperi-secretkey"], this.AddonUUID)) 
 		{
-
-			const err: any = new Error(`Authorization request denied. ${this.request.header["X-Pepperi-SecretKey"]? "check secret key" : "Missing secret key header"} `);
+			const err: any = new Error(`Authorization request denied. ${this.request.header["x-pepperi-secretkey"]? "check secret key" : "Missing secret key header"} `);
 			err.code = 401;
 			throw err;
 		}
