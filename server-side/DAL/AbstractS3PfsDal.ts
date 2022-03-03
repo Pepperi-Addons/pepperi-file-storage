@@ -60,7 +60,7 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
         }
 	}
 
-	abstract lock(key: string);
+	abstract lock(item: any);
 
 	abstract mutateADAL(newFileFields: any, existingFile: any);
 

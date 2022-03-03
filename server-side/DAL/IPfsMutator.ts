@@ -1,10 +1,10 @@
 export interface IPfsMutator
 {
     /**
-     * Lock the requested key.
-     * @param key The key to be locked
+     * Lock the item.
+     * @param item the item to be locked
      */
-    lock(key: string);
+    lock(item: any);
 
     /**
      * Write needed changes to S3 bucket - create a new file if needed, update file data, update or create file's thumbnails, etc.

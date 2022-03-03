@@ -116,8 +116,12 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 	//#endregion
 
 	//#region IPfsMutator
-	async lock(key: string){
+	async lock(item: any){
+		console.log(`Attempting to lock key: ${item.Key}`);
+		const lockRes =  await this.papiClient.addons.data.uuid(config.AddonUUID).table(LOCK_ADAL_TABLE_NAME).upsert(item);
+		console.log(`Successfully locked key: ${item.Key}`);
 
+		return lockRes;
 	}
 
 	async mutateADAL(newFileFields: any, existingFile: any) {
