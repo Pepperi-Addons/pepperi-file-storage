@@ -105,7 +105,9 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 		const tableName = LOCK_ADAL_TABLE_NAME;
 		try
 		{
+			//TODO Translate key - discard '/'
 			return await this.getObjectFromTable(key, tableName);
+
 		}
 		catch
 		{
@@ -118,7 +120,9 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 	//#region IPfsMutator
 	async lock(item: any){
 		console.log(`Attempting to lock key: ${item.Key}`);
+		//TODO Translate key - discard '/'
 		const lockRes =  await this.papiClient.addons.data.uuid(config.AddonUUID).table(LOCK_ADAL_TABLE_NAME).upsert(item);
+		//TODO Translate key - bring back '/'
 		console.log(`Successfully locked key: ${item.Key}`);
 
 		return lockRes;
@@ -133,7 +137,11 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 	}
 	
 	async unlock(key: string){
-
+		//TODO Translate key - discard '/'
+		console.log(`Attempting to unlock object: ${key}`);
+		const res = await this.papiClient.addons.data.uuid(config.AddonUUID).table(LOCK_ADAL_TABLE_NAME).key(key).hardDelete(true);
+		console.log(`Succcessfully unlocked object: ${key}`);
+		return res;
 	}
 
 	async invalidateCDN(key: string){
