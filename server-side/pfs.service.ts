@@ -144,7 +144,8 @@ export class PfsService
 		}));
 	}
 
-	private validateThumbnailsRequest(thumbnails: any) {
+	private validateThumbnailsRequest(thumbnails: any) 
+	{
 		if (thumbnails.length > 1) //Currently, only a single '200x200' thumbnail is supported.
 		{
 			const err: any = new Error(`A maximum of a single thumbnail is supported.`);
@@ -152,7 +153,7 @@ export class PfsService
 			throw err;
 		}
 
-		const validThumbnailsSizes = thumbnails.all(thumbnail => thumbnail.Size.toLowerCase() === '200x200');
+		const validThumbnailsSizes = thumbnails.every(thumbnail => thumbnail.Size.toLowerCase() === '200x200');
 		if (!validThumbnailsSizes) //Currently, only a single '200x200' thumbnail is supported.
 		{
 			const err: any = new Error(`Size of thumbnail should be '200x200'.`);
@@ -360,4 +361,15 @@ export class PfsService
 			}
 		}
 	}
+
+	async recordRemoved() 
+	{
+		const removedKeys: [string] = this.request.body.Message.ModifiedObjects.map(modifiedObject => modifiedObject.ObjectKey);
+		for(const removedKey of removedKeys)
+		{
+			await this.pfsMutator.mutateS3(null, {Key: removedKey, isFileExpired: true});
+		}
+	}
 }
+
+export default PfsService;

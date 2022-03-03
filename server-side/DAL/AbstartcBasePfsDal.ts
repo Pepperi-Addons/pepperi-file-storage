@@ -17,28 +17,16 @@ export abstract class AbstractBasePfsDal implements IPfsGetter, IPfsMutator
 	}
 	//#region IPfsMutator
 
-	/**
-	 * See IPfsMutator documentation
-	 */
 	abstract mutateS3(newFileFields: any, existingFile: any);
 
-	/**
-	 * See IPfsMutator documentation
-	 */
 	abstract mutateADAL(newFileFields: any, existingFile: any);
 	
 	//#endregion
 
 	//#region IPfsGetter
 
-	/**
-	 * See IPfsGetter documentation
-	 */
 	abstract listFolderContents(folderName: string): Promise<any>;
 
-	/**
-	 * See IPfsGetter documentation
-	 */
 	abstract downloadFileMetadata(Key: string): Promise<any>;
 	//#endregion
 	

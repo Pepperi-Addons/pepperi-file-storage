@@ -60,6 +60,24 @@ export async function files(client: Client, request: Request)
 	}
 }
 
+export async function record_removed(client: Client, request: Request) 
+{
+	console.log(`On Record Removed. received: ${JSON.stringify(request)}`);
+
+	switch (request.method) 
+	{
+	case "POST": {
+		const dal = getDalInstance(client, request);
+		const pfs = new PfsService(client, request, dal, dal);
+
+		return await pfs.recordRemoved();
+	}
+	default: {
+		throw new Error(`Unsupported method: ${request.method}`);
+	}
+	}
+}
+
 function getDalInstance(client: Client, request: Request) 
 {
 	return new IndexedDataS3PfsDal(client, request);

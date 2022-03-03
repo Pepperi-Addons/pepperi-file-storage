@@ -28,6 +28,10 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 
 	//#region IPfsMutator
 	public async mutateS3(newFileFields: any, existingFile: any){
+		if(existingFile.isFileExpired){
+			return await this.deleteFileData(existingFile.Key);
+		}
+
 		if(!this.request.body.URI && !existingFile.doesFileExist) //The file does not yet exist, and no data was provided. Assign a presigned URL for data upload.
 		{ 
 			newFileFields.PresignedURL = await this.generatePreSignedURL(newFileFields);
@@ -75,6 +79,22 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		console.log(`File uploaded successfully to ${uploaded.Location}`);
 
 		return uploaded;
+	}
+
+	private async deleteFileData(removedKey: string): Promise<any> 
+	{
+		console.log(`Trying to delete Key: ${removedKey}`)
+		const params: any = {};
+
+		// Create S3 params
+		params.Bucket = this.S3Bucket;
+		params.Key = removedKey;
+		
+		// Delete from S3 bucket.
+		const deletedFile = await this.s3.deleteObject(params).promise();
+		console.log(`Successfully deleted Key ${removedKey}: ${JSON.stringify(deletedFile)}`);
+
+		return deletedFile;
 	}
 
 	private async uploadThumbnail(Key: string, size: string, Body: Buffer): Promise<any> 
@@ -137,7 +157,7 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 			ContentType: this.getMimeType()
 		};
 			
-		const urlString = await  this.s3.getSignedUrl('putObject',params);
+		const urlString = await this.s3.getSignedUrl('putObject',params);
 		return urlString;
 	}
 
