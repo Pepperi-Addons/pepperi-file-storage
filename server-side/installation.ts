@@ -9,7 +9,7 @@ The error Message is importent! it will be written in the audit log and help the
 
 import { Client, Request } from '@pepperi-addons/debug-server'
 import { PapiClient } from '@pepperi-addons/papi-sdk';
-import { METADATA_ADAL_TABLE_NAME } from './constants';
+import { LOCK_ADAL_TABLE_NAME, METADATA_ADAL_TABLE_NAME, pfsSchemeData } from './constants';
 import config from '../addon.config.json';
 import semver from 'semver';
 
@@ -18,6 +18,7 @@ export async function install(client: Client, request: Request): Promise<any>
 
 	const papiClient = createPapiClient(client);
 	await createMetadataADALTable(papiClient);
+	await createLockADALTable(papiClient);
 	await subscribeToExpiredRecords(papiClient);
 
 	return { success: true, resultObject: {} }
@@ -27,17 +28,25 @@ export async function uninstall(client: Client, request: Request): Promise<any>
 {
 	const papiClient = createPapiClient(client);
 	await papiClient.post(`/addons/data/schemes/${METADATA_ADAL_TABLE_NAME}/purge`);
+	await papiClient.post(`/addons/data/schemes/${LOCK_ADAL_TABLE_NAME}/purge`);
 	await unsubscribeToExpiredRecords(papiClient)
 	return { success: true, resultObject: {} }
 }
 
 export async function upgrade(client: Client, request: Request): Promise<any> 
 {
+	const papiClient = createPapiClient(client);
+	
 	if (request.body.FromVersion && semver.compare(request.body.FromVersion, '0.0.39') < 0)
 	{
-		const papiClient = createPapiClient(client);
 		await createMetadataADALTable(papiClient);
 	}
+
+	if (request.body.FromVersion && semver.compare(request.body.FromVersion, '0.0.86') < 0)
+	{
+		await createLockADALTable(papiClient);
+	}
+
 	return { success: true, resultObject: {} }
 }
 
@@ -59,41 +68,21 @@ function createPapiClient(Client: Client)
 
 async function createMetadataADALTable(papiClient: PapiClient) 
 {
-	await papiClient.addons.data.schemes.post({
-		Name: METADATA_ADAL_TABLE_NAME,
-		Type: 'indexed_data',
-		Fields: {
-			Description: {
-				Type: 'String',
-				Indexed: true
-			},
-			// ModificationDateTime:{
-			// 	Type: "Integer",
-			// 	Indexed: true // Indexing Date fields is currntly buggy in ADAL. 
-			// },
-			MIME: {
-				Type: 'String',
-				Indexed: true
-			},
-			Sync: {
-				Type: 'String',
-			},
-			Thumbnails: {
-				Type: 'String'
-			},
-			Folder: {
-				Type: 'String',
-				Indexed: true
-			},
-			Name: {
-				Type: 'String'
-			},
-			URL: {
-				Type: 'String'
-			}
-		} as any,
-	});
+	const pfsMetadataTable = {
+		...pfsSchemeData,
+		Name: METADATA_ADAL_TABLE_NAME
+	}
+	await papiClient.addons.data.schemes.post(pfsMetadataTable);
 }
+
+async function createLockADALTable(papiClient: PapiClient) {
+	const pfsMetadataTable = {
+		...pfsSchemeData,
+		Name: LOCK_ADAL_TABLE_NAME
+	}
+	await papiClient.addons.data.schemes.post(pfsMetadataTable);
+}
+
 
 async function subscribeToExpiredRecords(papiClient: PapiClient) {
 	await papiClient.notification.subscriptions.upsert({
@@ -123,4 +112,3 @@ async function unsubscribeToExpiredRecords(papiClient: PapiClient) {
 		Hidden: true
 	});
 }
-

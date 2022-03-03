@@ -36,8 +36,43 @@ export interface IPfsListFilesResultObject {
     ModificationDateTime?: string // Folders don't have a ModificationDateTime, only files do.
 }
 
+export const pfsSchemeData: any = {
+    Type: 'indexed_data',
+    Fields: {
+        Description: {
+            Type: 'String',
+            Indexed: true
+        },
+        // ModificationDateTime:{
+        // 	Type: "Integer",
+        // 	Indexed: true // Indexing Date fields is currntly buggy in ADAL. 
+        // },
+        MIME: {
+            Type: 'String',
+            Indexed: true
+        },
+        Sync: {
+            Type: 'String',
+        },
+        Thumbnails: {
+            Type: 'String'
+        },
+        Folder: {
+            Type: 'String',
+            Indexed: true
+        },
+        Name: {
+            Type: 'String'
+        },
+        URL: {
+            Type: 'String'
+        }
+    } as any,
+}
+
 export  type IPfsListFilesResultObjects = Array<IPfsListFilesResultObject>
 
 export const dataURLRegex = /^\s*data:([a-z]+\/[a-z]+(;[a-z\-]+\=[a-z\-]+)?)?(;base64)?,([a-z0-9\!\$\&\'\,\(\)\*\+\,\;\=\-\.\_\~\:\@\/\?\%\s]*\s*)$/i;
 
 export const METADATA_ADAL_TABLE_NAME = "S3ObjectsMetadata";
+export const LOCK_ADAL_TABLE_NAME = "PfsLockTable";
