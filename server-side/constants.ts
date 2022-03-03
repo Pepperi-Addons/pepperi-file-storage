@@ -66,7 +66,11 @@ export const pfsSchemeData: any = {
         },
         URL: {
             Type: 'String'
+        },
+        FileVersion: {
+            Type: 'String'
         }
+
     } as any,
 }
 
