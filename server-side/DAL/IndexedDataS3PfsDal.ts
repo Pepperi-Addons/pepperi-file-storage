@@ -1,5 +1,5 @@
 import { Client, Request } from '@pepperi-addons/debug-server';
-import { CdnServers, METADATA_ADAL_TABLE_NAME } from "../constants";
+import { CdnServers, LOCK_ADAL_TABLE_NAME, METADATA_ADAL_TABLE_NAME } from "../constants";
 import { PapiClient } from '@pepperi-addons/papi-sdk/dist/papi-client';
 import config from '../../addon.config.json';
 import { FindOptions } from '@pepperi-addons/papi-sdk';
@@ -51,17 +51,22 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 
 	async downloadFileMetadata(Key: string): Promise<any> 
 	{
-		Key = this.getAbsolutePath(Key);
-		console.log(`Attempting to download the following key from ADAL: ${Key}`)
+		const tableName = METADATA_ADAL_TABLE_NAME;
+		return await this.getObjectFromTable(Key, tableName)
+	}
+
+	private async getObjectFromTable(key, tableName){
+		key = this.getAbsolutePath(key);
+		console.log(`Attempting to download the following key from ADAL: ${key}`)
 		try 
 		{
 			let res: any = null;
 			// Use where clause, since the Keys include '/'s.
 			const findOptions: FindOptions = {
-				where: `Key='${Key}'`
+				where: `Key='${key}'`
 			}
 
-			const downloaded = await this.papiClient.addons.data.uuid(config.AddonUUID).table(METADATA_ADAL_TABLE_NAME).find(findOptions);
+			const downloaded = await this.papiClient.addons.data.uuid(config.AddonUUID).table(tableName).find(findOptions);
 			if(downloaded.length === 1)
 			{
 				console.log(`File Downloaded`);
@@ -79,9 +84,9 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 			}
 			else 
 			{ //Couldn't find results
-				console.error(`Could not find requested item: '${Key}'`);
+				console.error(`Could not find requested item: '${key}'`);
 
-				const err: any = new Error(`Could not find requested item: '${this.getRelativePath(Key)}'`);
+				const err: any = new Error(`Could not find requested item: '${this.getRelativePath(key)}'`);
 				err.code = 404;
 				throw err;
 			}
@@ -96,11 +101,39 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 		}
 	}
 
+	async isObjectLocked(key: string){
+		const tableName = LOCK_ADAL_TABLE_NAME;
+		try
+		{
+			return await this.getObjectFromTable(key, tableName);
+		}
+		catch
+		{
+			return null;
+		}
+	}
+
 	//#endregion
 
 	//#region IPfsMutator
+	async lock(key: string){
+
+	}
+
 	async mutateADAL(newFileFields: any, existingFile: any) {
 		return await this.uploadFileMetadata(newFileFields, existingFile);
+	}
+
+	async notify(newFileFields: any, existingFile: any){
+
+	}
+	
+	async unlock(key: string){
+
+	}
+
+	async invalidateCDN(key: string){
+
 	}
 	//#endregion
 

@@ -15,11 +15,19 @@ export abstract class AbstractBasePfsDal implements IPfsGetter, IPfsMutator
         this.DistributorUUID = jwtDecode(client.OAuthAccessToken)['pepperi.distributoruuid'];
 		this.AddonUUID = this.request.query.addon_uuid;
 	}
+	
 	//#region IPfsMutator
+	abstract lock(key: string);
 
 	abstract mutateS3(newFileFields: any, existingFile: any);
 
 	abstract mutateADAL(newFileFields: any, existingFile: any);
+
+	abstract notify(newFileFields: any, existingFile: any);
+	
+	abstract unlock(key: string);
+
+	abstract invalidateCDN(key: string);
 	
 	//#endregion
 
@@ -28,6 +36,8 @@ export abstract class AbstractBasePfsDal implements IPfsGetter, IPfsMutator
 	abstract listFolderContents(folderName: string): Promise<any>;
 
 	abstract downloadFileMetadata(Key: string): Promise<any>;
+
+	abstract isObjectLocked(key: string);
 	//#endregion
 	
 

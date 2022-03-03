@@ -11,4 +11,10 @@ export interface IPfsGetter
      * @param FolderName The folder's content to be listed.
      */
     listFolderContents(FolderName: string): Promise<any>;
+
+    /**
+     * Returns the lock data if the key is locked, null otherwise.
+     * @param key the key to check.
+     */
+    isObjectLocked(key: string);
 }

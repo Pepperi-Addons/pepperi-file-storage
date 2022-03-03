@@ -60,6 +60,16 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
         }
 	}
 
+	abstract lock(key: string);
+
+	abstract mutateADAL(newFileFields: any, existingFile: any);
+
+	abstract notify(newFileFields: any, existingFile: any);
+	
+	abstract unlock(key: string);
+
+	abstract invalidateCDN(key: string);
+
 	//#endregion
 
 	//#region private methods
