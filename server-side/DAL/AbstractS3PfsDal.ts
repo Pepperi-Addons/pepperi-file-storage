@@ -1,5 +1,5 @@
 import { Client, Request } from '@pepperi-addons/debug-server';
-import { dataURLRegex, S3Buckets } from "../constants";
+import { dataURLRegex, S3Buckets, CloudfrontDistributions } from "../constants";
 import { AbstractBasePfsDal } from './AbstartcBasePfsDal';
 
 const AWS = require('aws-sdk'); // AWS is part of the lambda's environment. Importing it will result in it being rolled up redundently.
@@ -8,6 +8,7 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 {
 	private s3: any;
 	private S3Bucket: any;
+	private CloudfrontDistribution: any;
     
 	constructor(client: Client, request: Request)
 	{
@@ -24,6 +25,7 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 
 		this.s3 = new AWS.S3();
 		this.S3Bucket = S3Buckets[this.environment];
+		this.CloudfrontDistribution = CloudfrontDistributions[this.environment];
 	}
 
 	//#region IPfsMutator
@@ -68,7 +70,31 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 	
 	abstract unlock(key: string);
 
-	abstract invalidateCDN(key: string);
+	async invalidateCDN(key: string){
+		const keyAbsolutePath = this.getAbsolutePath(key);
+
+		console.log(`Trying to invlidate ${keyAbsolutePath}...`);
+
+		const cloudfront = new AWS.CloudFront({apiVersion: '2020-05-31'});
+		const invalidationParams = {
+			DistributionId: this.CloudfrontDistribution,
+  			InvalidationBatch: {
+				CallerReference: (new Date()).getTime().toString(), //A unique string to represent each invalidation request.
+				Paths: { 
+					Quantity: 1, 
+					Items: [
+						keyAbsolutePath
+					]
+				}
+  			}
+		};
+
+		const invlidation = await cloudfront.createInvalidation(invalidationParams).promise();
+
+		console.log(`Invalidation result:\n ${JSON.stringify(invlidation)}...`);
+
+		return invlidation;
+	}
 
 	//#endregion
 

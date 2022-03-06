@@ -13,6 +13,14 @@ export const CdnServers = {
 	"dev": "https://d3jagocnvgzx6w.cloudfront.net"
 }
 
+export const CloudfrontDistributions = {
+    "prod": "EZ8RY7SWZ0ZA0",
+	"sandbox": "E1JOFJL0PE5DBS",
+	"eu": "E1R0ITT15925AL",
+	//The next entry is just a placeholder, not a real CDN.
+	"dev": "E3VND838PBH3CH"
+}
+
 export interface IPfsDownloadObjectResponse {
     Key: string,
     Name: string,

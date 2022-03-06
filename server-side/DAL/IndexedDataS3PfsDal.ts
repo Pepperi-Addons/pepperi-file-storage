@@ -144,9 +144,7 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 		return res;
 	}
 
-	async invalidateCDN(key: string){
 
-	}
 	//#endregion
 
 	//#region private methods
