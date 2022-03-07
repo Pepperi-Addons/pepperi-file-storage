@@ -75,7 +75,8 @@ async function createMetadataADALTable(papiClient: PapiClient)
 	await papiClient.addons.data.schemes.post(pfsMetadataTable);
 }
 
-async function createLockADALTable(papiClient: PapiClient) {
+async function createLockADALTable(papiClient: PapiClient) 
+{
 	const pfsMetadataTable = {
 		...pfsSchemeData,
 		Name: LOCK_ADAL_TABLE_NAME
@@ -84,7 +85,8 @@ async function createLockADALTable(papiClient: PapiClient) {
 }
 
 
-async function subscribeToExpiredRecords(papiClient: PapiClient) {
+async function subscribeToExpiredRecords(papiClient: PapiClient) 
+{
 	await papiClient.notification.subscriptions.upsert({
 		AddonUUID:config.AddonUUID,
 		Name: "pfs--expired-adal-records-subscription",
@@ -98,7 +100,8 @@ async function subscribeToExpiredRecords(papiClient: PapiClient) {
 	});
 }
 
-async function unsubscribeToExpiredRecords(papiClient: PapiClient) {
+async function unsubscribeToExpiredRecords(papiClient: PapiClient) 
+{
 	await papiClient.notification.subscriptions.upsert({
 		AddonUUID:config.AddonUUID,
 		Name: "pfs--expired-adal-records-subscription",

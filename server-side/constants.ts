@@ -14,7 +14,7 @@ export const CdnServers = {
 }
 
 export const CloudfrontDistributions = {
-    "prod": "EZ8RY7SWZ0ZA0",
+	"prod": "EZ8RY7SWZ0ZA0",
 	"sandbox": "E1JOFJL0PE5DBS",
 	"eu": "E1R0ITT15925AL",
 	//The next entry is just a placeholder, not a real CDN.
@@ -45,41 +45,41 @@ export interface IPfsListFilesResultObject {
 }
 
 export const pfsSchemeData: any = {
-    Type: 'indexed_data',
-    Fields: {
-        Description: {
-            Type: 'String',
-            Indexed: true
-        },
-        // ModificationDateTime:{
-        // 	Type: "Integer",
-        // 	Indexed: true // Indexing Date fields is currntly buggy in ADAL. 
-        // },
-        MIME: {
-            Type: 'String',
-            Indexed: true
-        },
-        Sync: {
-            Type: 'String',
-        },
-        Thumbnails: {
-            Type: 'String'
-        },
-        Folder: {
-            Type: 'String',
-            Indexed: true
-        },
-        Name: {
-            Type: 'String'
-        },
-        URL: {
-            Type: 'String'
-        },
-        FileVersion: {
-            Type: 'String'
-        }
+	Type: 'indexed_data',
+	Fields: {
+		Description: {
+			Type: 'String',
+			Indexed: true
+		},
+		// ModificationDateTime:{
+		// 	Type: "Integer",
+		// 	Indexed: true // Indexing Date fields is currntly buggy in ADAL. 
+		// },
+		MIME: {
+			Type: 'String',
+			Indexed: true
+		},
+		Sync: {
+			Type: 'String',
+		},
+		Thumbnails: {
+			Type: 'String'
+		},
+		Folder: {
+			Type: 'String',
+			Indexed: true
+		},
+		Name: {
+			Type: 'String'
+		},
+		URL: {
+			Type: 'String'
+		},
+		FileVersion: {
+			Type: 'String'
+		}
 
-    } as any,
+	} as any,
 }
 
 export  type IPfsListFilesResultObjects = Array<IPfsListFilesResultObject>

@@ -8,6 +8,7 @@ import { AbstractS3PfsDal } from './AbstractS3PfsDal';
 export class IndexedDataS3PfsDal extends AbstractS3PfsDal 
 {
 	private papiClient: PapiClient;
+	private hostedAddonPapiClient: PapiClient;
     
 	constructor(client: Client, request: Request)
 	{
@@ -19,6 +20,14 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 			addonUUID: client.AddonUUID,
 			actionUUID: client.ActionUUID,
 			addonSecretKey: client.AddonSecretKey
+		});
+
+		this.hostedAddonPapiClient = new PapiClient({
+			baseURL: client.BaseURL,
+			token: client.OAuthAccessToken,
+			addonUUID: this.AddonUUID,
+			actionUUID: client.ActionUUID,
+			addonSecretKey: this.request.header["x-pepperi-secretkey"]
 		});
 	}
 
@@ -57,7 +66,7 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 
 	private async getObjectFromTable(key, tableName){
 		key = this.getAbsolutePath(key);
-		console.log(`Attempting to download the following key from ADAL: ${key}`)
+		console.log(`Attempting to download the following key from ADAL: ${key}, Table name: ${tableName}`);
 		try 
 		{
 			let res: any = null;
@@ -105,9 +114,11 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 		const tableName = LOCK_ADAL_TABLE_NAME;
 		try
 		{
-			//TODO Translate key - discard '/'
-			return await this.getObjectFromTable(key, tableName);
+			const lockAbsoluteKey = this.getAbsolutePath(key).replaceAll('/', '~');
+			const lockRes = await this.getObjectFromTable(lockAbsoluteKey, tableName);
+			lockRes.Key = this.getRelativePath(lockRes.Key.replaceAll('~', '/'));
 
+			return lockRes;
 		}
 		catch
 		{
@@ -120,10 +131,14 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 	//#region IPfsMutator
 	async lock(item: any){
 		console.log(`Attempting to lock key: ${item.Key}`);
-		//TODO Translate key - discard '/'
+
+		item.Key = this.getAbsolutePath(item.Key).replaceAll("/", "~");
+
 		const lockRes =  await this.papiClient.addons.data.uuid(config.AddonUUID).table(LOCK_ADAL_TABLE_NAME).upsert(item);
-		//TODO Translate key - bring back '/'
-		console.log(`Successfully locked key: ${item.Key}`);
+
+		lockRes.Key =this.getRelativePath(lockRes.replaceAll("~", "/"));
+
+		console.log(`Successfully locked key: ${lockRes.Key}`);
 
 		return lockRes;
 	}
@@ -133,13 +148,14 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 	}
 
 	async notify(newFileFields: any, existingFile: any){
-
+		//TODO implement.
 	}
 	
 	async unlock(key: string){
-		//TODO Translate key - discard '/'
+		const lockKey = this.getAbsolutePath(key).replaceAll("/", "~");
+
 		console.log(`Attempting to unlock object: ${key}`);
-		const res = await this.papiClient.addons.data.uuid(config.AddonUUID).table(LOCK_ADAL_TABLE_NAME).key(key).hardDelete(true);
+		const res = await this.papiClient.addons.data.uuid(config.AddonUUID).table(LOCK_ADAL_TABLE_NAME).key(lockKey).hardDelete(true);
 		console.log(`Succcessfully unlocked object: ${key}`);
 		return res;
 	}
