@@ -88,3 +88,5 @@ export const dataURLRegex = /^\s*data:([a-z]+\/[a-z]+(;[a-z\-]+\=[a-z\-]+)?)?(;b
 
 export const METADATA_ADAL_TABLE_NAME = "S3ObjectsMetadata";
 export const LOCK_ADAL_TABLE_NAME = "PfsLockTable";
+
+export const MAXIMAL_LOCK_TIME: number = 1000 * 60 * 5; // Set to 5 minutes.

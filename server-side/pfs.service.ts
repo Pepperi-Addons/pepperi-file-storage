@@ -1,7 +1,7 @@
 import { PapiClient } from '@pepperi-addons/papi-sdk'
 import { Client, Request } from '@pepperi-addons/debug-server';
 import jwtDecode from 'jwt-decode';
-import { dataURLRegex } from './constants';
+import { dataURLRegex, MAXIMAL_LOCK_TIME } from './constants';
 import fetch from 'node-fetch';
 import { ImageResizer } from './imageResizer';
 import { IPfsMutator } from './DAL/IPfsMutator';
@@ -36,30 +36,27 @@ export class PfsService
 	async uploadFile(): Promise<boolean> 
 	{
 		let res:any = {};
+
 		try 
 		{
-			await this.validateAddonSecretKey();
-			try
-			{
-				this.existingFile = await this.downloadFile();
-				this.existingFile.doesFileExist = true;
-			}
-			catch
-			{
-				this.existingFile = {};
-				this.existingFile.doesFileExist = false;
+			await this.validateUploadRequest();
 
-			}
+			await this.lock();
+
+			await this.getCurrentItemData();
+
 			this.validateFieldsForUpload();
+			
+			await this.pfsMutator.setRollbackData(this.existingFile);
 
-			if(this.request.body.Key.endsWith('/')) 
-			{ // if the key ends with '/' it means we are creating a folder 
-				res = await this.createFolder();
-			}
-			else //file post
-			{
-				res = await this.createFile();
-			}
+			res = await this.mutatePfs();
+
+			await this.pfsMutator.notify(this.newFileFields, this.existingFile);
+
+			await this.pfsMutator.unlock(this.existingFile.Key);
+
+			await this.pfsMutator.invalidateCDN(this.existingFile.Key);
+
 		}
 		catch (err) 
 		{
@@ -69,7 +66,64 @@ export class PfsService
 			}
 			throw err;
 		}
+
 		return res;
+	}
+
+	private async getCurrentItemData() {
+		try {
+			this.existingFile = await this.downloadFile();
+			this.existingFile.doesFileExist = true;
+		}
+		catch {
+			this.existingFile = {};
+			this.existingFile.doesFileExist = false;
+			this.existingFile.Key = this.request.body.Key;
+		}
+	}
+
+	private async validateUploadRequest() {
+		await this.validateAddonSecretKey();
+
+		if (this.request.body.Thumbnails) {
+			this.validateThumbnailsRequest(this.request.body.Thumbnails);
+		}
+	}
+
+	private async mutatePfs() {
+		let res: any = {};
+
+		if (this.request.body.Key.endsWith('/')) { // if the key ends with '/' it means we are creating a folder 
+			res = await this.createFolder();
+		}
+		else //file post
+		{
+			res = await this.createFile();
+		}
+		return res;
+	}
+
+	private async lock() {
+		const lockedFile = await this.pfsMutator.isObjectLocked(this.request.body.Key);
+		const timePassedSinceLock = lockedFile ? (new Date().getTime()) - (new Date(lockedFile.CreationDateTime)).getTime() : (new Date().getTime());
+
+		if (lockedFile) {
+			if (timePassedSinceLock > MAXIMAL_LOCK_TIME) {
+				this.rollback(lockedFile);
+			}
+
+			else {
+				const err: any = new Error(`The requested key ${this.request.body.Key} is currently locked for ${timePassedSinceLock} ms, which is less then the maixmal ${MAXIMAL_LOCK_TIME} ms. To allow the current transaction to finish executing, please try again later.`);
+				err.code = 409; // Conflict code. This response is sent when a request conflicts with the current state of the server.
+				throw err;
+			}
+		}
+
+		await this.pfsMutator.lock(this.request.body.Key);
+	}
+
+	private rollback(lockedFile: any) {
+		throw new Error('Method not implemented.');
 	}
 
 	/**
@@ -132,8 +186,6 @@ export class PfsService
 	{
 		const resizer = new ImageResizer(MIME, buffer);
 		const thumbnails = this.newFileFields.Thumbnails ?? this.existingFile.Thumbnails;
-
-		this.validateThumbnailsRequest(thumbnails);
 
 		this.newFileFields.Thumbnails = await Promise.all(thumbnails.map(async thumbnail => 
 		{
@@ -223,6 +275,10 @@ export class PfsService
 	private async validateAddonSecretKey() 
 	{
 		
+		for (const [key, value] of Object.entries(this.request.header)) {
+			this.request.header[key.toLowerCase()] = value;
+		}
+
 		if (!this.request.header["x-pepperi-secretkey"] || !await this.isValidRequestedAddon(this.client, this.request.header["x-pepperi-secretkey"], this.AddonUUID)) 
 		{
 			const err: any = new Error(`Authorization request denied. ${this.request.header["x-pepperi-secretkey"]? "check secret key" : "Missing secret key header"} `);

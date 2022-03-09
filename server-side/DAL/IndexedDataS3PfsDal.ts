@@ -114,9 +114,9 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 		const tableName = LOCK_ADAL_TABLE_NAME;
 		try
 		{
-			const lockAbsoluteKey = this.getAbsolutePath(key).replaceAll('/', '~');
+			const lockAbsoluteKey = this.getAbsolutePath(key).replace(new RegExp("/", 'g'), "~");
 			const lockRes = await this.getObjectFromTable(lockAbsoluteKey, tableName);
-			lockRes.Key = this.getRelativePath(lockRes.Key.replaceAll('~', '/'));
+			lockRes.Key = this.getRelativePath(lockRes.Key.replace(new RegExp("~", 'g'), "/"));
 
 			return lockRes;
 		}
@@ -129,16 +129,30 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 	//#endregion
 
 	//#region IPfsMutator
-	async lock(item: any){
-		console.log(`Attempting to lock key: ${item.Key}`);
+	async lock(Key: any){
+		console.log(`Attempting to lock key: ${Key}`);
 
-		item.Key = this.getAbsolutePath(item.Key).replaceAll("/", "~");
+		const item = {Key : this.getAbsolutePath(Key).replace(new RegExp("/", 'g'), "~")};
 
 		const lockRes =  await this.papiClient.addons.data.uuid(config.AddonUUID).table(LOCK_ADAL_TABLE_NAME).upsert(item);
 
-		lockRes.Key =this.getRelativePath(lockRes.replaceAll("~", "/"));
+		lockRes.Key =this.getRelativePath(item.Key.replace(new RegExp("~", 'g'), "/"));
 
 		console.log(`Successfully locked key: ${lockRes.Key}`);
+
+		return lockRes;
+	}
+
+	async setRollbackData(item: any) {
+		console.log(`Setting rollback data to key: ${item.Key}`);
+		const itemCopy = {...item};
+		itemCopy.Key = this.getAbsolutePath(item.Key).replace(new RegExp("/", 'g'), "~");
+
+		const lockRes =  await this.papiClient.addons.data.uuid(config.AddonUUID).table(LOCK_ADAL_TABLE_NAME).upsert(itemCopy);
+
+		lockRes.Key =this.getRelativePath(itemCopy.Key.replace(new RegExp("~", 'g'), "/"));
+
+		console.log(`Successfully set rollback data for key: ${lockRes.Key}`);
 
 		return lockRes;
 	}
@@ -152,7 +166,7 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 	}
 	
 	async unlock(key: string){
-		const lockKey = this.getAbsolutePath(key).replaceAll("/", "~");
+		const lockKey = this.getAbsolutePath(key).replace(new RegExp("/", 'g'), "~");
 
 		console.log(`Attempting to unlock object: ${key}`);
 		const res = await this.papiClient.addons.data.uuid(config.AddonUUID).table(LOCK_ADAL_TABLE_NAME).key(lockKey).hardDelete(true);

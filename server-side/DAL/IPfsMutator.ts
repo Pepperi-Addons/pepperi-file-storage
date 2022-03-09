@@ -1,10 +1,22 @@
 export interface IPfsMutator
 {
     /**
-     * Lock the item.
-     * @param item the item to be locked
+     * Returns the lock data if the key is locked, null otherwise.
+     * @param relativeKey the key to check.
      */
-    lock(item: any);
+     isObjectLocked(relativeKey: string);
+     
+    /**
+     * Lock the item.
+     * @param relativeKey the key to be locked.
+     */
+    lock(key: string);
+
+    /**
+     * Lock the item.
+     * @param item the item to be locked/
+     */
+     setRollbackData(item: any);
 
     /**
      * Write needed changes to S3 bucket - create a new file if needed, update file data, update or create file's thumbnails, etc.
@@ -29,13 +41,13 @@ export interface IPfsMutator
 
     /**
      * Unlock the requested key.
-     * @param key The key to be unlocked
+     * @param relativeKey The key to be unlocked
      */
-    unlock(key: string);
+    unlock(relativeKey: string);
 
     /**
      * Invalidate the CDN cached version of the requested key.
-     * @param key The key whose CDN cached version is to be invalidated.
+     * @param relativeKey The key whose CDN cached version is to be invalidated.
      */
-    invalidateCDN(key: string);
+    invalidateCDN(relativeKey: string);
 }

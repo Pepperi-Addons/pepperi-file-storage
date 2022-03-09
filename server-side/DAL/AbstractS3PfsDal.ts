@@ -14,16 +14,16 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 	{
 		super(client, request);
 
-		// const accessKeyId=""
-		// const secretAccessKey=""
-		// const sessionToken=""
+		// const accessKeyId="";
+		// const secretAccessKey="";
+		// const sessionToken="";
 		// AWS.config.update({
 		// 	accessKeyId,
 		// 	secretAccessKey,
 		// 	sessionToken
 		// });
 
-		this.s3 = new AWS.S3();
+		this.s3 = new AWS.S3({apiVersion: '2006-03-01'}); //lock API version
 		this.S3Bucket = S3Buckets[this.environment];
 		this.CloudfrontDistribution = CloudfrontDistributions[this.environment];
 	}
@@ -40,7 +40,9 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		}
 		else if (this.request.body.URI) // The file already has data, or data was provided.
 		{ 
-			await this.uploadFileData(newFileFields);
+			const uploadRes = await this.uploadFileData(newFileFields);
+			newFileFields.FileVersion = uploadRes.VersionId;
+			
 			delete newFileFields.buffer;
 		}
 
@@ -71,9 +73,9 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 	abstract unlock(key: string);
 
 	async invalidateCDN(key: string){
-		const keyAbsolutePath = this.getAbsolutePath(key);
+		const invalidationPath = `/${this.getAbsolutePath(key)}`; //Invalidation path must start with a '/'.
 
-		console.log(`Trying to invlidate ${keyAbsolutePath}...`);
+		console.log(`Trying to invlidate ${invalidationPath}...`);
 
 		const cloudfront = new AWS.CloudFront({apiVersion: '2020-05-31'});
 		const invalidationParams = {
@@ -83,7 +85,7 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 				Paths: { 
 					Quantity: 1, 
 					Items: [
-						keyAbsolutePath
+						invalidationPath
 					]
 				}
   			}

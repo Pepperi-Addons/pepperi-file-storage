@@ -17,7 +17,9 @@ export abstract class AbstractBasePfsDal implements IPfsGetter, IPfsMutator
 	}
 	
 	//#region IPfsMutator
-	abstract lock(item: any);
+	abstract lock(key: string);
+
+	abstract setRollbackData(item: any);
 
 	abstract mutateS3(newFileFields: any, existingFile: any);
 
