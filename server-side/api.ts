@@ -1,6 +1,7 @@
 import { PfsService } from './pfs.service'
 import { Client, Request } from '@pepperi-addons/debug-server'
 import { IndexedDataS3PfsDal } from './DAL/IndexedDataS3PfsDal';
+import { FailAfterLock, FailAfterMutatingAdal, FailAfterMutatingS3 } from './DAL/TestLockMechanism';
 
 export async function file(client: Client, request: Request) 
 {
@@ -80,5 +81,27 @@ export async function record_removed(client: Client, request: Request)
 
 function getDalInstance(client: Client, request: Request) 
 {
-	return new IndexedDataS3PfsDal(client, request);
+	if(!request.query){
+		request.query = {};
+	}
+
+	switch(request.query.testing_trasnaction){
+		//**** Testing scenarios ****//
+
+		case "stop_after_lock":{
+			return new FailAfterLock(client, request);
+		}
+		case "stop_after_S3":{
+			return new FailAfterMutatingS3(client, request);
+		}
+		case "stop_after_ADAL":{
+			return new FailAfterMutatingAdal(client, request);
+		}
+
+		//**** End of testing scenarios ****//
+
+		default:{
+			return new IndexedDataS3PfsDal(client, request);
+		}
+	}
 }
