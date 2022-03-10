@@ -70,30 +70,37 @@ export class PfsService
 		return res;
 	}
 
-	private async getCurrentItemData() {
-		try {
+	private async getCurrentItemData() 
+	{
+		try 
+		{
 			this.existingFile = await this.downloadFile();
 			this.existingFile.doesFileExist = true;
 		}
-		catch {
+		catch 
+		{
 			this.existingFile = {};
 			this.existingFile.doesFileExist = false;
 			this.existingFile.Key = this.request.body.Key;
 		}
 	}
 
-	private async validateUploadRequest() {
+	private async validateUploadRequest() 
+	{
 		await this.validateAddonSecretKey();
 
-		if (this.request.body.Thumbnails) {
+		if (this.request.body.Thumbnails) 
+		{
 			this.validateThumbnailsRequest(this.request.body.Thumbnails);
 		}
 	}
 
-	private async mutatePfs() {
+	private async mutatePfs() 
+	{
 		let res: any = {};
 
-		if (this.request.body.Key.endsWith('/')) { // if the key ends with '/' it means we are creating a folder 
+		if (this.request.body.Key.endsWith('/')) 
+		{ // if the key ends with '/' it means we are creating a folder 
 			res = await this.createFolder();
 		}
 		else //file post
@@ -103,16 +110,20 @@ export class PfsService
 		return res;
 	}
 
-	private async lock() {
+	private async lock() 
+	{
 		const lockedFile = await this.pfsMutator.isObjectLocked(this.request.body.Key);
 		const timePassedSinceLock = lockedFile ? (new Date().getTime()) - (new Date(lockedFile.CreationDateTime)).getTime() : (new Date().getTime());
 
-		if (lockedFile) {
-			if (timePassedSinceLock > MAXIMAL_LOCK_TIME) {
+		if (lockedFile) 
+		{
+			if (timePassedSinceLock > MAXIMAL_LOCK_TIME) 
+			{
 				this.rollback(lockedFile);
 			}
 
-			else {
+			else 
+			{
 				const err: any = new Error(`The requested key ${this.request.body.Key} is currently locked for ${timePassedSinceLock} ms, which is less then the maixmal ${MAXIMAL_LOCK_TIME} ms. To allow the current transaction to finish executing, please try again later.`);
 				err.code = 409; // Conflict code. This response is sent when a request conflicts with the current state of the server.
 				throw err;
@@ -122,7 +133,8 @@ export class PfsService
 		await this.pfsMutator.lock(this.request.body.Key);
 	}
 
-	private rollback(lockedFile: any) {
+	private rollback(lockedFile: any) 
+	{
 		throw new Error('Method not implemented.');
 	}
 
@@ -275,7 +287,8 @@ export class PfsService
 	private async validateAddonSecretKey() 
 	{
 		
-		for (const [key, value] of Object.entries(this.request.header)) {
+		for (const [key, value] of Object.entries(this.request.header)) 
+		{
 			this.request.header[key.toLowerCase()] = value;
 		}
 
