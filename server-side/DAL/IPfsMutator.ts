@@ -1,5 +1,11 @@
 export interface IPfsMutator
 {
+	/**
+     * Delete the given file's given VersionID.
+     * @param Key The key hows version is to be deleted.
+     * @param s3FileVersion The version to be deleted.
+     */
+    deleteS3FileVersion(Key: any, s3FileVersion: any);
     /**
      * Returns the lock data if the key is locked, null otherwise.
      * @param relativeKey the key to check.

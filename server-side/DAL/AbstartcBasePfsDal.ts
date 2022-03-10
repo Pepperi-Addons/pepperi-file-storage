@@ -30,6 +30,8 @@ export abstract class AbstractBasePfsDal implements IPfsGetter, IPfsMutator
 	abstract unlock(key: string);
 
 	abstract invalidateCDN(key: string);
+
+	abstract deleteS3FileVersion(Key: any, s3FileVersion: any);
 	
 	//#endregion
 
@@ -40,6 +42,8 @@ export abstract class AbstractBasePfsDal implements IPfsGetter, IPfsMutator
 	abstract downloadFileMetadata(Key: string): Promise<any>;
 
 	abstract isObjectLocked(key: string);
+
+	abstract getObjectS3FileVersion(Key: any);
 	//#endregion
 	
 

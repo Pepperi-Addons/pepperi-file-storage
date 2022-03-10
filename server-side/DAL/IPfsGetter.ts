@@ -1,5 +1,6 @@
 export interface IPfsGetter
 {
+	getObjectS3FileVersion(Key: any);
     /**
      * Download the file's metadata.
      * @param Key The file's key which metadata will be downloaded.

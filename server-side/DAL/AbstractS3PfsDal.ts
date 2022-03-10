@@ -98,6 +98,44 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		return invlidation;
 	}
 
+	
+	async deleteS3FileVersion(Key: any, s3FileVersion: any) {
+		console.log(`Trying to delete version: ${s3FileVersion} of key: ${Key}`);
+		const params: any = {};
+
+		// Create S3 params
+		params.Bucket = this.S3Bucket;
+		params.Key = this.getAbsolutePath(Key);
+		params.VersionId = s3FileVersion;
+
+		// Upload to S3 bucket.
+		const deletedVersionRes = await this.s3.deleteObject(params).promise();
+		console.log(`Successfully deleted version: ${s3FileVersion} of key: ${Key}`);
+
+		return deletedVersionRes;
+	}
+
+	//#endregion
+
+	//#region IPfsGetter
+	async getObjectS3FileVersion(Key: any) {
+		console.log(`Trying to retrieve the latest VersionId of key: ${Key}`);
+		const params: any = {};
+
+		// Create S3 params
+		params.Bucket = this.S3Bucket;
+		params.Prefix = this.getAbsolutePath(Key);
+
+		// Retrieve the list of versions.
+		const allVersions = await this.s3.listObjectVersions(params).promise();
+
+		const latestVersionId = allVersions.Versions.filter(ver => ver.IsLatest) ?? allVersions.DeleteMarkers.filter(ver => ver.IsLatest); //Id it wasn't found in the regular versions, it is in the DeleteMarkers list.
+	
+		console.log(`Successfully retrieved the latest VersionId of key: ${Key}`);
+
+		return latestVersionId;
+	} 
+	
 	//#endregion
 
 	//#region private methods

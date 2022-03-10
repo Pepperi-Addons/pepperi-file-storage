@@ -133,9 +133,36 @@ export class PfsService
 		await this.pfsMutator.lock(this.request.body.Key);
 	}
 
-	private rollback(lockedFile: any) 
+	private async rollback(lockedFile: any) 
 	{
-		throw new Error('Method not implemented.');
+		console.error(`Rollback algorithm invoked for key: ${lockedFile.Key}`);
+
+		await this.getCurrentItemData();
+		if(lockedFile != this.existingFile) 
+		// Changes have already been committed to (S3, if there were changes to the file's data and to) the metadata table. 
+		// The transaction can be completed. Since there's no way of telling whether a notification has already been sent or not,
+		// A notification will be sent anyway (PNS philosophy is "Notify at least once").
+		{
+			//Now the metadata table holds the updated data, and the lock table holds the outdated data.
+			await this.pfsMutator.notify(this.existingFile, lockedFile);
+		}
+		else
+		{
+			const s3FileVersion = this.pfsGetter.getObjectS3FileVersion(this.existingFile.Key);
+			if (s3FileVersion != this.existingFile.FileVersion) //We have to get the file version from S3 since S3 has been updated, but the metadata table hasn't.
+			// A change has been made to S3, but was not yet applied to ADAL. At this stage there's not enough data to complete
+			// the transaction, so a rollback is needed. Permanently delete the newer S3 version, to revert the latest version to the previous one.
+			{	
+				this.pfsMutator.deleteS3FileVersion(this.existingFile.Key, s3FileVersion);
+			}	
+		} 
+
+		await this.pfsMutator.unlock(lockedFile.Key);
+
+		console.error(`Rollback algorithm has finished running for key: ${lockedFile.Key}`);
+
+		await this.pfsMutator.invalidateCDN(lockedFile.Key);
+
 	}
 
 	/**
