@@ -1,7 +1,7 @@
 import { PapiClient } from '@pepperi-addons/papi-sdk'
 import { Client, Request } from '@pepperi-addons/debug-server';
 import jwtDecode from 'jwt-decode';
-import { dataURLRegex, MAXIMAL_LOCK_TIME } from './constants';
+import { dataURLRegex } from './constants';
 import fetch from 'node-fetch';
 import { ImageResizer } from './imageResizer';
 import { IPfsMutator } from './DAL/IPfsMutator';
@@ -82,6 +82,7 @@ export class PfsService
 			this.existingFile = {};
 			this.existingFile.doesFileExist = false;
 			this.existingFile.Key = this.request.body.Key;
+			this.existingFile.Hidden = false;
 		}
 	}
 
@@ -117,14 +118,14 @@ export class PfsService
 
 		if (lockedFile) 
 		{
-			if (timePassedSinceLock > MAXIMAL_LOCK_TIME) 
+			if (timePassedSinceLock > this.pfsMutator.getMaximalLockTime()) 
 			{
-				this.rollback(lockedFile);
+				await this.rollback(lockedFile);
 			}
 
 			else 
 			{
-				const err: any = new Error(`The requested key ${this.request.body.Key} is currently locked for ${timePassedSinceLock} ms, which is less then the maixmal ${MAXIMAL_LOCK_TIME} ms. To allow the current transaction to finish executing, please try again later.`);
+				const err: any = new Error(`The requested key ${this.request.body.Key} is currently locked for ${timePassedSinceLock} ms, which is less then the maixmal ${this.pfsMutator.getMaximalLockTime()} ms. To allow the current transaction to finish executing, please try again later.`);
 				err.code = 409; // Conflict code. This response is sent when a request conflicts with the current state of the server.
 				throw err;
 			}
@@ -138,31 +139,71 @@ export class PfsService
 		console.error(`Rollback algorithm invoked for key: ${lockedFile.Key}`);
 
 		await this.getCurrentItemData();
-		if(lockedFile != this.existingFile) 
+		console.log("Trying to determine where the transaction failed...");
+		if(this.existingFile.doesFileExist && !this.areExistingAndLockedFileSame(lockedFile)) 
 		// Changes have already been committed to (S3, if there were changes to the file's data and to) the metadata table. 
 		// The transaction can be completed. Since there's no way of telling whether a notification has already been sent or not,
 		// A notification will be sent anyway (PNS philosophy is "Notify at least once").
 		{
 			//Now the metadata table holds the updated data, and the lock table holds the outdated data.
+			console.log("Changes have already been committed to the metadata table (and S3, if they were needed). The transaction can be completed. Notifying subscribers...");
 			await this.pfsMutator.notify(this.existingFile, lockedFile);
 		}
 		else
 		{
-			const s3FileVersion = this.pfsGetter.getObjectS3FileVersion(this.existingFile.Key);
+			console.log("No changes were committed to the metadata table. Checking if S3 has been updated...");
+			const s3FileVersion = await this.pfsGetter.getObjectS3FileVersion(this.existingFile.Key);
 			if (s3FileVersion != this.existingFile.FileVersion) //We have to get the file version from S3 since S3 has been updated, but the metadata table hasn't.
 			// A change has been made to S3, but was not yet applied to ADAL. At this stage there's not enough data to complete
 			// the transaction, so a rollback is needed. Permanently delete the newer S3 version, to revert the latest version to the previous one.
 			{	
-				this.pfsMutator.deleteS3FileVersion(this.existingFile.Key, s3FileVersion);
+				console.log("Changes have been committed to S3. Reverting S3 to previous version (if exists. Otherwise delete S3 object.)");
+				await this.pfsMutator.deleteS3FileVersion(this.existingFile.Key, s3FileVersion);
+				console.log("Done reverting S3 to previous state.");
+
 			}	
+			else
+			{
+				console.log("No changes have been committed to S3 either.");
+			}
 		} 
 
+		console.log("Unlocking file...");
 		await this.pfsMutator.unlock(lockedFile.Key);
+		console.log("Done unlocking the file.");
 
 		console.error(`Rollback algorithm has finished running for key: ${lockedFile.Key}`);
 
 		await this.pfsMutator.invalidateCDN(lockedFile.Key);
 
+	}
+
+	private areExistingAndLockedFileSame(lockedFile: any) 
+	{
+		console.log("Comparing locked object data and the stored metadata...");
+
+		const files = [{...lockedFile}, {...this.existingFile}];
+
+		for(const file of files)
+		{
+			delete file.ModificationDateTime
+			delete file.CreationDateTime
+			delete file.doesFileExist;
+		}
+
+		files[1].Key = files[1].Key.startsWith('/') ? files[1].Key.substring(1) : files[1].Key
+
+		const res = shallowCompareObjects();
+
+		console.log(`Comparison results - lockeFile === storedFile: ${res}`);
+
+		return res;
+
+		function shallowCompareObjects() {
+			return Object.keys(files[0]).length === Object.keys(files[1]).length &&
+				Object.keys(files[0]).every(key => files[1].hasOwnProperty(key) && files[0][key] === files[1][key]
+				);
+		}
 	}
 
 	/**

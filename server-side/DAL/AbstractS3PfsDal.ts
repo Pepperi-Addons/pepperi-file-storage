@@ -10,9 +10,9 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 	private S3Bucket: any;
 	private CloudfrontDistribution: any;
     
-	constructor(client: Client, request: Request)
+	constructor(client: Client, request: Request, maximalLockTime: number)
 	{
-		super(client, request);
+		super(client, request, maximalLockTime);
 
 		// const accessKeyId="";
 		// const secretAccessKey="";
@@ -77,6 +77,11 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 
 		console.log(`Trying to invlidate ${invalidationPath}...`);
 
+		if(invalidationPath.endsWith('/')) // If this is a folder, it has no CDN representation, and there's no need to invalidate it.
+		{ 
+			return;
+		}
+
 		const cloudfront = new AWS.CloudFront({apiVersion: '2020-05-31'});
 		const invalidationParams = {
 			DistributionId: this.CloudfrontDistribution,
@@ -108,7 +113,6 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		params.Key = this.getAbsolutePath(Key);
 		params.VersionId = s3FileVersion;
 
-		// Upload to S3 bucket.
 		const deletedVersionRes = await this.s3.deleteObject(params).promise();
 		console.log(`Successfully deleted version: ${s3FileVersion} of key: ${Key}`);
 
@@ -121,17 +125,29 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 	async getObjectS3FileVersion(Key: any) {
 		console.log(`Trying to retrieve the latest VersionId of key: ${Key}`);
 		const params: any = {};
+		let latestVersionId;
 
 		// Create S3 params
 		params.Bucket = this.S3Bucket;
 		params.Prefix = this.getAbsolutePath(Key);
 
-		// Retrieve the list of versions.
-		const allVersions = await this.s3.listObjectVersions(params).promise();
+		if(Key.endsWith("/")) // If this is a folder, it has no S3 representations, and so has no VersionId.
+		{
+			latestVersionId = undefined;
 
-		const latestVersionId = allVersions.Versions.filter(ver => ver.IsLatest) ?? allVersions.DeleteMarkers.filter(ver => ver.IsLatest); //Id it wasn't found in the regular versions, it is in the DeleteMarkers list.
-	
-		console.log(`Successfully retrieved the latest VersionId of key: ${Key}`);
+			console.log(`Requested key is a folder, and has no VersionId.`);
+		}
+		else
+		{
+			// Retrieve the list of versions.
+			const allVersions = await this.s3.listObjectVersions(params).promise();
+
+			const filteredVersionId = allVersions.Versions.filter(ver => ver.IsLatest) ?? allVersions.DeleteMarkers.filter(ver => ver.IsLatest); //Id it wasn't found in the regular versions, it is in the DeleteMarkers list.
+
+			latestVersionId = filteredVersionId.length > 0 ? filteredVersionId[0].VersionId : undefined;
+
+			console.log(`Successfully retrieved the latest VersionId: ${latestVersionId} of key: ${Key}`);
+		}
 
 		return latestVersionId;
 	} 

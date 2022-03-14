@@ -10,9 +10,9 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 	private papiClient: PapiClient;
 	private hostedAddonPapiClient: PapiClient;
     
-	constructor(client: Client, request: Request)
+	constructor(client: Client, request: Request, maximalLockTime:number)
 	{
-        super(client, request);
+        super(client, request, maximalLockTime);
 				 
 		this.papiClient = new PapiClient({
 			baseURL: client.BaseURL,
@@ -61,27 +61,27 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 	async downloadFileMetadata(Key: string): Promise<any> 
 	{
 		const tableName = METADATA_ADAL_TABLE_NAME;
-		return await this.getObjectFromTable(Key, tableName)
+		const downloadRes = await this.getObjectFromTable(this.getAbsolutePath(Key), tableName)
+		this.setRelativePathsInMetadata(downloadRes.Key);
+
+		return downloadRes;
 	}
 
-	private async getObjectFromTable(key, tableName){
-		key = this.getAbsolutePath(key);
+	private async getObjectFromTable(key, tableName, getHidden: boolean = false){
 		console.log(`Attempting to download the following key from ADAL: ${key}, Table name: ${tableName}`);
 		try 
 		{
-			let res: any = null;
 			// Use where clause, since the Keys include '/'s.
 			const findOptions: FindOptions = {
-				where: `Key='${key}'`
+				where: `Key='${key}'`,
+				include_deleted: getHidden
 			}
 
 			const downloaded = await this.papiClient.addons.data.uuid(config.AddonUUID).table(tableName).find(findOptions);
 			if(downloaded.length === 1)
 			{
 				console.log(`File Downloaded`);
-				res = downloaded[0]
-				this.setRelativePathsInMetadata(res);
-				return res;
+				return downloaded[0];
 			}
 			else if(downloaded.length > 1)
 			{
@@ -115,8 +115,9 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 		try
 		{
 			const lockAbsoluteKey = this.getAbsolutePath(key).replace(new RegExp("/", 'g'), "~");
-			const lockRes = await this.getObjectFromTable(lockAbsoluteKey, tableName);
-			lockRes.Key = this.getRelativePath(lockRes.Key.replace(new RegExp("~", 'g'), "/"));
+			const getHidden: boolean = true;
+			const lockRes: any = await this.getObjectFromTable(lockAbsoluteKey, tableName, getHidden);
+			lockRes.Key = lockRes.Key.replace(new RegExp("~", 'g'), "/");
 
 			return lockRes;
 		}
@@ -132,11 +133,11 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 	async lock(Key: any){
 		console.log(`Attempting to lock key: ${Key}`);
 
-		const item = {Key : this.getAbsolutePath(Key).replace(new RegExp("/", 'g'), "~")};
+		const item: any = {Key : this.getAbsolutePath(Key).replace(new RegExp("/", 'g'), "~")};
 
 		const lockRes =  await this.papiClient.addons.data.uuid(config.AddonUUID).table(LOCK_ADAL_TABLE_NAME).upsert(item);
 
-		lockRes.Key =this.getRelativePath(item.Key.replace(new RegExp("~", 'g'), "/"));
+		lockRes.Key = item.Key.replace(new RegExp("~", 'g'), "/");
 
 		console.log(`Successfully locked key: ${lockRes.Key}`);
 
@@ -146,11 +147,12 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 	async setRollbackData(item: any) {
 		console.log(`Setting rollback data to key: ${item.Key}`);
 		const itemCopy = {...item};
+
 		itemCopy.Key = this.getAbsolutePath(item.Key).replace(new RegExp("/", 'g'), "~");
 
-		const lockRes =  await this.papiClient.addons.data.uuid(config.AddonUUID).table(LOCK_ADAL_TABLE_NAME).upsert(itemCopy);
+		const lockRes = await this.papiClient.addons.data.uuid(config.AddonUUID).table(LOCK_ADAL_TABLE_NAME).upsert(itemCopy);
 
-		lockRes.Key =this.getRelativePath(itemCopy.Key.replace(new RegExp("~", 'g'), "/"));
+		lockRes.Key = itemCopy.Key.replace(new RegExp("~", 'g'), "/");
 
 		console.log(`Successfully set rollback data for key: ${lockRes.Key}`);
 

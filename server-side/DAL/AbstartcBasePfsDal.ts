@@ -8,12 +8,18 @@ export abstract class AbstractBasePfsDal implements IPfsGetter, IPfsMutator
 	protected environment: any;
     protected DistributorUUID: any;
 	protected AddonUUID: any;
+	protected readonly MAXIMAL_LOCK_TIME; 
     
-	constructor(protected client: Client, protected request: Request)
+	constructor(protected client: Client, protected request: Request, maximalLockTime:number)
 	{
 		this.environment = jwtDecode(client.OAuthAccessToken)['pepperi.datacenter'];
         this.DistributorUUID = jwtDecode(client.OAuthAccessToken)['pepperi.distributoruuid'];
 		this.AddonUUID = this.request.query.addon_uuid;
+		this.MAXIMAL_LOCK_TIME = maximalLockTime;
+	}
+
+	getMaximalLockTime() {
+		return this.MAXIMAL_LOCK_TIME;
 	}
 	
 	//#region IPfsMutator
@@ -57,10 +63,12 @@ export abstract class AbstractBasePfsDal implements IPfsGetter, IPfsMutator
 	 */
 	protected getAbsolutePath(relativePath: string): string 
 	{
-		if(relativePath.startsWith('/'))
+		if(relativePath.startsWith('/')){
 			relativePath = relativePath.slice(1);
+		}
 
-		return `${this.DistributorUUID}/${this.AddonUUID}/${relativePath}`;
+		const absolutePrefix = `${this.DistributorUUID}/${this.AddonUUID}/`;
+		return relativePath.startsWith(absolutePrefix) ? relativePath : `${absolutePrefix}${relativePath}`;
 	}
 
 	/**

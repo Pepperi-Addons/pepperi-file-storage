@@ -90,3 +90,4 @@ export const METADATA_ADAL_TABLE_NAME = "S3ObjectsMetadata";
 export const LOCK_ADAL_TABLE_NAME = "PfsLockTable";
 
 export const MAXIMAL_LOCK_TIME: number = 1000 * 60 * 5; // Set to 5 minutes.
+export const DEBUG_MAXIMAL_LOCK_TIME: number = 1; // Debug
