@@ -104,7 +104,7 @@ function getDalInstance(client: Client, request: Request)
 	//**** End of testing scenarios ****//
 
 	default:{
-		return new IndexedDataS3PfsDal(client, request, MAXIMAL_LOCK_TIME);
+		return new IndexedDataS3PfsDal(client, request, request.query.testRollback ? 0 : MAXIMAL_LOCK_TIME);
 	}
 	}
 }

@@ -157,7 +157,7 @@ export class PfsService
 			// A change has been made to S3, but was not yet applied to ADAL. At this stage there's not enough data to complete
 			// the transaction, so a rollback is needed. Permanently delete the newer S3 version, to revert the latest version to the previous one.
 			{	
-				console.log("Changes have been committed to S3. Reverting S3 to previous version (if exists. Otherwise delete S3 object.)");
+				console.log(`Changes have been committed to S3 (S3's VersionId = ${s3FileVersion}, metadata FileVersion = ${this.existingFile.FileVersion}). Reverting S3 to previous version (if exists. Otherwise delete S3 object.)`);
 				await this.pfsMutator.deleteS3FileVersion(this.existingFile.Key, s3FileVersion);
 				console.log("Done reverting S3 to previous state.");
 
@@ -175,6 +175,11 @@ export class PfsService
 		console.error(`Rollback algorithm has finished running for key: ${lockedFile.Key}`);
 
 		await this.pfsMutator.invalidateCDN(lockedFile.Key);
+
+		if(this.request.query.testRollback) // If testing rollback, throw exception to stop the process after rollback.
+		{
+			throw new Error("Testing rollback - finishing execution after rollback was done.");
+		}
 
 	}
 

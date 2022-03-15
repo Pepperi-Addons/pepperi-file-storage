@@ -62,7 +62,7 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 	{
 		const tableName = METADATA_ADAL_TABLE_NAME;
 		const downloadRes = await this.getObjectFromTable(this.getAbsolutePath(Key), tableName)
-		this.setRelativePathsInMetadata(downloadRes.Key);
+		this.setRelativePathsInMetadata(downloadRes);
 
 		return downloadRes;
 	}
@@ -117,7 +117,7 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 			const lockAbsoluteKey = this.getAbsolutePath(key).replace(new RegExp("/", 'g'), "~");
 			const getHidden: boolean = true;
 			const lockRes: any = await this.getObjectFromTable(lockAbsoluteKey, tableName, getHidden);
-			lockRes.Key = lockRes.Key.replace(new RegExp("~", 'g'), "/");
+			lockRes.Key = this.getRelativePath(lockRes.Key.replace(new RegExp("~", 'g'), "/"));
 
 			return lockRes;
 		}
@@ -137,7 +137,7 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 
 		const lockRes =  await this.papiClient.addons.data.uuid(config.AddonUUID).table(LOCK_ADAL_TABLE_NAME).upsert(item);
 
-		lockRes.Key = item.Key.replace(new RegExp("~", 'g'), "/");
+		lockRes.Key = this.getRelativePath(item.Key.replace(new RegExp("~", 'g'), "/"));
 
 		console.log(`Successfully locked key: ${lockRes.Key}`);
 
@@ -152,7 +152,7 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 
 		const lockRes = await this.papiClient.addons.data.uuid(config.AddonUUID).table(LOCK_ADAL_TABLE_NAME).upsert(itemCopy);
 
-		lockRes.Key = itemCopy.Key.replace(new RegExp("~", 'g'), "/");
+		lockRes.Key = this.getRelativePath(itemCopy.Key.replace(new RegExp("~", 'g'), "/"));
 
 		console.log(`Successfully set rollback data for key: ${lockRes.Key}`);
 
