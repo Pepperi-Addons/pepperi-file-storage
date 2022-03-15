@@ -55,7 +55,7 @@ export class PfsService
 
 			await this.pfsMutator.unlock(this.existingFile.Key);
 
-			await this.pfsMutator.invalidateCDN(this.existingFile.Key);
+			await this.pfsMutator.invalidateCDN(this.existingFile);
 
 		}
 		catch (err) 
@@ -174,7 +174,7 @@ export class PfsService
 
 		console.error(`Rollback algorithm has finished running for key: ${lockedFile.Key}`);
 
-		await this.pfsMutator.invalidateCDN(lockedFile.Key);
+		await this.pfsMutator.invalidateCDN(lockedFile);
 
 		if(this.request.query.testRollback) // If testing rollback, throw exception to stop the process after rollback.
 		{

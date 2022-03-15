@@ -72,12 +72,18 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 	
 	abstract unlock(key: string);
 
-	async invalidateCDN(key: string){
-		const invalidationPath = `/${this.getAbsolutePath(key)}`; //Invalidation path must start with a '/'.
+	async invalidateCDN(file: any){
+		const keyInvalidationPath = `/${this.getAbsolutePath(file.Key)}`; //Invalidation path must start with a '/'.
+		const invalidationPaths: string[] = [];
+		invalidationPaths.push(keyInvalidationPath);
 
-		console.log(`Trying to invlidate ${invalidationPath}...`);
+		if(file.Thumbnails){
+			file.Thumbnails.map(thumbnail => invalidationPaths.push(`/thumbnails${keyInvalidationPath}_${thumbnail.Size}`));
+		}
 
-		if(invalidationPath.endsWith('/')) // If this is a folder, it has no CDN representation, and there's no need to invalidate it.
+		console.log(`Trying to invlidate ${invalidationPaths}...`);
+
+		if(keyInvalidationPath.endsWith('/')) // If this is a folder, it has no CDN representation, and there's no need to invalidate it.
 		{ 
 			return;
 		}
@@ -88,10 +94,8 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
   			InvalidationBatch: {
 				CallerReference: (new Date()).getTime().toString(), //A unique string to represent each invalidation request.
 				Paths: { 
-					Quantity: 1, 
-					Items: [
-						invalidationPath
-					]
+					Quantity: invalidationPaths.length, 
+					Items: invalidationPaths
 				}
   			}
 		};
