@@ -8,7 +8,7 @@ export const S3Buckets = {
 export const CdnServers = {
 	"prod": "https://pfs.pepperi.com",
 	"sandbox": "https://pfs.staging.pepperi.com",
-	"eu": "https://pfs.eu.pepperi.com",
+	"eu": "https://eupfs.pepperi.com",
 	//The next entry is just a placeholder, not a real CDN.
 	"dev": "https://d3jagocnvgzx6w.cloudfront.net"
 }
