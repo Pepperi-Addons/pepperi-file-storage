@@ -15,7 +15,7 @@
     "ClientStack": "ng10",
     "Editors": [],
     "Dependencies": {
-      "adal": "1.0.194"
+      "adal": "1.0.196"
     },
     "CPISide": []
   }
