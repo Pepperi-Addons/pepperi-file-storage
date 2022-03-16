@@ -49,7 +49,8 @@ export const pfsSchemeData: any = {
 	Fields: {
 		Description: {
 			Type: 'String',
-			Indexed: true
+			// Indexed: true // Description field is defined optional, while the currently used indexed_data tabke doesn't support an empty value indexed key. 
+							 // Until a solution is found, this field cannot be indexed.
 		},
 		// ModificationDateTime:{
 		// 	Type: "Integer",
