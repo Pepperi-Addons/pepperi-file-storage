@@ -110,21 +110,24 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 		}
 	}
 
+	/**
+     * Returns the lock data if the key is locked, null otherwise.
+     * @param relativeKey the key to check.
+     */
 	async isObjectLocked(key: string){
+		let res: any = null;
 		const tableName = LOCK_ADAL_TABLE_NAME;
 		try
 		{
 			const lockAbsoluteKey = this.getAbsolutePath(key).replace(new RegExp("/", 'g'), "~");
 			const getHidden: boolean = true;
-			const lockRes: any = await this.getObjectFromTable(lockAbsoluteKey, tableName, getHidden);
-			lockRes.Key = this.getRelativePath(lockRes.Key.replace(new RegExp("~", 'g'), "/"));
+			res = await this.getObjectFromTable(lockAbsoluteKey, tableName, getHidden);
+			res.Key = this.getRelativePath(res.Key.replace(new RegExp("~", 'g'), "/"));
+		}
+		catch // If the object isn't locked, the getObjectFromTable will throw an "object not found" error. Return null to indicate this object isn't locked.
+		{}
 
-			return lockRes;
-		}
-		catch
-		{
-			return null;
-		}
+		return res;
 	}
 
 	//#endregion

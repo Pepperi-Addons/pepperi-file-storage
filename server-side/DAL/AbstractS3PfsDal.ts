@@ -142,9 +142,20 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 			// Retrieve the list of versions.
 			const allVersions = await this.s3.listObjectVersions(params).promise();
 
-			const filteredVersionId = allVersions.Versions.filter(ver => ver.IsLatest) ?? allVersions.DeleteMarkers.filter(ver => ver.IsLatest); //Id it wasn't found in the regular versions, it is in the DeleteMarkers list.
+			// listObjectVersions GETs all file versions, in two arrays: 
+			// 1. Versions, used for all available versions.
+			// 2. DeleteMarkers, used to list versions where the file is marked as deleted.
+			
+			// Delete markers enable S3 to mark deleted files and behave accordingly (They won't be served, etc.),
+			// while still keeping all previous versions' data.If we use this delete marker, our Latest Version
+			// will not be listed in the first Versions array, but rather on the second DeleteMarkers array.
 
-			latestVersionId = filteredVersionId.length > 0 ? filteredVersionId[0].VersionId : undefined;
+			// For more information about delete markers: https://docs.aws.amazon.com/AmazonS3/latest/userguide/DeleteMarker.html
+			// For more information about listObjectVersions: https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/S3.html#listObjectVersions-property
+
+			const filteredVersionId = allVersions.Versions.filter(ver => ver.IsLatest) ?? allVersions.DeleteMarkers.filter(ver => ver.IsLatest);
+
+			latestVersionId = filteredVersionId.length > 0 ? filteredVersionId[0].VersionId : undefined; // undefined will be returned in case no available version is found on S3.
 
 			console.log(`Successfully retrieved the latest VersionId: ${latestVersionId} of key: ${Key}`);
 		}
