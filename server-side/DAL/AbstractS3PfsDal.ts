@@ -1,5 +1,5 @@
 import { Client, Request } from '@pepperi-addons/debug-server';
-import { dataURLRegex, S3Buckets } from "../constants";
+import { dataURLRegex, S3Buckets, CloudfrontDistributions } from "../constants";
 import { AbstractBasePfsDal } from './AbstartcBasePfsDal';
 
 const AWS = require('aws-sdk'); // AWS is part of the lambda's environment. Importing it will result in it being rolled up redundently.
@@ -8,22 +8,24 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 {
 	private s3: any;
 	private S3Bucket: any;
+	private CloudfrontDistribution: any;
     
-	constructor(client: Client, request: Request)
+	constructor(client: Client, request: Request, maximalLockTime: number)
 	{
-		super(client, request);
+		super(client, request, maximalLockTime);
 
-		// const accessKeyId=""
-		// const secretAccessKey=""
-		// const sessionToken=""
+		// const accessKeyId="";
+		// const secretAccessKey="";
+		// const sessionToken="";
 		// AWS.config.update({
 		// 	accessKeyId,
 		// 	secretAccessKey,
 		// 	sessionToken
 		// });
 
-		this.s3 = new AWS.S3();
+		this.s3 = new AWS.S3({apiVersion: '2006-03-01'}); //lock API version
 		this.S3Bucket = S3Buckets[this.environment];
+		this.CloudfrontDistribution = CloudfrontDistributions[this.environment];
 	}
 
 	//#region IPfsMutator
@@ -38,7 +40,9 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		}
 		else if (this.request.body.URI) // The file already has data, or data was provided.
 		{ 
-			await this.uploadFileData(newFileFields);
+			const uploadRes = await this.uploadFileData(newFileFields);
+			newFileFields.FileVersion = uploadRes.VersionId;
+			
 			delete newFileFields.buffer;
 		}
 
@@ -60,6 +64,105 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
         }
 	}
 
+	abstract lock(item: any);
+
+	abstract mutateADAL(newFileFields: any, existingFile: any);
+
+	abstract notify(newFileFields: any, existingFile: any);
+	
+	abstract unlock(key: string);
+
+	async invalidateCDN(key: string){
+		const invalidationPath = `/${this.getAbsolutePath(key)}`; //Invalidation path must start with a '/'.
+
+		console.log(`Trying to invlidate ${invalidationPath}...`);
+
+		if(invalidationPath.endsWith('/')) // If this is a folder, it has no CDN representation, and there's no need to invalidate it.
+		{ 
+			return;
+		}
+
+		const cloudfront = new AWS.CloudFront({apiVersion: '2020-05-31'});
+		const invalidationParams = {
+			DistributionId: this.CloudfrontDistribution,
+  			InvalidationBatch: {
+				CallerReference: (new Date()).getTime().toString(), //A unique string to represent each invalidation request.
+				Paths: { 
+					Quantity: 1, 
+					Items: [
+						invalidationPath
+					]
+				}
+  			}
+		};
+
+		const invlidation = await cloudfront.createInvalidation(invalidationParams).promise();
+
+		console.log(`Invalidation result:\n ${JSON.stringify(invlidation)}...`);
+
+		return invlidation;
+	}
+
+	
+	async deleteS3FileVersion(Key: any, s3FileVersion: any) {
+		console.log(`Trying to delete version: ${s3FileVersion} of key: ${Key}`);
+		const params: any = {};
+
+		// Create S3 params
+		params.Bucket = this.S3Bucket;
+		params.Key = this.getAbsolutePath(Key);
+		params.VersionId = s3FileVersion;
+
+		const deletedVersionRes = await this.s3.deleteObject(params).promise();
+		console.log(`Successfully deleted version: ${s3FileVersion} of key: ${Key}`);
+
+		return deletedVersionRes;
+	}
+
+	//#endregion
+
+	//#region IPfsGetter
+	async getObjectS3FileVersion(Key: any) {
+		console.log(`Trying to retrieve the latest VersionId of key: ${Key}`);
+		const params: any = {};
+		let latestVersionId;
+
+		// Create S3 params
+		params.Bucket = this.S3Bucket;
+		params.Prefix = this.getAbsolutePath(Key);
+
+		if(Key.endsWith("/")) // If this is a folder, it has no S3 representations, and so has no VersionId.
+		{
+			latestVersionId = undefined;
+
+			console.log(`Requested key is a folder, and has no VersionId.`);
+		}
+		else
+		{
+			// Retrieve the list of versions.
+			const allVersions = await this.s3.listObjectVersions(params).promise();
+
+			// listObjectVersions GETs all file versions, in two arrays: 
+			// 1. Versions, used for all available versions.
+			// 2. DeleteMarkers, used to list versions where the file is marked as deleted.
+			
+			// Delete markers enable S3 to mark deleted files and behave accordingly (They won't be served, etc.),
+			// while still keeping all previous versions' data.If we use this delete marker, our Latest Version
+			// will not be listed in the first Versions array, but rather on the second DeleteMarkers array.
+
+			// For more information about delete markers: https://docs.aws.amazon.com/AmazonS3/latest/userguide/DeleteMarker.html
+			// For more information about listObjectVersions: https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/S3.html#listObjectVersions-property
+
+			const filteredVersionId = allVersions.Versions.filter(ver => ver.IsLatest) ?? allVersions.DeleteMarkers.filter(ver => ver.IsLatest);
+
+			latestVersionId = filteredVersionId.length > 0 ? filteredVersionId[0].VersionId : undefined; // undefined will be returned in case no available version is found on S3.
+
+			console.log(`Successfully retrieved the latest VersionId: ${latestVersionId} of key: ${Key}`);
+		}
+
+		return latestVersionId;
+	} 
+	
 	//#endregion
 
 	//#region private methods

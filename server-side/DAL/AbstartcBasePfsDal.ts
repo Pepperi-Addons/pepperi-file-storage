@@ -8,18 +8,36 @@ export abstract class AbstractBasePfsDal implements IPfsGetter, IPfsMutator
 	protected environment: any;
     protected DistributorUUID: any;
 	protected AddonUUID: any;
+	protected readonly MAXIMAL_LOCK_TIME; 
     
-	constructor(protected client: Client, protected request: Request)
+	constructor(protected client: Client, protected request: Request, maximalLockTime:number)
 	{
 		this.environment = jwtDecode(client.OAuthAccessToken)['pepperi.datacenter'];
         this.DistributorUUID = jwtDecode(client.OAuthAccessToken)['pepperi.distributoruuid'];
 		this.AddonUUID = this.request.query.addon_uuid;
+		this.MAXIMAL_LOCK_TIME = maximalLockTime;
 	}
+
+	getMaximalLockTime() {
+		return this.MAXIMAL_LOCK_TIME;
+	}
+	
 	//#region IPfsMutator
+	abstract lock(key: string);
+
+	abstract setRollbackData(item: any);
 
 	abstract mutateS3(newFileFields: any, existingFile: any);
 
 	abstract mutateADAL(newFileFields: any, existingFile: any);
+
+	abstract notify(newFileFields: any, existingFile: any);
+	
+	abstract unlock(key: string);
+
+	abstract invalidateCDN(key: string);
+
+	abstract deleteS3FileVersion(Key: any, s3FileVersion: any);
 	
 	//#endregion
 
@@ -28,6 +46,10 @@ export abstract class AbstractBasePfsDal implements IPfsGetter, IPfsMutator
 	abstract listFolderContents(folderName: string): Promise<any>;
 
 	abstract downloadFileMetadata(Key: string): Promise<any>;
+
+	abstract isObjectLocked(key: string);
+
+	abstract getObjectS3FileVersion(Key: any);
 	//#endregion
 	
 
@@ -41,10 +63,12 @@ export abstract class AbstractBasePfsDal implements IPfsGetter, IPfsMutator
 	 */
 	protected getAbsolutePath(relativePath: string): string 
 	{
-		if(relativePath.startsWith('/'))
+		if(relativePath.startsWith('/')){
 			relativePath = relativePath.slice(1);
+		}
 
-		return `${this.DistributorUUID}/${this.AddonUUID}/${relativePath}`;
+		const absolutePrefix = `${this.DistributorUUID}/${this.AddonUUID}/`;
+		return relativePath.startsWith(absolutePrefix) ? relativePath : `${absolutePrefix}${relativePath}`;
 	}
 
 	/**

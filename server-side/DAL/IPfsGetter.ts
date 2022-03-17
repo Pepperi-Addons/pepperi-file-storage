@@ -1,5 +1,11 @@
 export interface IPfsGetter
 {
+	/**
+     * Returns the S3 VersionId if one exists. Undefined otherwise;
+     * @param Key The file's key which VersionId will be returned.
+     */
+    getObjectS3FileVersion(Key: any);
+    
     /**
      * Download the file's metadata.
      * @param Key The file's key which metadata will be downloaded.

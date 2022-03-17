@@ -1,8 +1,33 @@
 export interface IPfsMutator
 {
+	/**
+     * Delete the given file's given VersionID.
+     * @param Key The key hows version is to be deleted.
+     * @param s3FileVersion The version to be deleted.
+     */
+    deleteS3FileVersion(Key: any, s3FileVersion: any);
+    
+    /**
+     * Returns the lock data if the key is locked, null otherwise.
+     * @param relativeKey the key to check.
+     */
+     isObjectLocked(relativeKey: string);
+     
+    /**
+     * Lock the item.
+     * @param relativeKey the key to be locked.
+     */
+    lock(key: string);
+
+    /**
+     * Save the given data on the lock. This data will be later used in case a rollback is executed.
+     * @param item the item's data to be saved.
+     */
+     setRollbackData(item: any);
+
     /**
      * Write needed changes to S3 bucket - create a new file if needed, update file data, update or create file's thumbnails, etc.
-     * @param newFileFields The new file data and metada.
+     * @param newFileFields The new file data and metadata.
      * @param existingFile The previous file's metadata.
      */
     mutateS3(newFileFields: any, existingFile: any);
@@ -13,4 +38,28 @@ export interface IPfsMutator
      * @param existingFile 
      */
     mutateADAL(newFileFields: any, existingFile: any);
+
+    /**
+     * Notify subscribers of changes in file data or metadata.
+     * @param newFileFields The new file data and metadata.
+     * @param existingFile The previous file's metadata.
+     */
+    notify(newFileFields: any, existingFile: any);
+
+    /**
+     * Unlock the requested key.
+     * @param relativeKey The key to be unlocked
+     */
+    unlock(relativeKey: string);
+
+    /**
+     * Invalidate the CDN cached version of the requested key.
+     * @param relativeKey The key whose CDN cached version is to be invalidated.
+     */
+    invalidateCDN(relativeKey: string);
+
+    /**
+     * Return the maximal lock time
+     */
+    getMaximalLockTime();
 }
