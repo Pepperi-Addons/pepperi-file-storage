@@ -350,7 +350,7 @@ export class PfsService
 			// if 'pepperi/folder' is provided on creation and the key is not ending with '/', the POST should fail
 			throw new Error("On creation of a folder, the key must end with '/'");
 		}
-		else if(this.request.body.MIME != 'pepperi/folder' && this.request.body.Key.endsWith('/'))
+		else if(this.request.body.MIME && this.request.body.MIME != 'pepperi/folder' && this.request.body.Key.endsWith('/'))
 		{
 			// a folder's MIME type should always be 'pepperi/folder', otherwise the POST should fail
 			throw new Error("A filename cannot contain a '/'.");
