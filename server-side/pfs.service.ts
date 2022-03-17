@@ -427,6 +427,10 @@ export class PfsService
 
 		this.newFileFields.Key = this.request.body.Key;
 
+		if(typeof this.request.body.Hidden === 'string'){
+			this.request.body.Hidden = this.request.body.Hidden.toLowerCase() === 'true';
+		}
+
 		if(!this.existingFile.doesFileExist)
 		{
 			this.newFileFields.Name = `${fileName}${this.request.body.Key.endsWith('/') ? '/' :''}`; // Add the dropped '/' for folders.
