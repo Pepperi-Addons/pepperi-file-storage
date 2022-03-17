@@ -6,6 +6,7 @@ export interface IPfsMutator
      * @param s3FileVersion The version to be deleted.
      */
     deleteS3FileVersion(Key: any, s3FileVersion: any);
+    
     /**
      * Returns the lock data if the key is locked, null otherwise.
      * @param relativeKey the key to check.
@@ -19,8 +20,8 @@ export interface IPfsMutator
     lock(key: string);
 
     /**
-     * Lock the item.
-     * @param item the item to be locked/
+     * Save the given data on the lock. This data will be later used in case a rollback is executed.
+     * @param item the item's data to be saved.
      */
      setRollbackData(item: any);
 
