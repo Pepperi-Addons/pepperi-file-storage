@@ -404,7 +404,7 @@ export class PfsService
 		if(this.request.body.URI && this.isDataURL(this.request.body.URI))
 		{
 			// Get mime type from base64 data
-			MIME = this.request.body.URI.match(/[^:]\w+\/[\w-+\d.]+(?=;|,)/)[0];
+			MIME = this.request.body.URI.match(/[^:\s*]\w+\/[\w-+\d.]+(?=[;| ])/)[0];
 		}
 
 		return MIME;
