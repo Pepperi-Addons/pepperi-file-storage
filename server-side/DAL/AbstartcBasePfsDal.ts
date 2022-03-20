@@ -35,7 +35,7 @@ export abstract class AbstractBasePfsDal implements IPfsGetter, IPfsMutator
 	
 	abstract unlock(key: string);
 
-	abstract invalidateCDN(key: string);
+	abstract invalidateCDN(file: any);
 
 	abstract deleteS3FileVersion(Key: any, s3FileVersion: any);
 	

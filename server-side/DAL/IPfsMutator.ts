@@ -53,10 +53,10 @@ export interface IPfsMutator
     unlock(relativeKey: string);
 
     /**
-     * Invalidate the CDN cached version of the requested key.
-     * @param relativeKey The key whose CDN cached version is to be invalidated.
+     * Invalidate the CDN cached version of the given file.
+     * @param file The file whose CDN cached version is to be invalidated.
      */
-    invalidateCDN(relativeKey: string);
+    invalidateCDN(file: any);
 
     /**
      * Return the maximal lock time
