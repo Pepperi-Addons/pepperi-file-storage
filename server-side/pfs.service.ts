@@ -39,22 +39,31 @@ export class PfsService
 
 		try 
 		{
+			// Validate preliminary request requirements
 			await this.validateUploadRequest();
 
+			// Set preliminary lock on the file. If necessary, this will also rollback an existing lock
 			await this.lock();
 
+			// Download the current saved metadata, if exists
 			await this.getCurrentItemData();
 
+			// Further validation of input
 			this.validateFieldsForUpload();
 			
+			// Save the currently saved metadata on the lock - will be used for rollback purposes
 			await this.pfsMutator.setRollbackData(this.existingFile);
 
+			// Commit changes to S3 and ADAL metadata table
 			res = await this.mutatePfs();
 
+			// Publish notification to subscribers
 			await this.pfsMutator.notify(this.newFileFields, this.existingFile);
 
+			// Remove lock
 			await this.pfsMutator.unlock(this.existingFile.Key);
 
+			// Invalidate CDN server (including thumbnails if exist)
 			await this.pfsMutator.invalidateCDN(this.existingFile);
 
 		}
@@ -204,7 +213,8 @@ export class PfsService
 
 		return res;
 
-		function shallowCompareObjects() {
+		function shallowCompareObjects() 
+		{
 			return Object.keys(files[0]).length === Object.keys(files[1]).length &&
 				Object.keys(files[0]).every(key => files[1].hasOwnProperty(key) && files[0][key] === files[1][key]
 				);
@@ -344,17 +354,20 @@ export class PfsService
 		else this.validateMIMEtype();
 	}
 
-	private validateMIMEtype() {
+	private validateMIMEtype() 
+	{
 		if (!this.existingFile.doesFileExist && !this.request.body.MIME && !this.isDataURL(this.request.body.URI)) 
 		{
 			 // this is a presigned url request, or a URL link to data, MIME must be sent.
 			throw new Error(this.MIME_FIELD_IS_MISSING);
 		}
-		else if (!this.existingFile.doesFileExist && this.request.body.MIME == 'pepperi/folder' && !this.request.body.Key.endsWith('/')) {
+		else if (!this.existingFile.doesFileExist && this.request.body.MIME == 'pepperi/folder' && !this.request.body.Key.endsWith('/')) 
+		{
 			// if 'pepperi/folder' is provided on creation and the key is not ending with '/', the POST should fail
 			throw new Error("On creation of a folder, the key must end with '/'");
 		}
-		else if (this.request.body.MIME && this.request.body.MIME != 'pepperi/folder' && this.request.body.Key.endsWith('/')) {
+		else if (this.request.body.MIME && this.request.body.MIME != 'pepperi/folder' && this.request.body.Key.endsWith('/')) 
+		{
 			// a folder's MIME type should always be 'pepperi/folder', otherwise the POST should fail
 			throw new Error("A filename cannot contain a '/'.");
 		}
@@ -412,7 +425,8 @@ export class PfsService
 
 			// If MIME type was passed, it must be the same as the one parsed from the data URI.
 			// (Otherwise use the parsed MIME from the data URI)
-			if(MIME && MIME != parsedMIME){
+			if(MIME && MIME != parsedMIME)
+			{
 				const err: any = new Error(`There's a discrepancy between the passed MIME type and the parsed one from the data URI.`);
 				err.code = 400;
 				throw err;
@@ -441,7 +455,8 @@ export class PfsService
 
 		this.newFileFields.Key = this.request.body.Key;
 
-		if(typeof this.request.body.Hidden === 'string'){
+		if(typeof this.request.body.Hidden === 'string')
+		{
 			this.request.body.Hidden = this.request.body.Hidden.toLowerCase() === 'true';
 		}
 
