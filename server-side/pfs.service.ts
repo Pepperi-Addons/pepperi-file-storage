@@ -341,17 +341,20 @@ export class PfsService
 		{
 			throw new Error("Missing mandatory field 'Key'");
 		}
-		else if(!this.existingFile.doesFileExist && !this.request.body.MIME )
+		else this.validateMIMEtype();
+	}
+
+	private validateMIMEtype() {
+		if (!this.existingFile.doesFileExist && !this.request.body.MIME && !this.isDataURL(this.request.body.URI)) 
 		{
+			 // this is a presigned url request, or a URL link to data, MIME must be sent.
 			throw new Error(this.MIME_FIELD_IS_MISSING);
 		}
-		else if(!this.existingFile.doesFileExist && this.request.body.MIME == 'pepperi/folder' && !this.request.body.Key.endsWith('/'))
-		{
+		else if (!this.existingFile.doesFileExist && this.request.body.MIME == 'pepperi/folder' && !this.request.body.Key.endsWith('/')) {
 			// if 'pepperi/folder' is provided on creation and the key is not ending with '/', the POST should fail
 			throw new Error("On creation of a folder, the key must end with '/'");
 		}
-		else if(this.request.body.MIME && this.request.body.MIME != 'pepperi/folder' && this.request.body.Key.endsWith('/'))
-		{
+		else if (this.request.body.MIME && this.request.body.MIME != 'pepperi/folder' && this.request.body.Key.endsWith('/')) {
 			// a folder's MIME type should always be 'pepperi/folder', otherwise the POST should fail
 			throw new Error("A filename cannot contain a '/'.");
 		}
@@ -401,10 +404,21 @@ export class PfsService
 	private getMimeType(): string 
 	{
 		let MIME = this.request.body.MIME;
+		
 		if(this.request.body.URI && this.isDataURL(this.request.body.URI))
 		{
 			// Get mime type from base64 data
-			MIME = this.request.body.URI.match(/[^:\s*]\w+\/[\w-+\d.]+(?=[;| ])/)[0];
+			const parsedMIME = this.request.body.URI.match(/[^:\s*]\w+\/[\w-+\d.]+(?=[;| ])/)[0];
+
+			// If MIME type was passed, it must be the same as the one parsed from the data URI.
+			// (Otherwise use the parsed MIME from the data URI)
+			if(MIME && MIME != parsedMIME){
+				const err: any = new Error(`There's a discrepancy between the passed MIME type and the parsed one from the data URI.`);
+				err.code = 400;
+				throw err;
+			}
+			
+			MIME = parsedMIME;
 		}
 
 		return MIME;
