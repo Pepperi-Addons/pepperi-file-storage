@@ -83,7 +83,7 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 
 		console.log(`Trying to invlidate ${invalidationPaths}...`);
 
-		if(keyInvalidationPath.endsWith('/')) // If this is a folder, it has no CDN representation, and there's no need to invalidate it.
+		if(keyInvalidationPath.endsWith('/') || !file.doesFileExist) // If this is a folder or  ifthis file doesn't exist, it has no CDN representation, and there's no need to invalidate it. 
 		{ 
 			return;
 		}

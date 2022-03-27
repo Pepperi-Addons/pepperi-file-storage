@@ -38,13 +38,13 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 		const folderNameAbsolutePath = this.getAbsolutePath(folderName);
 
 		const findOptions: FindOptions = {
-			where: `Folder='${folderName == '/' ? folderNameAbsolutePath : folderNameAbsolutePath.slice(0, -1)}'${this.request.query.where ? "AND(" + this.request.query.where + ")" :""}`,
-			...(this.request.query.page_size && {page_size: parseInt(this.request.query.page_size)}),
-			...(this.request.query.page && {page: this.getRequestedPageNumber()}),
-			...(this.request.query.fields && {fields: this.request.query.fields}),
-			...(this.request.query.order_by && {order_by: this.request.query.order_by}),
-			...(this.request.query.include_count && {include_count: this.request.query.include_count}),
-			...(this.request.query.include_deleted && {include_deleted: this.request.query.include_deleted}),
+			where: `Folder='${folderName == '/' ? folderNameAbsolutePath : folderNameAbsolutePath.slice(0, -1)}'${(this.request.query && this.request.query.where) ? "AND(" + this.request.query.where + ")" :""}`,
+			...(this.request.query && this.request.query.page_size && {page_size: parseInt(this.request.query.page_size)}),
+			...(this.request.query && this.request.query.page && {page: this.getRequestedPageNumber()}),
+			...(this.request.query && this.request.query.fields && {fields: this.request.query.fields}),
+			...(this.request.query && this.request.query.order_by && {order_by: this.request.query.order_by}),
+			...(this.request.query && this.request.query.include_count && {include_count: this.request.query.include_count}),
+			...(this.request.query && this.request.query.include_deleted && {include_deleted: this.request.query.include_deleted}),
 		}
 
 		const res =  await this.papiClient.addons.data.uuid(config.AddonUUID).table(METADATA_ADAL_TABLE_NAME).find(findOptions);
