@@ -31,6 +31,11 @@ export class PfsService
 		this.environment = jwtDecode(client.OAuthAccessToken)['pepperi.datacenter'];
 		this.DistributorUUID = jwtDecode(client.OAuthAccessToken)['pepperi.distributoruuid'];
 		this.AddonUUID = this.request.query.addon_uuid;
+
+		if(this.request.body && typeof this.request.body.Hidden === 'string')
+		{
+			this.request.body.Hidden = this.request.body.Hidden.toLowerCase() === 'true';
+		}
 	}
 
 	async uploadFile(): Promise<boolean> 
@@ -49,7 +54,7 @@ export class PfsService
 			await this.getCurrentItemData();
 
 			// Further validation of input
-			this.validateFieldsForUpload();
+			await this.validateFieldsForUpload();
 			
 			// Save the currently saved metadata on the lock - will be used for rollback purposes
 			await this.pfsMutator.setRollbackData(this.existingFile);
@@ -99,6 +104,11 @@ export class PfsService
 	{
 		await this.validateAddonSecretKey();
 
+		if (!this.request.body.Key) 
+		{
+			throw new Error("Missing mandatory field 'Key'");
+		}
+		
 		if (this.request.body.Thumbnails) 
 		{
 			this.validateThumbnailsRequest(this.request.body.Thumbnails);
@@ -345,13 +355,30 @@ export class PfsService
 		return !!s.match(dataURLRegex);
 	}
 
-	private validateFieldsForUpload() 
+	private async validateFieldsForUpload() 
 	{
-		if (!this.request.body.Key) 
+		if(this.existingFile.doesFileExist && this.existingFile.MIME === '')
 		{
-			throw new Error("Missing mandatory field 'Key'");
+			this.validateMIMEtype();
 		}
-		else this.validateMIMEtype();
+
+		if(this.request.body.Key.endsWith('/') && this.request.body.Hidden) // If trying to delete a folder
+		{
+			await this.validateNoContentsBeforeFolderDeletion();
+		}
+		
+	}
+
+	private async validateNoContentsBeforeFolderDeletion() 
+	{
+		const folderContents = await this.pfsGetter.listFolderContents(this.request.body.Key);
+		if (folderContents.length > 0) // Currently deleting folder that has exisitng content is not supported.
+		{
+			const err: any = new Error(`Bad request. Folder content must be deleted before the deletion of the folder.`);
+			err.code = 400;
+			console.log(err.message);
+			throw err;
+		}
 	}
 
 	private validateMIMEtype() 
@@ -454,11 +481,6 @@ export class PfsService
 		const containingFolder = pathFoldersList.join('/');
 
 		this.newFileFields.Key = this.request.body.Key;
-
-		if(typeof this.request.body.Hidden === 'string')
-		{
-			this.request.body.Hidden = this.request.body.Hidden.toLowerCase() === 'true';
-		}
 
 		if(!this.existingFile.doesFileExist)
 		{
