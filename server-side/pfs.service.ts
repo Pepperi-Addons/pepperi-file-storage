@@ -357,10 +357,8 @@ export class PfsService
 
 	private async validateFieldsForUpload() 
 	{
-		if(this.existingFile.doesFileExist && this.existingFile.MIME === '')
-		{
-			this.validateMIMEtype();
-		}
+
+		this.validateMIMEtype();
 
 		if(this.request.body.Key.endsWith('/') && this.request.body.Hidden) // If trying to delete a folder
 		{
