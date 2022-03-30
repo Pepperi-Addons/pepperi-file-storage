@@ -381,7 +381,7 @@ export class PfsService
 
 	private validateMIMEtype() 
 	{
-		if (!this.existingFile.doesFileExist && !this.request.body.MIME && !this.isDataURL(this.request.body.URI)) 
+		if (!this.existingFile.doesFileExist && !this.request.body.MIME && (! this.request.body.URI || !this.isDataURL(this.request.body.URI))) 
 		{
 			 // this is a presigned url request, or a URL link to data, MIME must be sent.
 			throw new Error(this.MIME_FIELD_IS_MISSING);
