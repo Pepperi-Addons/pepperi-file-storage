@@ -203,8 +203,6 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 		const presignedURL = newFileFields.PresignedURL;
 		delete newFileFields.PresignedURL //Don't store PresignedURL in ADAL
 
-		delete existingFile.doesFileExist;
-
 		const res =  await this.papiClient.addons.data.uuid(config.AddonUUID).table(METADATA_ADAL_TABLE_NAME).upsert(newFileFields);
 
 		if(presignedURL){ // Return PresignedURL if there was one
