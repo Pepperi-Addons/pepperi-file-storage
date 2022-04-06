@@ -85,6 +85,7 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 
 		if(keyInvalidationPath.endsWith('/') || !file.doesFileExist) // If this is a folder or  ifthis file doesn't exist, it has no CDN representation, and there's no need to invalidate it. 
 		{ 
+			console.log(`Invalidation was not carried out since ${keyInvalidationPath.endsWith('/') ? 'requested path is a folder.' : 'the file does not exist.'}`);
 			return;
 		}
 
