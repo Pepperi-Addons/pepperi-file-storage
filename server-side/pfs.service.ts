@@ -1,7 +1,7 @@
 import { PapiClient } from '@pepperi-addons/papi-sdk'
 import { Client, Request } from '@pepperi-addons/debug-server';
 import jwtDecode from 'jwt-decode';
-import { dataURLRegex } from './constants';
+import { dataURLRegex, DESCRIPTION_DEFAULT_VALUE, HIDDEN_DEFAULT_VALUE, NO_CACHE_DEFAULT_VALUE, SYNC_DEFAULTVALUE as SYNC_DEFAULT_VALUE, VERSIONED_CDN_DEFAULT_VALUE } from './constants';
 import fetch from 'node-fetch';
 import { ImageResizer } from './imageResizer';
 import { IPfsMutator } from './DAL/IPfsMutator';
@@ -14,7 +14,6 @@ export class PfsService
 	AddonUUID: string;
 	readonly environment: string;
 	readonly MIME_FIELD_IS_MISSING = "Missing mandatory field 'MIME'";
-	syncTypes = ["None", "Device", "DeviceThumbnail", "Always"];
 	existingFile: any;
 	newFileFields: any = {};
 
@@ -414,7 +413,7 @@ export class PfsService
 		}
 	}
 
-	private async  isValidRequestedAddon(client: Client, secretKey, addonUUID)
+	private async isValidRequestedAddon(client: Client, secretKey, addonUUID)
 	{
 		const papiClient = new PapiClient({
 		  baseURL: client.BaseURL,
@@ -485,17 +484,19 @@ export class PfsService
 			this.newFileFields.Name = `${fileName}${this.request.body.Key.endsWith('/') ? '/' :''}`; // Add the dropped '/' for folders.
 			this.newFileFields.Folder = containingFolder;
 			this.newFileFields.MIME = this.getMimeType();
-			this.newFileFields.Hidden = this.request.body.Hidden ?? false;
+			this.newFileFields.Hidden = this.request.body.Hidden ?? HIDDEN_DEFAULT_VALUE;
 
 			if(!this.request.body.Key.endsWith('/')) // This is not a folder
 			{
-				this.newFileFields.Sync = this.request.body.Sync ?? this.syncTypes[0];
-				this.newFileFields.Description = this.request.body.Description ?? "";
+				this.newFileFields.Sync = this.request.body.Sync ?? SYNC_DEFAULT_VALUE;
+				this.newFileFields.Description = this.request.body.Description ?? DESCRIPTION_DEFAULT_VALUE;
+				this.newFileFields.NoCache = this.request.body.NoCache ?? NO_CACHE_DEFAULT_VALUE;
+				this.newFileFields.VersionedCDN = this.request.body.VersionedCDN ?? VERSIONED_CDN_DEFAULT_VALUE;
 			}
 			else //this is a folder
 			{
-				this.newFileFields.Sync = this.syncTypes[0];
-				this.newFileFields.Description = "";
+				this.newFileFields.Sync = SYNC_DEFAULT_VALUE;
+				this.newFileFields.Description = DESCRIPTION_DEFAULT_VALUE;
 			}
 			
 		}
@@ -506,6 +507,8 @@ export class PfsService
 				if(this.request.body.MIME) this.newFileFields.MIME = this.getMimeType();
 				if(this.request.body.Sync) this.newFileFields.Sync = this.request.body.Sync;
 				if(this.request.body.Description) this.newFileFields.Description = this.request.body.Description;
+				if(this.request.body.NoCache) this.newFileFields.NoCache = this.request.body.NoCache;
+				if(this.request.body.VersionedCDN) this.newFileFields.VersionedCDN = this.request.body.VersionedCDN;
 			}
 			
 			if(this.request.body.Hidden) this.newFileFields.Hidden = this.request.body.Hidden;
