@@ -1,7 +1,7 @@
 import { PapiClient } from '@pepperi-addons/papi-sdk'
 import { Client, Request } from '@pepperi-addons/debug-server';
 import jwtDecode from 'jwt-decode';
-import { dataURLRegex, DESCRIPTION_DEFAULT_VALUE, HIDDEN_DEFAULT_VALUE, NO_CACHE_DEFAULT_VALUE, SYNC_DEFAULTVALUE as SYNC_DEFAULT_VALUE, VERSIONED_CDN_DEFAULT_VALUE } from './constants';
+import { dataURLRegex, DESCRIPTION_DEFAULT_VALUE, HIDDEN_DEFAULT_VALUE, CACHE_DEFAULT_VALUE as CACHE_DEFAULT_VALUE, SYNC_DEFAULTVALUE as SYNC_DEFAULT_VALUE } from './constants';
 import fetch from 'node-fetch';
 import { ImageResizer } from './imageResizer';
 import { IPfsMutator } from './DAL/IPfsMutator';
@@ -490,8 +490,7 @@ export class PfsService
 			{
 				this.newFileFields.Sync = this.request.body.Sync ?? SYNC_DEFAULT_VALUE;
 				this.newFileFields.Description = this.request.body.Description ?? DESCRIPTION_DEFAULT_VALUE;
-				this.newFileFields.NoCache = this.request.body.NoCache ?? NO_CACHE_DEFAULT_VALUE;
-				this.newFileFields.VersionedCDN = this.request.body.VersionedCDN ?? VERSIONED_CDN_DEFAULT_VALUE;
+				this.newFileFields.Cache = this.request.body.Cache ?? CACHE_DEFAULT_VALUE;
 			}
 			else //this is a folder
 			{
@@ -507,11 +506,10 @@ export class PfsService
 				if(this.request.body.MIME) this.newFileFields.MIME = this.getMimeType();
 				if(this.request.body.Sync) this.newFileFields.Sync = this.request.body.Sync;
 				if(this.request.body.Description) this.newFileFields.Description = this.request.body.Description;
-				if(this.request.body.NoCache) this.newFileFields.NoCache = this.request.body.NoCache;
-				if(this.request.body.VersionedCDN) this.newFileFields.VersionedCDN = this.request.body.VersionedCDN;
+				if(this.request.body.hasOwnProperty('Cache')) this.newFileFields.Cache = this.request.body.Cache;
 			}
 			
-			if(this.request.body.Hidden) this.newFileFields.Hidden = this.request.body.Hidden;
+			if(this.request.body.hasOwnProperty('Hidden')) this.newFileFields.Hidden = this.request.body.Hidden;
 		}
 
 		if(this.request.body.Thumbnails && Array.isArray(this.request.body.Thumbnails))

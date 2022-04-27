@@ -1,5 +1,5 @@
 import { Client, Request } from '@pepperi-addons/debug-server';
-import { dataURLRegex, S3Buckets, CloudfrontDistributions, NO_CACHE_DEFAULT_VALUE } from "../constants";
+import { dataURLRegex, S3Buckets, CloudfrontDistributions, CACHE_DEFAULT_VALUE } from "../constants";
 import { AbstractBasePfsDal } from './AbstartcBasePfsDal';
 
 const AWS = require('aws-sdk'); // AWS is part of the lambda's environment. Importing it will result in it being rolled up redundently.
@@ -33,7 +33,7 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		if(existingFile.isFileExpired){
 			return await this.deleteFileData(existingFile.Key);
 		}
-		const isNoCache = this.shouldUseNoCache(newFileFields, existingFile);
+		const isCache = this.shouldUseCache(newFileFields, existingFile);
 
 		if(!this.request.body.URI && !existingFile.doesFileExist) //The file does not yet exist, and no data was provided. Assign a presigned URL for data upload.
 		{ 
@@ -41,7 +41,7 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		}
 		else if (this.request.body.URI) // The file already has data, or data was provided.
 		{ 
-			const uploadRes = await this.uploadFileData(newFileFields, isNoCache);
+			const uploadRes = await this.uploadFileData(newFileFields, isCache);
 			newFileFields.FileVersion = uploadRes.VersionId;
 			
 			delete newFileFields.buffer;
@@ -49,7 +49,7 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 
 		if(Array.isArray(newFileFields.Thumbnails)){
             for (const thumbnail of newFileFields.Thumbnails) {
-                await this.uploadThumbnail(newFileFields.Key, thumbnail.Size, thumbnail.buffer, isNoCache);
+                await this.uploadThumbnail(newFileFields.Key, thumbnail.Size, thumbnail.buffer, isCache);
                 delete thumbnail.buffer;
             }
             if (Array.isArray(existingFile.Thumbnails)) { //delete unnecessary thumbnails from S3.
@@ -65,16 +65,16 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
         }
 	}
 
-	private shouldUseNoCache(newFileFields: any, existingFile: any) {
-		let isNoCache = NO_CACHE_DEFAULT_VALUE;
+	private shouldUseCache(newFileFields: any, existingFile: any) {
+		let isCache = CACHE_DEFAULT_VALUE;
 
-		if (newFileFields.hasOwnProperty('NoCache')) {
-			isNoCache = newFileFields.NoCache;
+		if (newFileFields.hasOwnProperty('Cache')) {
+			isCache = newFileFields.Cache;
 		}
-		else if (existingFile.hasOwnProperty('NoCache')) {
-			isNoCache = existingFile.NoCache;
+		else if (existingFile.hasOwnProperty('Cache')) {
+			isCache = existingFile.Cache;
 		}
-		return isNoCache;
+		return isCache;
 	}
 
 	abstract lock(item: any);
@@ -96,7 +96,7 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 
 		console.log(`Trying to invlidate ${invalidationPaths}...`);
 
-		const { shouldSkipInvalidation, skipReason }: { shouldSkipInvalidation: boolean; skipReason: string; } = this.shouldSkipInvalidation(keyInvalidationPath, file); // If it used NoCache flag, there's no need to invalidate.
+		const { shouldSkipInvalidation, skipReason }: { shouldSkipInvalidation: boolean; skipReason: string; } = this.shouldSkipInvalidation(keyInvalidationPath, file); // If it used Cache=false flag, there's no need to invalidate.
 
 		if(shouldSkipInvalidation)
 		{ 
@@ -124,7 +124,7 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 	}
 
 	private shouldSkipInvalidation(keyInvalidationPath: string, file: any) {
-		const shouldSkipInvalidation: boolean = keyInvalidationPath.endsWith('/') || !file.doesFileExist || file.NoCache;
+		const shouldSkipInvalidation: boolean = keyInvalidationPath.endsWith('/') || !file.doesFileExist || !file.Cache;
 
 		let skipReason: string = '';
 
@@ -132,8 +132,8 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 			skipReason = 'requested path is a folder.'; // If this is a folder or if this file doesn't exist, it has no CDN representation, and there's no need to invalidate it.
 		else if (!file.doesFileExist)
 			skipReason = 'the file does not exist.';
-		else if (file.NoCache)
-			skipReason = 'the file used no-cache.'; // If it used NoCache flag, there's no need to invalidate.
+		else if (!file.Cache)
+			skipReason = "the file doesn't use cache."; // If it used Cache=false flag, there's no need to invalidate.
 
 		return { shouldSkipInvalidation, skipReason };
 	}
@@ -200,7 +200,7 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 	//#endregion
 
 	//#region private methods
-	private async uploadFileData(file: any, isNoCache = NO_CACHE_DEFAULT_VALUE): Promise<any> 
+	private async uploadFileData(file: any, isCache = CACHE_DEFAULT_VALUE): Promise<any> 
 	{
 		const params: any = {};
 
@@ -210,7 +210,7 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		params.Body = file.buffer;
 		params.ContentType = this.getMimeType();
 		params.ContentEncoding = 'base64';
-		if(isNoCache){
+		if(!isCache){
 			params.CacheControl = 'no-cache';
 		}
 
@@ -237,7 +237,7 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		return deletedFile;
 	}
 
-	private async uploadThumbnail(Key: string, size: string, Body: Buffer, isNoCache = NO_CACHE_DEFAULT_VALUE): Promise<any> 
+	private async uploadThumbnail(Key: string, size: string, Body: Buffer, isCache = CACHE_DEFAULT_VALUE): Promise<any> 
 	{
 		const params: any = {};
 
@@ -247,7 +247,7 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		params.Body = Body;
 		params.ContentType = this.getMimeType();
 		params.ContentEncoding = 'base64';
-		if(isNoCache){
+		if(!isCache){
 			params.CacheControl = 'no-cache';
 		}
 
