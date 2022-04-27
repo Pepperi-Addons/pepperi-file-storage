@@ -202,12 +202,17 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 	//#region private methods
 	private async uploadFileData(file: any, isCache = CACHE_DEFAULT_VALUE): Promise<any> 
 	{
+		const key = this.getAbsolutePath(file.Key);
+		return this.uploadToS3(key, file.buffer, isCache);
+	}
+
+	private async uploadToS3(key, buffer, isCache = CACHE_DEFAULT_VALUE){
 		const params: any = {};
 
 		// Create S3 params
 		params.Bucket = this.S3Bucket;
-		params.Key = this.getAbsolutePath(file.Key);
-		params.Body = file.buffer;
+		params.Key = key;
+		params.Body = buffer;
 		params.ContentType = this.getMimeType();
 		params.ContentEncoding = 'base64';
 		if(!isCache){
@@ -239,23 +244,8 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 
 	private async uploadThumbnail(Key: string, size: string, Body: Buffer, isCache = CACHE_DEFAULT_VALUE): Promise<any> 
 	{
-		const params: any = {};
-
-		// Create S3 params
-		params.Bucket = this.S3Bucket;
-		params.Key = `thumbnails/${this.getAbsolutePath(Key)}_${size}`;
-		params.Body = Body;
-		params.ContentType = this.getMimeType();
-		params.ContentEncoding = 'base64';
-		if(!isCache){
-			params.CacheControl = 'no-cache';
-		}
-
-		// Upload to S3 bucket.
-		const uploaded = await this.s3.upload(params).promise();
-		console.log(`File uploaded successfully to ${uploaded.Location}`);
-
-		return uploaded;
+		const key = `thumbnails/${this.getAbsolutePath(Key)}_${size}`;
+		return this.uploadToS3(key, Body, isCache);
 	}
 
 	private async deleteThumbnail(key: any, size: any) {
