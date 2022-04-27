@@ -78,8 +78,10 @@ export const pfsSchemeData: any = {
 		},
 		FileVersion: {
 			Type: 'String'
+		},
+		Cache: {
+			Type: 'Boolean'
 		}
-
 	} as any,
 }
 
@@ -92,3 +94,10 @@ export const LOCK_ADAL_TABLE_NAME = "PfsLockTable";
 
 export const MAXIMAL_LOCK_TIME: number = 1000 * 60 * 5; // Set to 5 minutes.
 export const DEBUG_MAXIMAL_LOCK_TIME = 1; // Debug
+
+export const HIDDEN_DEFAULT_VALUE = false;
+export const DESCRIPTION_DEFAULT_VALUE = "";
+export const CACHE_DEFAULT_VALUE = true;
+export const syncTypes = ["None", "Device", "DeviceThumbnail", "Always"];
+export const SYNC_DEFAULTVALUE = syncTypes[0];
+
