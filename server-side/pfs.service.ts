@@ -39,7 +39,7 @@ export class PfsService
 
 	async uploadFile(): Promise<boolean> 
 	{
-		let res:any = {};
+		let res: any = {};
 
 		try 
 		{
@@ -48,30 +48,8 @@ export class PfsService
 
 			// Set preliminary lock on the file. If necessary, this will also rollback an existing lock
 			await this.lock();
-
-			// Download the current saved metadata, if exists
-			await this.getCurrentItemData();
-
-			// Further validation of input
-			await this.validateFieldsForUpload();
-			
-			// Save the currently saved metadata on the lock - will be used for rollback purposes
-			await this.pfsMutator.setRollbackData(this.existingFile);
-
-			// Commit changes to S3 and ADAL metadata table
-			res = await this.mutatePfs();
-
-			// Publish notification to subscribers
-			await this.pfsMutator.notify(this.newFileFields, this.existingFile);
-
-			// Remove lock
-			await this.pfsMutator.unlock(this.existingFile.Key);
-
-			// Invalidate CDN server (including thumbnails if exist)
-			await this.pfsMutator.invalidateCDN(this.existingFile);
-
 		}
-		catch (err) 
+		catch(err)
 		{
 			if (err instanceof Error) 
 			{
@@ -79,6 +57,50 @@ export class PfsService
 			}
 			throw err;
 		}
+
+		try
+		{
+			res = await this.executeUpsertTransaction();
+		}
+		catch(err)
+		{
+			if (err instanceof Error) 
+			{
+				console.error(`Could not upload file ${this.request.body.Key}. ${err.message}`);
+			}
+			
+			// Remove lock
+			await this.pfsMutator.unlock(this.request.body.Key);
+
+			throw err;
+		}
+
+		// Remove lock
+		await this.pfsMutator.unlock(this.request.body.Key);
+
+		// Invalidate CDN server (including thumbnails if exist)
+		await this.pfsMutator.invalidateCDN(this.existingFile);
+
+		return res;
+	}
+
+	private async executeUpsertTransaction() 
+	{
+		
+		// Download the current saved metadata, if exists
+		await this.getCurrentItemData();
+
+		// Further validation of input
+		await this.validateFieldsForUpload();
+
+		// Save the currently saved metadata on the lock - will be used for rollback purposes
+		await this.pfsMutator.setRollbackData(this.existingFile);
+
+		// Commit changes to S3 and ADAL metadata table
+		const res: any = await this.mutatePfs();
+
+		// Publish notification to subscribers
+		await this.pfsMutator.notify(this.newFileFields, this.existingFile);
 
 		return res;
 	}
