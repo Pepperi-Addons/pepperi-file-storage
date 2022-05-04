@@ -1,7 +1,7 @@
 import { PapiClient } from '@pepperi-addons/papi-sdk'
 import { Client, Request } from '@pepperi-addons/debug-server';
 import jwtDecode from 'jwt-decode';
-import { dataURLRegex, DESCRIPTION_DEFAULT_VALUE, HIDDEN_DEFAULT_VALUE, CACHE_DEFAULT_VALUE as CACHE_DEFAULT_VALUE, SYNC_DEFAULTVALUE as SYNC_DEFAULT_VALUE } from './constants';
+import { dataURLRegex, DESCRIPTION_DEFAULT_VALUE, HIDDEN_DEFAULT_VALUE, CACHE_DEFAULT_VALUE as CACHE_DEFAULT_VALUE, SYNC_DEFAULTVALUE as SYNC_DEFAULT_VALUE, TestError } from './constants';
 import fetch from 'node-fetch';
 import { ImageResizer } from './imageResizer';
 import { IPfsMutator } from './DAL/IPfsMutator';
@@ -69,8 +69,15 @@ export class PfsService
 				console.error(`Could not upload file ${this.request.body.Key}. ${err.message}`);
 			}
 			
-			// Remove lock
-			await this.pfsMutator.unlock(this.request.body.Key);
+			if(!(err instanceof TestError)){
+				// Perform rollback
+				const lockedFile = await this.pfsMutator.isObjectLocked(this.request.body.Key);
+				if (lockedFile) 
+				{
+					await this.rollback(lockedFile);
+				}
+			}
+			
 
 			throw err;
 		}
@@ -218,7 +225,7 @@ export class PfsService
 
 		if(this.request.query.testRollback) // If testing rollback, throw exception to stop the process after rollback.
 		{
-			throw new Error("Testing rollback - finishing execution after rollback was done.");
+			throw new TestError("Testing rollback - finishing execution after rollback was done.");
 		}
 
 	}
