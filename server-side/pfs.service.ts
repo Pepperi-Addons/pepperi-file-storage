@@ -1,8 +1,9 @@
 import { PapiClient } from '@pepperi-addons/papi-sdk'
 import { Client, Request } from '@pepperi-addons/debug-server';
 import jwtDecode from 'jwt-decode';
-import { dataURLRegex, DESCRIPTION_DEFAULT_VALUE, HIDDEN_DEFAULT_VALUE, CACHE_DEFAULT_VALUE as CACHE_DEFAULT_VALUE, SYNC_DEFAULTVALUE as SYNC_DEFAULT_VALUE, TestError } from './constants';
+import { dataURLRegex, DESCRIPTION_DEFAULT_VALUE, HIDDEN_DEFAULT_VALUE, CACHE_DEFAULT_VALUE, SYNC_DEFAULT_VALUE, TestError, MAXIMAL_TREE_DEPTH } from './constants';
 import fetch from 'node-fetch';
+import * as path from 'path';
 import { ImageResizer } from './imageResizer';
 import { IPfsMutator } from './DAL/IPfsMutator';
 import { IPfsGetter } from './DAL/IPfsGetter';
@@ -130,6 +131,9 @@ export class PfsService
 
 	private async validateUploadRequest() 
 	{
+		if(this.getPathDepth() > MAXIMAL_TREE_DEPTH){
+			throw new Error(`Requested path is deeper than the maximum allowed depth of ${MAXIMAL_TREE_DEPTH}.`);
+		}
 		await this.validateAddonSecretKey();
 
 		if (!this.request.body.Key) 
@@ -147,6 +151,8 @@ export class PfsService
 	{
 		let res: any = {};
 
+		await this.createParentFoldersIfMissing();
+
 		if (this.request.body.Key.endsWith('/')) 
 		{ // if the key ends with '/' it means we are creating a folder 
 			res = await this.createFolder();
@@ -156,6 +162,33 @@ export class PfsService
 			res = await this.createFile();
 		}
 		return res;
+	}
+
+	private async createParentFoldersIfMissing() {
+		if(!await this.doesParentFolderExist(this.request.body.key)){
+
+		}
+	}
+
+	private async doesParentFolderExist(key) {
+		let doesParentFolderExist = true;
+		try {
+			await this.downloadFile(`${path.dirname(key)}\\`);
+		}
+		catch {
+			doesParentFolderExist = false;
+		}
+		return doesParentFolderExist;
+	}
+
+	private getPathDepth(): number {
+		let requestedPath = this.request.body.Key;
+		if(!requestedPath.startsWith('/'))
+		{
+			requestedPath = `/${requestedPath}`;
+		}
+		const trailingSlashes = 2;
+		return requestedPath.split('/').length - trailingSlashes;
 	}
 
 	private async lock() 
