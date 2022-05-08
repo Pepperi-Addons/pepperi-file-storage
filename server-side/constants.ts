@@ -101,3 +101,4 @@ export const CACHE_DEFAULT_VALUE = true;
 export const syncTypes = ["None", "Device", "DeviceThumbnail", "Always"];
 export const SYNC_DEFAULTVALUE = syncTypes[0];
 
+export class TestError extends Error{};
