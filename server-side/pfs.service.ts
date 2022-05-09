@@ -70,7 +70,8 @@ export class PfsService
 				console.error(`Could not upload file ${this.request.body.Key}. ${err.message}`);
 			}
 			
-			if(!(err instanceof TestError)){
+			if(!(err instanceof TestError))
+			{
 				// Perform rollback
 				const lockedFile = await this.pfsMutator.isObjectLocked(this.request.body.Key);
 				if (lockedFile) 
@@ -131,7 +132,8 @@ export class PfsService
 
 	private async validateUploadRequest() 
 	{
-		if(this.getPathDepth() > MAXIMAL_TREE_DEPTH){
+		if(this.getPathDepth() > MAXIMAL_TREE_DEPTH)
+		{
 			throw new Error(`Requested path is deeper than the maximum allowed depth of ${MAXIMAL_TREE_DEPTH}.`);
 		}
 		await this.validateAddonSecretKey();
@@ -164,24 +166,71 @@ export class PfsService
 		return res;
 	}
 
-	private async createParentFoldersIfMissing() {
-		if(!await this.doesParentFolderExist(this.request.body.key)){
+	private async createParentFoldersIfMissing() 
+	{
+		const missingFolders: string[] = await this.getMissingParentFolders();
+		// Creating the missing folders from root to leaf allows the recovery in case of a failure.
+		// this.getMissingParentFolders() assumes that if a folder exists, the entire path to it from root
+		// also exists. If we create just the first folder (the one closest to the root) and then fail, in the next iteration
+		// we will continue the creation from the next missing folder in line.
+		for (const missingFolder of missingFolders) 
+		{
+			const existingFile = {doesFileExist: false};
+			const newFileFields = {};
+			const data = {
+				Key: missingFolder,
+				MIME: 'pepperi/folder',
+			}
 
+			await this.createFolder(data, existingFile, newFileFields);
 		}
 	}
 
-	private async doesParentFolderExist(key) {
-		let doesParentFolderExist = true;
-		try {
-			await this.downloadFile(`${path.dirname(key)}\\`);
+	/**
+	 * Assumes that if a folder exists, the entire path to it from root also exists
+	 * @returns a list of missing parent folders, starting (index=0) from the closest to the root, ending closest to the leaf.
+	 */
+	private async getMissingParentFolders(): Promise<string[]> 
+	{
+		let canonizedPath = this.request.body.Key.startsWith('/') ? this.request.body.Key : `/${this.request.body.Key}`;
+		const missingFoldersList: string[] = [];
+
+		while(path.dirname(canonizedPath) !== '/')
+		{
+			const parentFolder = `${path.dirname(canonizedPath)}/`;
+			if(!await this.doesParentFolderExist(canonizedPath))
+			{
+				missingFoldersList.unshift(parentFolder);
+			}
+			else
+			{
+				// if the direct parent folder exists, the entire path up to it also exists. 
+				// There's no need to further investigate whether containing folders exist or not.
+				break;
+			}
+
+			canonizedPath = parentFolder;
 		}
-		catch {
+
+		return missingFoldersList;
+	}
+
+	private async doesParentFolderExist(key) 
+	{
+		let doesParentFolderExist = true;
+		try 
+		{
+			await this.downloadFile(`${path.dirname(key)}/`);
+		}
+		catch 
+		{
 			doesParentFolderExist = false;
 		}
 		return doesParentFolderExist;
 	}
 
-	private getPathDepth(): number {
+	private getPathDepth(): number 
+	{
 		let requestedPath = this.request.body.Key;
 		if(!requestedPath.startsWith('/'))
 		{
@@ -405,10 +454,10 @@ export class PfsService
 		return buf;
 	}
 
-	private async createFolder() 
+	private async createFolder(data?, existingFile?, newFileFields?) 
 	{
-		this.getMetadata();	
-		return await this.pfsMutator.mutateADAL(this.newFileFields, this.existingFile);
+		this.getMetadata(data, existingFile, newFileFields);	
+		return await this.pfsMutator.mutateADAL(newFileFields ?? this.newFileFields, existingFile ?? this.existingFile);
 	}
 		
 	isDataURL(s) 
@@ -500,14 +549,16 @@ export class PfsService
 		}
 	}
 
-	private getMimeType(): string 
+	private getMimeType(data?): string 
 	{
-		let MIME = this.request.body.MIME;
+		data = data ?? this.request.body;
+
+		let MIME = data.MIME;
 		
-		if(this.request.body.URI && this.isDataURL(this.request.body.URI))
+		if(data.URI && this.isDataURL(data.URI))
 		{
 			// Get mime type from base64 data
-			const parsedMIME = this.request.body.URI.match(/[^:\s*]\w+\/[\w-+\d.]+(?=[;| ])/)[0];
+			const parsedMIME = data.URI.match(/[^:\s*]\w+\/[\w-+\d.]+(?=[;| ])/)[0];
 
 			// If MIME type was passed, it must be the same as the one parsed from the data URI.
 			// (Otherwise use the parsed MIME from the data URI)
@@ -528,55 +579,58 @@ export class PfsService
 	 * Returns a Metadata object representing the needed metadata.
 	 * @returns a dictionary representation of the metadata.
 	 */
-	protected getMetadata()
+	protected getMetadata(data?, existingFile?, newFileFields?)
 	{
+		data = data ?? this.request.body;
+		existingFile = existingFile ?? this.existingFile;
+		newFileFields = newFileFields ?? this.newFileFields;
 
-		const pathFoldersList = this.request.body.Key.split('/');
-		if (this.request.body.Key.endsWith('/'))  //This is a new folder being created. We need to pop the trailing '' after splitting.
+		const pathFoldersList = data.Key.split('/');
+		if (data.Key.endsWith('/'))  //This is a new folder being created. We need to pop the trailing '' after splitting.
 		{
 			pathFoldersList.pop();
 		}
 		const fileName = pathFoldersList.pop();
 		const containingFolder = pathFoldersList.join('/');
 
-		this.newFileFields.Key = this.request.body.Key;
+		newFileFields.Key = data.Key;
 
-		if(!this.existingFile.doesFileExist)
+		if(!existingFile.doesFileExist)
 		{
-			this.newFileFields.Name = `${fileName}${this.request.body.Key.endsWith('/') ? '/' :''}`; // Add the dropped '/' for folders.
-			this.newFileFields.Folder = containingFolder;
-			this.newFileFields.MIME = this.getMimeType();
-			this.newFileFields.Hidden = this.request.body.Hidden ?? HIDDEN_DEFAULT_VALUE;
+			newFileFields.Name = `${fileName}${data.Key.endsWith('/') ? '/' :''}`; // Add the dropped '/' for folders.
+			newFileFields.Folder = containingFolder;
+			newFileFields.MIME = this.getMimeType(data);
+			newFileFields.Hidden = data.Hidden ?? HIDDEN_DEFAULT_VALUE;
 
-			if(!this.request.body.Key.endsWith('/')) // This is not a folder
+			if(!data.Key.endsWith('/')) // This is not a folder
 			{
-				this.newFileFields.Sync = this.request.body.Sync ?? SYNC_DEFAULT_VALUE;
-				this.newFileFields.Description = this.request.body.Description ?? DESCRIPTION_DEFAULT_VALUE;
-				this.newFileFields.Cache = this.request.body.Cache ?? CACHE_DEFAULT_VALUE;
+				newFileFields.Sync = data.Sync ?? SYNC_DEFAULT_VALUE;
+				newFileFields.Description = data.Description ?? DESCRIPTION_DEFAULT_VALUE;
+				newFileFields.Cache = data.Cache ?? CACHE_DEFAULT_VALUE;
 			}
 			else //this is a folder
 			{
-				this.newFileFields.Sync = SYNC_DEFAULT_VALUE;
-				this.newFileFields.Description = DESCRIPTION_DEFAULT_VALUE;
+				newFileFields.Sync = SYNC_DEFAULT_VALUE;
+				newFileFields.Description = DESCRIPTION_DEFAULT_VALUE;
 			}
 			
 		}
 		else // The file does exist, there's no need to set Folder and Name fields
 		{
-			if(!this.request.body.Key.endsWith('/')) // This is not a folder
+			if(!data.Key.endsWith('/')) // This is not a folder
 			{
-				if(this.request.body.MIME) this.newFileFields.MIME = this.getMimeType();
-				if(this.request.body.Sync) this.newFileFields.Sync = this.request.body.Sync;
-				if(this.request.body.Description) this.newFileFields.Description = this.request.body.Description;
-				if(this.request.body.hasOwnProperty('Cache')) this.newFileFields.Cache = this.request.body.Cache;
+				if(data.MIME) newFileFields.MIME = this.getMimeType(data);
+				if(data.Sync) newFileFields.Sync = data.Sync;
+				if(data.Description) newFileFields.Description = data.Description;
+				if(data.hasOwnProperty('Cache')) newFileFields.Cache = data.Cache;
 			}
 			
-			if(this.request.body.hasOwnProperty('Hidden')) this.newFileFields.Hidden = this.request.body.Hidden;
+			if(data.hasOwnProperty('Hidden')) newFileFields.Hidden = data.Hidden;
 		}
 
-		if(this.request.body.Thumbnails && Array.isArray(this.request.body.Thumbnails))
+		if(data.Thumbnails && Array.isArray(data.Thumbnails))
 		{
-			this.newFileFields.Thumbnails = this.request.body.Thumbnails.map(thumbnailRequest => 
+			newFileFields.Thumbnails = data.Thumbnails.map(thumbnailRequest => 
 			{
 				return {Size: thumbnailRequest.Size.toLowerCase()}
 			});
