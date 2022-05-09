@@ -369,7 +369,7 @@ export class PfsService
 	{
 		let res: any = {};
 
-		this.getMetadata();
+		await this.getMetadata();
 		if(this.request.body.URI)
 		{
 			this.newFileFields.buffer = await this.getFileDataBuffer(this.request.body.URI);
@@ -456,7 +456,7 @@ export class PfsService
 
 	private async createFolder(data?, existingFile?, newFileFields?) 
 	{
-		this.getMetadata(data, existingFile, newFileFields);	
+		await this.getMetadata(data, existingFile, newFileFields);	
 		return await this.pfsMutator.mutateADAL(newFileFields ?? this.newFileFields, existingFile ?? this.existingFile);
 	}
 		
@@ -579,7 +579,7 @@ export class PfsService
 	 * Returns a Metadata object representing the needed metadata.
 	 * @returns a dictionary representation of the metadata.
 	 */
-	protected getMetadata(data?, existingFile?, newFileFields?)
+	protected async getMetadata(data?, existingFile?, newFileFields?)
 	{
 		data = data ?? this.request.body;
 		existingFile = existingFile ?? this.existingFile;
@@ -607,6 +607,7 @@ export class PfsService
 				newFileFields.Sync = data.Sync ?? SYNC_DEFAULT_VALUE;
 				newFileFields.Description = data.Description ?? DESCRIPTION_DEFAULT_VALUE;
 				newFileFields.Cache = data.Cache ?? CACHE_DEFAULT_VALUE;
+				newFileFields.UploadedBy = await this.getUploadedByUUID();
 			}
 			else //this is a folder
 			{
@@ -623,6 +624,15 @@ export class PfsService
 				if(data.Sync) newFileFields.Sync = data.Sync;
 				if(data.Description) newFileFields.Description = data.Description;
 				if(data.hasOwnProperty('Cache')) newFileFields.Cache = data.Cache;
+
+				var uploadedBy: string = '';
+				if(data.URI && (uploadedBy = await this.getUploadedByUUID()) !== existingFile.UploadedBy) 
+				// Assignment to uploadedBy var inside the if-statement is intentional.
+				// Check if URI was passed to avoid calling async getUploadedByUUID() unnecessarily.
+				// Check if there's a discrepancy between current uploader and pervious to avoid updating the file's UploadedBy field unnecessarily.
+				{
+					newFileFields.UploadedBy = uploadedBy;
+				}
 			}
 			
 			if(data.hasOwnProperty('Hidden')) newFileFields.Hidden = data.Hidden;
@@ -635,6 +645,18 @@ export class PfsService
 				return {Size: thumbnailRequest.Size.toLowerCase()}
 			});
 		}
+	}
+
+	/**
+	 * Return the UUID of the user that uploads the file. Return blank string if it is the support admin user.
+	 * @returns UUID of the user that uploaded the file
+	 */
+	private async getUploadedByUUID(): Promise<any> {
+		const userId = (jwtDecode(this.client.OAuthAccessToken))["pepperi.id"];
+        const isSupportAdminUser: Boolean = (await this.papiClient.get(`/users/${userId}?fields=IsSupportAdminUser`)).IsSupportAdminUser;
+
+		//Leave files uploaded by support admin user (i.e. uploading using integration) with a blank 
+		return isSupportAdminUser ? '' : jwtDecode(this.client.OAuthAccessToken)['pepperi.useruuid'];
 	}
 
 	/**
