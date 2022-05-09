@@ -36,15 +36,15 @@ export async function uninstall(client: Client, request: Request): Promise<any>
 export async function upgrade(client: Client, request: Request): Promise<any> 
 {
 	const papiClient = createPapiClient(client);
-	
-	if (request.body.FromVersion && semver.compare(request.body.FromVersion, '0.0.39') < 0)
-	{
-		await createMetadataADALTable(papiClient);
-	}
 
 	if (request.body.FromVersion && semver.compare(request.body.FromVersion, '0.0.86') < 0)
 	{
 		await createLockADALTable(papiClient);
+	}
+
+	if (request.body.FromVersion && semver.compare(request.body.FromVersion, '0.5.9') < 0)
+	{
+		await createMetadataADALTable(papiClient);
 	}
 
 	return { success: true, resultObject: {} }
