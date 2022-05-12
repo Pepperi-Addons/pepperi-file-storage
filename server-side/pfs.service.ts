@@ -132,15 +132,16 @@ export class PfsService
 
 	private async validateUploadRequest() 
 	{
-		if(this.getPathDepth() > MAXIMAL_TREE_DEPTH)
-		{
-			throw new Error(`Requested path is deeper than the maximum allowed depth of ${MAXIMAL_TREE_DEPTH}.`);
-		}
 		await this.validateAddonSecretKey();
 
 		if (!this.request.body.Key) 
 		{
 			throw new Error("Missing mandatory field 'Key'");
+		}
+
+		if(this.getPathDepth() > MAXIMAL_TREE_DEPTH)
+		{
+			throw new Error(`Requested path is deeper than the maximum allowed depth of ${MAXIMAL_TREE_DEPTH}.`);
 		}
 		
 		if (this.request.body.Thumbnails) 
