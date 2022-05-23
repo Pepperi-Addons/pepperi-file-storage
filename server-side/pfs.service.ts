@@ -626,7 +626,7 @@ export class PfsService
 				if(data.Description) newFileFields.Description = data.Description;
 				if(data.hasOwnProperty('Cache')) newFileFields.Cache = data.Cache;
 
-				var uploadedBy: string = '';
+				let uploadedBy = '';
 				if(data.URI && (uploadedBy = await this.getUploadedByUUID()) !== existingFile.UploadedBy) 
 				// Assignment to uploadedBy var inside the if-statement is intentional.
 				// Check if URI was passed to avoid calling async getUploadedByUUID() unnecessarily.
@@ -652,9 +652,10 @@ export class PfsService
 	 * Return the UUID of the user that uploads the file. Return blank string if it is the support admin user.
 	 * @returns UUID of the user that uploaded the file
 	 */
-	private async getUploadedByUUID(): Promise<any> {
+	private async getUploadedByUUID(): Promise<any> 
+	{
 		const userId = (jwtDecode(this.client.OAuthAccessToken))["pepperi.id"];
-        const isSupportAdminUser: Boolean = (await this.papiClient.get(`/users/${userId}?fields=IsSupportAdminUser`)).IsSupportAdminUser;
+		const isSupportAdminUser: boolean = (await this.papiClient.get(`/users/${userId}?fields=IsSupportAdminUser`)).IsSupportAdminUser;
 
 		//Leave files uploaded by support admin user (i.e. uploading using integration) with a blank 
 		return isSupportAdminUser ? '' : jwtDecode(this.client.OAuthAccessToken)['pepperi.useruuid'];
