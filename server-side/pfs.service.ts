@@ -7,6 +7,7 @@ import * as path from 'path';
 import { ImageResizer } from './imageResizer';
 import { IPfsMutator } from './DAL/IPfsMutator';
 import { IPfsGetter } from './DAL/IPfsGetter';
+import { Helper } from './helper';
 
 export class PfsService 
 {
@@ -132,7 +133,7 @@ export class PfsService
 
 	private async validateUploadRequest() 
 	{
-		await this.validateAddonSecretKey();
+		await Helper.validateAddonSecretKey(this.request.header, this.client, this.AddonUUID);
 
 		if (!this.request.body.Key) 
 		{
@@ -506,47 +507,6 @@ export class PfsService
 		{
 			// a folder's MIME type should always be 'pepperi/folder', otherwise the POST should fail
 			throw new Error("A filename cannot contain a '/'.");
-		}
-	}
-
-	private async validateAddonSecretKey() 
-	{
-		
-		for (const [key, value] of Object.entries(this.request.header)) 
-		{
-			this.request.header[key.toLowerCase()] = value;
-		}
-
-		if (!this.request.header["x-pepperi-secretkey"] || !await this.isValidRequestedAddon(this.client, this.request.header["x-pepperi-secretkey"], this.AddonUUID)) 
-		{
-			const err: any = new Error(`Authorization request denied. ${this.request.header["x-pepperi-secretkey"]? "check secret key" : "Missing secret key header"} `);
-			err.code = 401;
-			throw err;
-		}
-	}
-
-	private async isValidRequestedAddon(client: Client, secretKey, addonUUID)
-	{
-		const papiClient = new PapiClient({
-		  baseURL: client.BaseURL,
-		  token: client.OAuthAccessToken,
-		  addonUUID: addonUUID,
-		  actionUUID: client.ActionUUID,
-		  addonSecretKey: secretKey
-		});
-
-		try
-		{
-			const res = await papiClient.get(`/var/sk/addons/${addonUUID}/validate`);
-			return true;
-		}
-		catch (err) 
-		{
-			if (err instanceof Error) 
-			{
-				console.error(`${err.message}`);
-			}
-			return false;
 		}
 	}
 

@@ -1,44 +1,93 @@
 import { Client, Request } from "@pepperi-addons/debug-server/dist";
 import { AddonDataScheme, PapiClient } from "@pepperi-addons/papi-sdk";
-import { METADATA_ADAL_TABLE_NAME, pfsSchemeData } from "./constants";
+import { pfsSchemaData } from "./constants";
+import { Helper } from "./helper";
 
 export class PfsSchemeService
 {
-	private papiClient: PapiClient;
+	private schema: AddonDataScheme;
 
 	constructor(private client: Client, private request: Request)
 	{
-		this.papiClient = new PapiClient({
-			token: client.OAuthAccessToken,
-			baseURL: client.BaseURL,
-			addonUUID: client.AddonUUID,
-			addonSecretKey: client.AddonSecretKey,
-			actionUUID: client.ActionUUID,
-		});
+		this.schema = request.body;
+		this.request.header = Helper.getLowerCaseHeaders(this.request.header);	
 	}
 
+	/**
+     * Completes the schema creation process by adding the PFS's fields to the schema.
+     * @returns the addon data scheme after the PFS's fields addition.
+     */
 	public async create(): Promise<AddonDataScheme> 
 	{
-		this.validateSchemaType(this.request.body as AddonDataScheme);
-		return this.upsertSchemeWithPfsFields();
+		await this.validateSchemaCreationRequest();
+
+		// Upsert the schema as requested by the client, adding PFS's default fields and indices.
+		return this.upsertSchemaWithPfsFields();
 	}
 
-	private async upsertSchemeWithPfsFields(): Promise<AddonDataScheme> 
+	/**
+     * Validate that the schema creation request is valid.
+     */
+	private async validateSchemaCreationRequest() 
+	{
+		// Validate that the provided secret key matches the addon's secre key, and that the addon is indeed installed.
+		await Helper.validateAddonSecretKey(this.request.header, this.client, this.request.query.addon_uuid);
+
+		// Validate that the requested schema is valid
+		this.validateSchema();
+	}
+
+	/**
+     * Upsert the PFS's fields to the requested schema.
+     * @returns the addon data scheme after the PFS's fields addition.
+     */
+	private async upsertSchemaWithPfsFields(): Promise<AddonDataScheme> 
 	{
 		const pfsMetadataTable = {
-			...pfsSchemeData,
-			Name: METADATA_ADAL_TABLE_NAME
+			...pfsSchemaData,
+			...this.schema
 		};
-		return this.papiClient.addons.data.schemes.post(pfsMetadataTable);
+
+		const papiClient = this.createPapiClient(this.client, this.request.query.addon_uuid, this.request.header["x-pepperi-secretkey"]);
+		return papiClient.addons.data.schemes.post(pfsMetadataTable);
 	}
 
-	private validateSchemaType(schema: AddonDataScheme): void 
+	
+	private validateSchema(): void 
 	{
-		if (!schema || schema.Type !== 'pfs') 
+		this.validateSchemaType();
+		this.validateSchemaName();
+	}
+
+	/**
+     * Validates that the requested schema type is 'pfs'. Throws an excpetion otherwise.
+     */
+	private validateSchemaType() 
+	{
+		if (!this.schema || this.schema.Type !== 'pfs') 
 		{
-			throw new Error("The schema must be of type 'pfs'")
+			//Uncomment when we actually have a pfs type
+			// throw new Error("The schema must be of type 'pfs'")
 		}
 	}
 
+	private validateSchemaName() 
+	{
+		if (!this.schema || !this.schema.Name) 
+		{
+			throw new Error("The schema must have a Name property");
+		}
+	}
+
+	private createPapiClient(client: Client, addonUUID: string, addonScretKey: string)
+	{
+		return new PapiClient({
+			token: client.OAuthAccessToken,
+			baseURL: client.BaseURL,
+			addonUUID: addonUUID,
+			addonSecretKey: addonScretKey,
+			actionUUID: client.ActionUUID,
+		});
+	}
 
 }

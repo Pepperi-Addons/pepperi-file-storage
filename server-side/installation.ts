@@ -9,7 +9,7 @@ The error Message is importent! it will be written in the audit log and help the
 
 import { Client, Request } from '@pepperi-addons/debug-server'
 import { PapiClient } from '@pepperi-addons/papi-sdk';
-import { LOCK_ADAL_TABLE_NAME, METADATA_ADAL_TABLE_NAME, pfsSchemeData } from './constants';
+import { LOCK_ADAL_TABLE_NAME, METADATA_ADAL_TABLE_NAME, pfsSchemaData } from './constants';
 import config from '../addon.config.json';
 import semver from 'semver';
 
@@ -69,7 +69,7 @@ function createPapiClient(Client: Client)
 async function createMetadataADALTable(papiClient: PapiClient) 
 {
 	const pfsMetadataTable = {
-		...pfsSchemeData,
+		...pfsSchemaData,
 		Name: METADATA_ADAL_TABLE_NAME
 	}
 	await papiClient.addons.data.schemes.post(pfsMetadataTable);
@@ -78,7 +78,7 @@ async function createMetadataADALTable(papiClient: PapiClient)
 async function createLockADALTable(papiClient: PapiClient) 
 {
 	const pfsMetadataTable = {
-		...pfsSchemeData,
+		...pfsSchemaData,
 		Name: LOCK_ADAL_TABLE_NAME
 	}
 	await papiClient.addons.data.schemes.post(pfsMetadataTable);
