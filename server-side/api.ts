@@ -10,6 +10,11 @@ export async function file(client: Client, request: Request)
 		request.query.Key = request.query.key;
 	}
 
+	if (!(request.query && request.query.resource_name)) 
+	{
+		throw new Error(`Missing necessary parameter: resource_name`);
+	}
+
 	switch (request.method) 
 	{
 	case "GET": {
@@ -31,6 +36,11 @@ export async function files(client: Client, request: Request)
 	if (!(request.query && request.query.addon_uuid)) 
 	{
 		throw new Error(`Missing necessary parameter: addon_uuid`);
+	}
+
+	if (!(request.query && request.query.resource_name)) 
+	{
+		throw new Error(`Missing necessary parameter: resource_name`);
 	}
 
 	switch (request.method) 

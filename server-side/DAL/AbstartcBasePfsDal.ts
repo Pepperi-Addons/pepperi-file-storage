@@ -5,16 +5,18 @@ import { IPfsMutator } from './IPfsMutator';
 
 export abstract class AbstractBasePfsDal implements IPfsGetter, IPfsMutator
 {
-	protected environment: any;
-    protected DistributorUUID: any;
-	protected AddonUUID: any;
+	protected environment: string;
+    protected DistributorUUID: string;
+	protected clientAddonUUID: string;
 	protected readonly MAXIMAL_LOCK_TIME; 
+	protected clientSchemaName: string;
     
 	constructor(protected client: Client, protected request: Request, maximalLockTime:number)
 	{
 		this.environment = jwtDecode(client.OAuthAccessToken)['pepperi.datacenter'];
         this.DistributorUUID = jwtDecode(client.OAuthAccessToken)['pepperi.distributoruuid'];
-		this.AddonUUID = this.request.query.addon_uuid;
+		this.clientAddonUUID = this.request.query.addon_uuid;
+		this.clientSchemaName = this.request.query.resource_name;
 		this.MAXIMAL_LOCK_TIME = maximalLockTime;
 	}
 
@@ -63,12 +65,17 @@ export abstract class AbstractBasePfsDal implements IPfsGetter, IPfsMutator
 	 */
 	protected getAbsolutePath(relativePath: string): string 
 	{
-		if(relativePath.startsWith('/')){
-			relativePath = relativePath.slice(1);
-		}
+		relativePath = this.removeSlashPrefix(relativePath);
 
-		const absolutePrefix = `${this.DistributorUUID}/${this.AddonUUID}/`;
+		const absolutePrefix = `${this.DistributorUUID}/${this.clientAddonUUID}/${this.clientSchemaName}/`;
 		return relativePath.startsWith(absolutePrefix) ? relativePath : `${absolutePrefix}${relativePath}`;
+	}
+
+	protected removeSlashPrefix(path: string) {
+		if (path.startsWith('/')) {
+			path = path.slice(1);
+		}
+		return path;
 	}
 
 	/**
@@ -79,7 +86,7 @@ export abstract class AbstractBasePfsDal implements IPfsGetter, IPfsMutator
 	 */
 	protected getRelativePath(absolutePath: string): string 
 	{
-		const relativePath = absolutePath.split(`${this.DistributorUUID}/${this.AddonUUID}/`)[1]
+		const relativePath = absolutePath.split(`${this.DistributorUUID}/${this.clientAddonUUID}/${this.clientSchemaName}/`)[1]
 		const res = relativePath === '' ? '/' : relativePath; // Handle root folder case
 		return res;
 	}
