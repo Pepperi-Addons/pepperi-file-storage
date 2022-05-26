@@ -76,7 +76,8 @@ export class Helper
 		}
 	}
 
-	public static createPapiClient(client: Client, addonUUID: any, secretKey: any) {
+	public static createPapiClient(client: Client, addonUUID: any, secretKey: any) 
+	{
 		return new PapiClient({
 			baseURL: client.BaseURL,
 			token: client.OAuthAccessToken,
