@@ -37,10 +37,10 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 
 	async listFolderContents(folderName: string): Promise<any> 
 	{
-		const folderNameAbsolutePath = this.getAbsolutePath(folderName);
+		folderName = this.removeSlashPrefix(folderName);
 
 		const findOptions: FindOptions = {
-			where: `Folder='${folderName == '/' ? folderNameAbsolutePath : folderNameAbsolutePath.slice(0, -1)}'${(this.request.query && this.request.query.where) ? "AND(" + this.request.query.where + ")" :""}`,
+			where: `Folder='${folderName == '/' ? folderName : folderName.slice(0, -1)}'${(this.request.query && this.request.query.where) ? "AND(" + this.request.query.where + ")" :""}`,
 			...(this.request.query && this.request.query.page_size && {page_size: parseInt(this.request.query.page_size)}),
 			...(this.request.query && this.request.query.page && {page: this.getRequestedPageNumber()}),
 			...(this.request.query && this.request.query.fields && {fields: this.request.query.fields}),
@@ -50,11 +50,6 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 		}
 
 		const res =  await this.hostedAddonPapiClient.addons.data.uuid(this.clientAddonUUID).table(this.clientSchemaName).find(findOptions);
-
-		res.map(file => 
-		{
-			return this.setRelativePathsInMetadata(file);
-		});
 
 		console.log(`Files listing done successfully.`);
 		return res;
@@ -197,7 +192,9 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 
 	private async uploadFileMetadata(newFileFields: any, existingFile: any): Promise<any> 
 	{
-		// Set metdata to absolute paths
+		newFileFields.Key = this.removeSlashPrefix(newFileFields.Key);
+		newFileFields.Folder = this.removeSlashPrefix(newFileFields.Folder);
+		// Set Urls
 		this.setUrls(newFileFields, existingFile);
 		
 		const presignedURL = newFileFields.PresignedURL;
@@ -212,17 +209,6 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 		return res;
 	}
 
-	private setRelativePathsInMetadata(res) 
-	{
-		if(res.Key)
-		{
-			res.Key = this.getRelativePath(res.Key);
-		}
-		if(res.Folder)
-		{
-			res.Folder = this.getRelativePath(res.Folder);
-		}
-	}
 
 	private setUrls(newFileFields: any, existingFile: any) 
 	{

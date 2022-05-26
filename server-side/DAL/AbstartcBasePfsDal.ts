@@ -71,8 +71,8 @@ export abstract class AbstractBasePfsDal implements IPfsGetter, IPfsMutator
 		return relativePath.startsWith(absolutePrefix) ? relativePath : `${absolutePrefix}${relativePath}`;
 	}
 
-	protected removeSlashPrefix(path: string) {
-		if (path.startsWith('/')) {
+	protected removeSlashPrefix(path: string){
+		if (path != '/' && path.startsWith('/')) {
 			path = path.slice(1);
 		}
 		return path;
