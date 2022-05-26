@@ -9,17 +9,16 @@ The error Message is importent! it will be written in the audit log and help the
 
 import { Client, Request } from '@pepperi-addons/debug-server'
 import { PapiClient } from '@pepperi-addons/papi-sdk';
-import { LOCK_ADAL_TABLE_NAME, METADATA_ADAL_TABLE_NAME, pfsSchemaData } from './constants';
-import config from '../addon.config.json';
+import { LOCK_ADAL_TABLE_NAME, pfsSchemaData } from './constants';
 import semver from 'semver';
 
 export async function install(client: Client, request: Request): Promise<any> 
 {
 
 	const papiClient = createPapiClient(client);
-	await createMetadataADALTable(papiClient);
+	// await createMetadataADALTable(papiClient);
 	await createLockADALTable(papiClient);
-	await subscribeToExpiredRecords(papiClient);
+	// await subscribeToExpiredRecords(papiClient);
 
 	return { success: true, resultObject: {} }
 }
@@ -27,9 +26,9 @@ export async function install(client: Client, request: Request): Promise<any>
 export async function uninstall(client: Client, request: Request): Promise<any> 
 {
 	const papiClient = createPapiClient(client);
-	await papiClient.post(`/addons/data/schemes/${METADATA_ADAL_TABLE_NAME}/purge`);
+	// await papiClient.post(`/addons/data/schemes/${METADATA_ADAL_TABLE_NAME}/purge`);
 	await papiClient.post(`/addons/data/schemes/${LOCK_ADAL_TABLE_NAME}/purge`);
-	await unsubscribeToExpiredRecords(papiClient)
+	// await unsubscribeToExpiredRecords(papiClient)
 	return { success: true, resultObject: {} }
 }
 
@@ -42,10 +41,10 @@ export async function upgrade(client: Client, request: Request): Promise<any>
 		await createLockADALTable(papiClient);
 	}
 
-	if (request.body.FromVersion && semver.compare(request.body.FromVersion, '0.5.9') < 0)
-	{
-		await createMetadataADALTable(papiClient);
-	}
+	// if (request.body.FromVersion && semver.compare(request.body.FromVersion, '0.5.9') < 0)
+	// {
+	// 	await createMetadataADALTable(papiClient);
+	// }
 
 	return { success: true, resultObject: {} }
 }
@@ -66,14 +65,14 @@ function createPapiClient(Client: Client)
 	});
 }
 
-async function createMetadataADALTable(papiClient: PapiClient) 
-{
-	const pfsMetadataTable = {
-		...pfsSchemaData,
-		Name: METADATA_ADAL_TABLE_NAME
-	}
-	await papiClient.addons.data.schemes.post(pfsMetadataTable);
-}
+// async function createMetadataADALTable(papiClient: PapiClient) 
+// {
+// 	const pfsMetadataTable = {
+// 		...pfsSchemaData,
+// 		Name: METADATA_ADAL_TABLE_NAME
+// 	}
+// 	await papiClient.addons.data.schemes.post(pfsMetadataTable);
+// }
 
 async function createLockADALTable(papiClient: PapiClient) 
 {
@@ -84,34 +83,35 @@ async function createLockADALTable(papiClient: PapiClient)
 	await papiClient.addons.data.schemes.post(pfsMetadataTable);
 }
 
+//TODO: should be done on create
+// async function subscribeToExpiredRecords(papiClient: PapiClient) 
+// {
+// 	await papiClient.notification.subscriptions.upsert({
+// 		AddonUUID:config.AddonUUID,
+// 		Name: "pfs--expired-adal-records-subscription",
+// 		Type:"data",
+// 		FilterPolicy: {
+// 		  Resource: [METADATA_ADAL_TABLE_NAME],
+// 		  Action:["remove"],
+// 		  AddonUUID:[config.AddonUUID]
+// 		},
+// 		AddonRelativeURL:'/api/record_removed' // the path of the function that will remove the file from S3
+// 	});
+// }
 
-async function subscribeToExpiredRecords(papiClient: PapiClient) 
-{
-	await papiClient.notification.subscriptions.upsert({
-		AddonUUID:config.AddonUUID,
-		Name: "pfs--expired-adal-records-subscription",
-		Type:"data",
-		FilterPolicy: {
-		  Resource: [METADATA_ADAL_TABLE_NAME],
-		  Action:["remove"],
-		  AddonUUID:[config.AddonUUID]
-		},
-		AddonRelativeURL:'/api/record_removed' // the path of the function that will remove the file from S3
-	});
-}
-
-async function unsubscribeToExpiredRecords(papiClient: PapiClient) 
-{
-	await papiClient.notification.subscriptions.upsert({
-		AddonUUID:config.AddonUUID,
-		Name: "pfs--expired-adal-records-subscription",
-		Type:"data",
-		FilterPolicy: {
-		  Resource: [METADATA_ADAL_TABLE_NAME],
-		  Action:["remove"],
-		  AddonUUID:[config.AddonUUID]
-		},
-		AddonRelativeURL:'/api/record_removed',
-		Hidden: true
-	});
-}
+//TODO: should be done on purge
+// async function unsubscribeToExpiredRecords(papiClient: PapiClient) 
+// {
+// 	await papiClient.notification.subscriptions.upsert({
+// 		AddonUUID:config.AddonUUID,
+// 		Name: "pfs--expired-adal-records-subscription",
+// 		Type:"data",
+// 		FilterPolicy: {
+// 		  Resource: [METADATA_ADAL_TABLE_NAME],
+// 		  Action:["remove"],
+// 		  AddonUUID:[config.AddonUUID]
+// 		},
+// 		AddonRelativeURL:'/api/record_removed',
+// 		Hidden: true
+// 	});
+// }
