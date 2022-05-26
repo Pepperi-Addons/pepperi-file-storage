@@ -91,6 +91,7 @@ export  type IPfsListFilesResultObjects = Array<IPfsListFilesResultObject>
 
 export const dataURLRegex = /^\s*data:([a-z]+\/[\w-+\d.]+(;[a-z\-]+\=[a-z\-]+)?)?(;base64)?,([a-z0-9\!\$\&\'\,\(\)\*\+\,\;\=\-\.\_\~\:\@\/\?\%\s]*\s*)$/i;
 
+export const METADATA_ADAL_TABLE_NAME = "S3ObjectsMetadata";
 export const LOCK_ADAL_TABLE_NAME = "PfsLockTable";
 
 export const SECRETKEY_HEADER = 'x-pepperi-secretkey';

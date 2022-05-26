@@ -2,6 +2,7 @@ import { Client, Request } from "@pepperi-addons/debug-server/dist";
 import { AddonDataScheme, PapiClient } from "@pepperi-addons/papi-sdk";
 import { pfsSchemaData } from "./constants";
 import { Helper } from "./helper";
+import config from './../addon.config.json';
 
 export class PfsSchemeService
 {
@@ -22,7 +23,28 @@ export class PfsSchemeService
 		await this.validateSchemaCreationRequest();
 
 		// Upsert the schema as requested by the client, adding PFS's default fields and indices.
-		return this.upsertSchemaWithPfsFields();
+		const schemaCreationRes = this.upsertSchemaWithPfsFields();
+
+		// Subscribe to Remove events on the schema
+		await this.subscribeToExpiredRecords();
+
+		return schemaCreationRes;
+	}
+
+	private async subscribeToExpiredRecords() 
+	{
+		const papiClient = Helper.createPapiClient(this.client, config.AddonUUID);
+		await papiClient.notification.subscriptions.upsert({
+			AddonUUID:config.AddonUUID,
+			Name: "pfs-expired-adal-records-subscription",
+			Type:"data",
+			FilterPolicy: {
+				Resource: [this.schema.Name],
+				Action:["remove"],
+				AddonUUID:[this.request.query.addon_uuid]
+			},
+			AddonRelativeURL:'/api/record_removed' // the path of the function that will remove the file from S3
+		});
 	}
 
 	/**
@@ -48,7 +70,7 @@ export class PfsSchemeService
 			...this.schema
 		};
 
-		const papiClient = this.createPapiClient(this.client, this.request.query.addon_uuid, this.request.header["x-pepperi-secretkey"]);
+		const papiClient = Helper.createPapiClient(this.client, this.request.query.addon_uuid, this.request.header["x-pepperi-secretkey"]);
 		return papiClient.addons.data.schemes.post(pfsMetadataTable);
 	}
 
@@ -78,16 +100,4 @@ export class PfsSchemeService
 			throw new Error("The schema must have a Name property");
 		}
 	}
-
-	private createPapiClient(client: Client, addonUUID: string, addonScretKey: string)
-	{
-		return new PapiClient({
-			token: client.OAuthAccessToken,
-			baseURL: client.BaseURL,
-			addonUUID: addonUUID,
-			addonSecretKey: addonScretKey,
-			actionUUID: client.ActionUUID,
-		});
-	}
-
 }
