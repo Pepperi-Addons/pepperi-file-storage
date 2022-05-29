@@ -1,5 +1,5 @@
 import { Client, Request } from "@pepperi-addons/debug-server/dist";
-import { AddonDataScheme, PapiClient } from "@pepperi-addons/papi-sdk";
+import { AddonDataScheme, PapiClient, Subscription } from "@pepperi-addons/papi-sdk";
 import { pfsSchemaData } from "./constants";
 import { Helper } from "./helper";
 import config from './../addon.config.json';
@@ -31,19 +31,31 @@ export class PfsSchemeService
 		return schemaCreationRes;
 	}
 
-	private async subscribeToExpiredRecords() 
+	private async subscribeToExpiredRecords(): Promise<Subscription>
 	{
-		const papiClient = Helper.createPapiClient(this.client, config.AddonUUID);
-		await papiClient.notification.subscriptions.upsert({
-			AddonUUID:config.AddonUUID,
+		const shouldHideSubscription = false;
+		return this.expiredRecordsSubscription(shouldHideSubscription);
+	}
+
+	private async unsubscribeToExpiredRecords(): Promise<Subscription>
+	{
+		const shouldHideSubscription = true;
+		return this.expiredRecordsSubscription(shouldHideSubscription);
+	}
+
+	private async expiredRecordsSubscription(hidden: boolean): Promise<Subscription> {
+		const papiClient: PapiClient = Helper.createPapiClient(this.client, config.AddonUUID);
+		return papiClient.notification.subscriptions.upsert({
+			AddonUUID: config.AddonUUID,
 			Name: "pfs-expired-adal-records-subscription",
-			Type:"data",
+			Type: "data",
 			FilterPolicy: {
 				Resource: [this.schema.Name],
-				Action:["remove"],
-				AddonUUID:[this.request.query.addon_uuid]
+				Action: ["remove"],
+				AddonUUID: [this.request.query.addon_uuid]
 			},
-			AddonRelativeURL:'/api/record_removed' // the path of the function that will remove the file from S3
+			AddonRelativeURL: '/api/record_removed',
+			Hidden: hidden,
 		});
 	}
 
@@ -70,7 +82,7 @@ export class PfsSchemeService
 			...this.schema
 		};
 
-		const papiClient = Helper.createPapiClient(this.client, this.request.query.addon_uuid, this.request.header["x-pepperi-secretkey"]);
+		const papiClient: PapiClient = Helper.createPapiClient(this.client, this.request.query.addon_uuid, this.request.header["x-pepperi-secretkey"]);
 		return papiClient.addons.data.schemes.post(pfsMetadataTable);
 	}
 
@@ -99,5 +111,13 @@ export class PfsSchemeService
 		{
 			throw new Error("The schema must have a Name property");
 		}
+	}
+
+	/**
+	 * Completes the schema purge process. ADAL is called first, where the table's records are deleted (S3 clean up is done by the subscription to the 'remove' notifications).
+	 * All that is left to do is to remove the subscription.
+	 */
+	public async purge() {
+		return await this.unsubscribeToExpiredRecords()
 	}
 }
