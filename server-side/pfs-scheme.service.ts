@@ -43,7 +43,8 @@ export class PfsSchemeService
 		return this.expiredRecordsSubscription(shouldHideSubscription);
 	}
 
-	private async expiredRecordsSubscription(hidden: boolean): Promise<Subscription> {
+	private async expiredRecordsSubscription(hidden: boolean): Promise<Subscription> 
+	{
 		const papiClient: PapiClient = Helper.createPapiClient(this.client, config.AddonUUID);
 		return papiClient.notification.subscriptions.upsert({
 			AddonUUID: config.AddonUUID,
@@ -117,7 +118,8 @@ export class PfsSchemeService
 	 * Completes the schema purge process. ADAL is called first, where the table's records are deleted (S3 clean up is done by the subscription to the 'remove' notifications).
 	 * All that is left to do is to remove the subscription.
 	 */
-	public async purge() {
+	public async purge() 
+	{
 		return await this.unsubscribeToExpiredRecords()
 	}
 }

@@ -662,9 +662,10 @@ export class PfsService
 		const arrayOfArraysInSizeForDelete: string[][] = Helper.chunkArray(removedKeys, AWS_MAX_DELETE_OBJECTS_NUMBER);
 
 		// Create a promise for each array, and await for all of them to settle.
-		Promise.allSettled(arrayOfArraysInSizeForDelete.map(keys => (async () => {
-            await this.pfsMutator.batchDeleteS3(keys);
-        })()));
+		Promise.allSettled(arrayOfArraysInSizeForDelete.map(keys => (async () => 
+		{
+			await this.pfsMutator.batchDeleteS3(keys);
+		})()));
 	}
 }
 
