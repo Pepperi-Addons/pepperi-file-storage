@@ -1,7 +1,7 @@
 import { PapiClient } from '@pepperi-addons/papi-sdk'
 import { Client, Request } from '@pepperi-addons/debug-server';
 import jwtDecode from 'jwt-decode';
-import { dataURLRegex, DESCRIPTION_DEFAULT_VALUE, HIDDEN_DEFAULT_VALUE, CACHE_DEFAULT_VALUE,  SYNC_DEFAULT_VALUE, MAXIMAL_TREE_DEPTH, TestError, SECRETKEY_HEADER } from './constants';
+import { dataURLRegex, DESCRIPTION_DEFAULT_VALUE, HIDDEN_DEFAULT_VALUE, CACHE_DEFAULT_VALUE,  SYNC_DEFAULT_VALUE, MAXIMAL_TREE_DEPTH, TestError, SECRETKEY_HEADER, AWS_MAX_DELETE_OBJECTS_NUMBER } from './constants';
 import fetch from 'node-fetch';
 import * as path from 'path';
 import { ImageResizer } from './imageResizer';
@@ -654,11 +654,17 @@ export class PfsService
 
 	async recordRemoved() 
 	{
-		const removedKeys: [string] = this.request.body.Message.ModifiedObjects.map(modifiedObject => modifiedObject.ObjectKey);
-		for(const removedKey of removedKeys)
-		{
-			await this.pfsMutator.mutateS3(null, {Key: removedKey, isFileExpired: true});
-		}
+		// Get a list of the removed keys.
+		const removedKeys: string[] = this.request.body.Message.ModifiedObjects.map(modifiedObject => modifiedObject.ObjectKey);
+
+		// S3's DeleteObjects supports requests with up to 1000 objects.
+		// Break array to smaller arrays with size up to 1000.
+		const arrayOfArraysInSizeForDelete: string[][] = Helper.chunkArray(removedKeys, AWS_MAX_DELETE_OBJECTS_NUMBER);
+
+		// Create a promise for each array, and await for all of them to settle.
+		Promise.allSettled(arrayOfArraysInSizeForDelete.map(keys => (async () => {
+            await this.pfsMutator.batchDeleteS3(keys);
+        })()));
 	}
 }
 

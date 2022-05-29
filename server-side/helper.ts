@@ -86,4 +86,24 @@ export class Helper
 			addonSecretKey: secretKey
 		});
 	}
+	
+	/**
+	 * Returns an array with arrays of the requested chunk size.
+	 *
+	 * @param arr {Array} array to split
+	 * @param chunk_size {number} Size of every group
+	 */
+	public static chunkArray<Type>(arr: Array<Type>, chunk_size: number): Array<Array<Type>>{
+		var index = 0;
+		var arrayLength = arr.length;
+		var resArray: Array<any> = [];
+		
+		for (index = 0; index < arrayLength; index += chunk_size) {
+			const chunk = arr.slice(index, index + chunk_size);
+			// Do something if you want with the group
+			resArray.push(chunk);
+		}
+
+		return resArray;
+	}
 }

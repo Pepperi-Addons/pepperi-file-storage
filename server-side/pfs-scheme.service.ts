@@ -47,7 +47,7 @@ export class PfsSchemeService
 		const papiClient: PapiClient = Helper.createPapiClient(this.client, config.AddonUUID);
 		return papiClient.notification.subscriptions.upsert({
 			AddonUUID: config.AddonUUID,
-			Name: "pfs-expired-adal-records-subscription",
+			Name: `pfs-expired-adal-records-subscription-${this.schema.Name}`, // Names of subscriptions should be unique
 			Type: "data",
 			FilterPolicy: {
 				Resource: [this.schema.Name],

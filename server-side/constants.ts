@@ -101,6 +101,8 @@ export const DEBUG_MAXIMAL_LOCK_TIME = 1; // Debug
 
 export const MAXIMAL_TREE_DEPTH = 7;
 
+export const AWS_MAX_DELETE_OBJECTS_NUMBER = 1000;
+
 export const HIDDEN_DEFAULT_VALUE = false;
 export const DESCRIPTION_DEFAULT_VALUE = "";
 export const CACHE_DEFAULT_VALUE = true;
