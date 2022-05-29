@@ -7,6 +7,7 @@ import * as path from 'path';
 import { ImageResizer } from './imageResizer';
 import { IPfsMutator } from './DAL/IPfsMutator';
 import { IPfsGetter } from './DAL/IPfsGetter';
+import { Helper } from './helper';
 
 export class PfsService 
 {
@@ -132,7 +133,7 @@ export class PfsService
 
 	private async validateUploadRequest() 
 	{
-		await this.validateAddonSecretKey();
+		await Helper.validateAddonSecretKey(this.request.header, this.client, this.AddonUUID);
 
 		if (!this.request.body.Key) 
 		{
@@ -509,47 +510,6 @@ export class PfsService
 		}
 	}
 
-	private async validateAddonSecretKey() 
-	{
-		
-		for (const [key, value] of Object.entries(this.request.header)) 
-		{
-			this.request.header[key.toLowerCase()] = value;
-		}
-
-		if (!this.request.header["x-pepperi-secretkey"] || !await this.isValidRequestedAddon(this.client, this.request.header["x-pepperi-secretkey"], this.AddonUUID)) 
-		{
-			const err: any = new Error(`Authorization request denied. ${this.request.header["x-pepperi-secretkey"]? "check secret key" : "Missing secret key header"} `);
-			err.code = 401;
-			throw err;
-		}
-	}
-
-	private async isValidRequestedAddon(client: Client, secretKey, addonUUID)
-	{
-		const papiClient = new PapiClient({
-		  baseURL: client.BaseURL,
-		  token: client.OAuthAccessToken,
-		  addonUUID: addonUUID,
-		  actionUUID: client.ActionUUID,
-		  addonSecretKey: secretKey
-		});
-
-		try
-		{
-			const res = await papiClient.get(`/var/sk/addons/${addonUUID}/validate`);
-			return true;
-		}
-		catch (err) 
-		{
-			if (err instanceof Error) 
-			{
-				console.error(`${err.message}`);
-			}
-			return false;
-		}
-	}
-
 	private getMimeType(data?): string 
 	{
 		data = data ?? this.request.body;
@@ -626,7 +586,7 @@ export class PfsService
 				if(data.Description) newFileFields.Description = data.Description;
 				if(data.hasOwnProperty('Cache')) newFileFields.Cache = data.Cache;
 
-				var uploadedBy: string = '';
+				let uploadedBy = '';
 				if(data.URI && (uploadedBy = await this.getUploadedByUUID()) !== existingFile.UploadedBy) 
 				// Assignment to uploadedBy var inside the if-statement is intentional.
 				// Check if URI was passed to avoid calling async getUploadedByUUID() unnecessarily.
@@ -652,9 +612,10 @@ export class PfsService
 	 * Return the UUID of the user that uploads the file. Return blank string if it is the support admin user.
 	 * @returns UUID of the user that uploaded the file
 	 */
-	private async getUploadedByUUID(): Promise<any> {
+	private async getUploadedByUUID(): Promise<any> 
+	{
 		const userId = (jwtDecode(this.client.OAuthAccessToken))["pepperi.id"];
-        const isSupportAdminUser: Boolean = (await this.papiClient.get(`/users/${userId}?fields=IsSupportAdminUser`)).IsSupportAdminUser;
+		const isSupportAdminUser: boolean = (await this.papiClient.get(`/users/${userId}?fields=IsSupportAdminUser`)).IsSupportAdminUser;
 
 		//Leave files uploaded by support admin user (i.e. uploading using integration) with a blank 
 		return isSupportAdminUser ? '' : jwtDecode(this.client.OAuthAccessToken)['pepperi.useruuid'];
