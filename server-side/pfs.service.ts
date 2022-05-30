@@ -139,6 +139,8 @@ export class PfsService
 			throw new Error("Missing mandatory field 'Key'");
 		}
 
+		await this.validateExtension();
+
 		if(this.getPathDepth() > MAXIMAL_TREE_DEPTH)
 		{
 			throw new Error(`Requested path is deeper than the maximum allowed depth of ${MAXIMAL_TREE_DEPTH}.`);
@@ -148,6 +150,27 @@ export class PfsService
 		{
 			this.validateThumbnailsRequest(this.request.body.Thumbnails);
 		}
+	}
+
+	/**
+	 * Throw an error if the file's extension is not part of the whitelist.
+	 */
+	private async validateExtension() {
+		if(!this.request.body.Key.endsWith('/')) // Don't validate folders
+		{
+			const validExtensions = await this.getPfsExtensionsWhitelist();
+			const extension = path.extname(this.request.body.Key);
+			
+			if(!validExtensions.includes(extension))
+			{
+				throw new Error(`The requested file extension '${extension}' is not supported.`);
+			}
+		}
+		
+	}
+	private async getPfsExtensionsWhitelist() 
+	{
+		return Object.values(JSON.parse((await this.papiClient.get(`/configuration_fields?key=PFSExtensionsWhitelist`)).Value));
 	}
 
 	private async mutatePfs() 
