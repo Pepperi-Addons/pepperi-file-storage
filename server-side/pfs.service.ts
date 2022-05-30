@@ -1,7 +1,7 @@
 import { PapiClient } from '@pepperi-addons/papi-sdk'
 import { Client, Request } from '@pepperi-addons/debug-server';
 import jwtDecode from 'jwt-decode';
-import { dataURLRegex, DESCRIPTION_DEFAULT_VALUE, HIDDEN_DEFAULT_VALUE, CACHE_DEFAULT_VALUE,  SYNC_DEFAULT_VALUE, MAXIMAL_TREE_DEPTH, TestError } from './constants';
+import { dataURLRegex, DESCRIPTION_DEFAULT_VALUE, HIDDEN_DEFAULT_VALUE, CACHE_DEFAULT_VALUE,  SYNC_DEFAULT_VALUE, MAXIMAL_TREE_DEPTH, TestError, SECRETKEY_HEADER } from './constants';
 import fetch from 'node-fetch';
 import * as path from 'path';
 import { ImageResizer } from './imageResizer';
@@ -11,7 +11,6 @@ import { Helper } from './helper';
 
 export class PfsService 
 {
-	papiClient: PapiClient;
 	DistributorUUID: string;
 	AddonUUID: string;
 	readonly environment: string;
@@ -21,13 +20,7 @@ export class PfsService
 
 	constructor(private client: Client, private request: Request, private pfsMutator: IPfsMutator, private pfsGetter: IPfsGetter ) 
 	{
-		this.papiClient = new PapiClient({
-			baseURL: client.BaseURL,
-			token: client.OAuthAccessToken,
-			addonUUID: client.AddonUUID,
-			addonSecretKey: client.AddonSecretKey,
-			actionUUID: client.AddonUUID
-		});
+		request.header = Helper.getLowerCaseHeaders(request.header);
 				 
 		this.environment = jwtDecode(client.OAuthAccessToken)['pepperi.datacenter'];
 		this.DistributorUUID = jwtDecode(client.OAuthAccessToken)['pepperi.distributoruuid'];
@@ -559,7 +552,7 @@ export class PfsService
 		if(!existingFile.doesFileExist)
 		{
 			newFileFields.Name = `${fileName}${data.Key.endsWith('/') ? '/' :''}`; // Add the dropped '/' for folders.
-			newFileFields.Folder = containingFolder;
+			newFileFields.Folder = containingFolder ? containingFolder : '/'; // Set '/' for root folder
 			newFileFields.MIME = this.getMimeType(data);
 			newFileFields.Hidden = data.Hidden ?? HIDDEN_DEFAULT_VALUE;
 
@@ -615,7 +608,8 @@ export class PfsService
 	private async getUploadedByUUID(): Promise<any> 
 	{
 		const userId = (jwtDecode(this.client.OAuthAccessToken))["pepperi.id"];
-		const isSupportAdminUser: boolean = (await this.papiClient.get(`/users/${userId}?fields=IsSupportAdminUser`)).IsSupportAdminUser;
+		const papiClient: PapiClient = Helper.createPapiClient(this.client, this.AddonUUID, this.request.header[SECRETKEY_HEADER]);
+		const isSupportAdminUser: boolean = (await papiClient.get(`/users/${userId}?fields=IsSupportAdminUser`)).IsSupportAdminUser;
 
 		//Leave files uploaded by support admin user (i.e. uploading using integration) with a blank 
 		return isSupportAdminUser ? '' : jwtDecode(this.client.OAuthAccessToken)['pepperi.useruuid'];

@@ -1,5 +1,5 @@
 import { Client, Request } from '@pepperi-addons/debug-server';
-import { CdnServers, LOCK_ADAL_TABLE_NAME, METADATA_ADAL_TABLE_NAME } from "../constants";
+import { CdnServers, LOCK_ADAL_TABLE_NAME, SECRETKEY_HEADER } from "../constants";
 import { PapiClient } from '@pepperi-addons/papi-sdk/dist/papi-client';
 import config from '../../addon.config.json';
 import { FindOptions } from '@pepperi-addons/papi-sdk';
@@ -13,7 +13,8 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 	constructor(client: Client, request: Request, maximalLockTime:number)
 	{
         super(client, request, maximalLockTime);
-				 
+		
+		//Used for operations on the lock table.
 		this.papiClient = new PapiClient({
 			baseURL: client.BaseURL,
 			token: client.OAuthAccessToken,
@@ -22,12 +23,13 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 			addonSecretKey: client.AddonSecretKey
 		});
 
+		// Used for other operations, GET and POST to the client addon's PFS table.
 		this.hostedAddonPapiClient = new PapiClient({
 			baseURL: client.BaseURL,
 			token: client.OAuthAccessToken,
-			addonUUID: this.AddonUUID,
+			addonUUID: this.clientAddonUUID,
 			actionUUID: client.ActionUUID,
-			addonSecretKey: this.request.header["x-pepperi-secretkey"]
+			addonSecretKey: this.request.header[SECRETKEY_HEADER]
 		});
 	}
 
@@ -35,10 +37,10 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 
 	async listFolderContents(folderName: string): Promise<any> 
 	{
-		const folderNameAbsolutePath = this.getAbsolutePath(folderName);
+		folderName = this.removeSlashPrefix(folderName);
 
 		const findOptions: FindOptions = {
-			where: `Folder='${folderName == '/' ? folderNameAbsolutePath : folderNameAbsolutePath.slice(0, -1)}'${(this.request.query && this.request.query.where) ? "AND(" + this.request.query.where + ")" :""}`,
+			where: `Folder='${folderName == '/' ? folderName : folderName.slice(0, -1)}'${(this.request.query && this.request.query.where) ? "AND(" + this.request.query.where + ")" :""}`,
 			...(this.request.query && this.request.query.page_size && {page_size: parseInt(this.request.query.page_size)}),
 			...(this.request.query && this.request.query.page && {page: this.getRequestedPageNumber()}),
 			...(this.request.query && this.request.query.fields && {fields: this.request.query.fields}),
@@ -47,12 +49,7 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 			...(this.request.query && this.request.query.include_deleted && {include_deleted: this.request.query.include_deleted}),
 		}
 
-		const res =  await this.papiClient.addons.data.uuid(config.AddonUUID).table(METADATA_ADAL_TABLE_NAME).find(findOptions);
-
-		res.map(file => 
-		{
-			return this.setRelativePathsInMetadata(file);
-		});
+		const res =  await this.hostedAddonPapiClient.addons.data.uuid(this.clientAddonUUID).table(this.clientSchemaName).find(findOptions);
 
 		console.log(`Files listing done successfully.`);
 		return res;
@@ -60,14 +57,12 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 
 	async downloadFileMetadata(Key: string): Promise<any> 
 	{
-		const tableName = METADATA_ADAL_TABLE_NAME;
-		const downloadRes = await this.getObjectFromTable(this.getAbsolutePath(Key), tableName)
-		this.setRelativePathsInMetadata(downloadRes);
+		const downloadRes = await this.getObjectFromTable(this.removeSlashPrefix(Key), this.clientSchemaName);
 
 		return downloadRes;
 	}
 
-	private async getObjectFromTable(key, tableName, getHidden: boolean = false){
+	private async getObjectFromTable(key, tableName, papiClient: PapiClient = this.hostedAddonPapiClient, tableOwnerUUID: string = this.clientAddonUUID, getHidden: boolean = false){
 		console.log(`Attempting to download the following key from ADAL: ${key}, Table name: ${tableName}`);
 		try 
 		{
@@ -77,7 +72,7 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 				include_deleted: getHidden
 			}
 
-			const downloaded = await this.papiClient.addons.data.uuid(config.AddonUUID).table(tableName).find(findOptions);
+			const downloaded = await papiClient.addons.data.uuid(tableOwnerUUID).table(tableName).find(findOptions);
 			if(downloaded.length === 1)
 			{
 				console.log(`File Downloaded`);
@@ -121,7 +116,7 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 		{
 			const lockAbsoluteKey = this.getAbsolutePath(key).replace(new RegExp("/", 'g'), "~");
 			const getHidden: boolean = true;
-			res = await this.getObjectFromTable(lockAbsoluteKey, tableName, getHidden);
+			res = await this.getObjectFromTable(lockAbsoluteKey, tableName, this.papiClient, config.AddonUUID ,getHidden);
 			res.Key = this.getRelativePath(res.Key.replace(new RegExp("~", 'g'), "/"));
 		}
 		catch // If the object isn't locked, the getObjectFromTable will throw an "object not found" error. Return null to indicate this object isn't locked.
@@ -197,46 +192,32 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 
 	private async uploadFileMetadata(newFileFields: any, existingFile: any): Promise<any> 
 	{
-		// Set metdata to absolute paths
-		this.setAbsolutePathsInMetadata(newFileFields, existingFile);
+		newFileFields.Key = this.removeSlashPrefix(newFileFields.Key);
+		newFileFields.Folder = this.removeSlashPrefix(newFileFields.Folder);
+		// Set Urls
+		this.setUrls(newFileFields, existingFile);
 		
 		const presignedURL = newFileFields.PresignedURL;
 		delete newFileFields.PresignedURL //Don't store PresignedURL in ADAL
 
-		const res =  await this.papiClient.addons.data.uuid(config.AddonUUID).table(METADATA_ADAL_TABLE_NAME).upsert(newFileFields);
+		const res =  await this.hostedAddonPapiClient.addons.data.uuid(this.clientAddonUUID).table(this.clientSchemaName).upsert(newFileFields);
 
 		if(presignedURL){ // Return PresignedURL if there was one
 			res.PresignedURL = presignedURL;
 		}
 
-		this.setRelativePathsInMetadata(res);
-
 		return res;
 	}
 
-	private setRelativePathsInMetadata(res) 
-	{
-		if(res.Key)
-		{
-			res.Key = this.getRelativePath(res.Key);
-		}
-		if(res.Folder)
-		{
-			res.Folder = this.getRelativePath(res.Folder);
-		}
-	}
 
-	private setAbsolutePathsInMetadata(newFileFields: any, existingFile: any) 
+	private setUrls(newFileFields: any, existingFile: any) 
 	{
-		newFileFields.Key = this.getAbsolutePath(newFileFields.Key);
 
 		if (!existingFile.doesFileExist) 
 		{
-			newFileFields.Folder = this.getAbsolutePath(newFileFields.Folder);
-
 			if (!newFileFields.Key.endsWith('/')) //Add URL if this isn't a folder and this file doesn't exist.
 			{
-				newFileFields.URL = `${CdnServers[this.environment]}/${newFileFields.Key}`;
+				newFileFields.URL = `${CdnServers[this.environment]}/${this.getAbsolutePath(newFileFields.Key)}`;
 			}
 			else
 			{
@@ -245,7 +226,7 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 		}
 		if(newFileFields.Thumbnails){
 			newFileFields.Thumbnails.forEach(thumbnail => {
-				thumbnail.URL = `${CdnServers[this.environment]}/thumbnails/${newFileFields.Key}_${thumbnail.Size}`;
+				thumbnail.URL = `${CdnServers[this.environment]}/thumbnails/${this.getAbsolutePath(newFileFields.Key)}_${thumbnail.Size}`;
 			});
 		}
 	}
