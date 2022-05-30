@@ -627,11 +627,13 @@ export class PfsService
 		const downloadKeyRes: string = downloadKey ?? ((this.request.body && this.request.body.Key) ? this.request.body.Key : this.request.query.Key); 
 		const whereClause = `Key='${downloadKeyRes}'`;
 		const res = await this.pfsGetter.getObjects(whereClause);
-		if (res.length === 1) {
+		if (res.length === 1) 
+		{
 			console.log(`File Downloaded`);
 			return res[0];
 		}
-		else { //Couldn't find results
+		else 
+		{ //Couldn't find results
 			console.error(`Could not find requested item: '${downloadKeyRes}'`);
 			const err: any = new Error(`Could not find requested item: '${downloadKeyRes}'`);
 			err.code = 404;
