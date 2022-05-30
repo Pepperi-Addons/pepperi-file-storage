@@ -10,7 +10,7 @@ export async function file(client: Client, request: Request)
 		request.query.Key = request.query.key;
 	}
 
-	validateResourceNameQueryParam(request);
+	Helper.validateResourceNameQueryParam(request);
 
 	switch (request.method) 
 	{
@@ -30,7 +30,7 @@ export async function files(client: Client, request: Request)
 {
 	console.log(`Request received: ${JSON.stringify(request)}`);
 
-	validateFilesQueryParams(request);
+	Helper.validateFilesQueryParams(request);
 
 	switch (request.method) 
 	{
@@ -56,28 +56,6 @@ export async function files(client: Client, request: Request)
 	default: {
 		throw new Error(`Unsupported method: ${request.method}`);
 	}
-	}
-}
-
-function validateFilesQueryParams(request: Request) 
-{
-	validateAddonUUIDQueryParam(request);
-	validateResourceNameQueryParam(request);
-}
-
-function validateResourceNameQueryParam(request: Request) 
-{
-	if (!(request.query && request.query.resource_name)) 
-	{
-		throw new Error(`Missing necessary parameter: resource_name`);
-	}
-}
-
-function validateAddonUUIDQueryParam(request: Request) 
-{
-	if (!(request.query && request.query.addon_uuid)) 
-	{
-		throw new Error(`Missing necessary parameter: addon_uuid`);
 	}
 }
 

@@ -48,15 +48,11 @@ export abstract class AbstractBasePfsDal implements IPfsGetter, IPfsMutator
 
 	//#region IPfsGetter
 
-	abstract listFolderContents(folderName: string): Promise<any>;
-
-	abstract downloadFileMetadata(Key: string): Promise<any>;
-
 	abstract isObjectLocked(key: string);
 
 	abstract getObjectS3FileVersion(Key: any);
 
-	abstract getObjects(): Promise<AddonData[]>;
+	abstract getObjects(whereClause?: string): Promise<AddonData[]>;
 	//#endregion
 	
 

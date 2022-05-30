@@ -35,23 +35,11 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 
 	//#region IPfsGetter
 
-	async listFolderContents(folderName: string): Promise<AddonData[]> 
-	{
-		folderName = this.removeSlashPrefix(folderName);
-
-		if(!this.request.query){
-			this.request['query'] = {};
-		}
-
-		this.request.query.where = `Folder='${folderName == '/' ? folderName : folderName.slice(0, -1)}'${(this.request.query && this.request.query.where) ? "AND(" + this.request.query.where + ")" :""}`
-		
-		return await this.getObjects();
-	}
-
-	async getObjects(): Promise<AddonData[]>
+	async getObjects(whereClause?: string): Promise<AddonData[]>
 	{
 		const findOptions: FindOptions = {
 			...(this.request.query && this.request.query.where && {where: this.request.query.where}),
+			...(whereClause && {where: whereClause}),
 			...(this.request.query && this.request.query.page_size && {page_size: parseInt(this.request.query.page_size)}),
 			...(this.request.query && this.request.query.page && {page: this.getRequestedPageNumber()}),
 			...(this.request.query && this.request.query.fields && {fields: this.request.query.fields}),
@@ -64,13 +52,6 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 
 		console.log(`Files listing done successfully.`);
 		return res;
-	}
-
-	async downloadFileMetadata(Key: string): Promise<any> 
-	{
-		const downloadRes = await this.getObjectFromTable(this.removeSlashPrefix(Key), this.clientSchemaName);
-
-		return downloadRes;
 	}
 
 	private async getObjectFromTable(key, tableName, papiClient: PapiClient = this.hostedAddonPapiClient, tableOwnerUUID: string = this.clientAddonUUID, getHidden: boolean = false){

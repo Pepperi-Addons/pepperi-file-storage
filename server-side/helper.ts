@@ -107,4 +107,26 @@ export class Helper
 
 		return resArray;
 	}
+
+	public static validateFilesQueryParams(request: Request) 
+	{
+		this.validateAddonUUIDQueryParam(request);
+		this.validateResourceNameQueryParam(request);
+	}
+
+	public static validateResourceNameQueryParam(request: Request) 
+	{
+		if (!(request.query && request.query.resource_name)) 
+		{
+			throw new Error(`Missing necessary parameter: resource_name`);
+		}
+	}
+
+	public static  validateAddonUUIDQueryParam(request: Request) 
+	{
+		if (!(request.query && request.query.addon_uuid)) 
+		{
+			throw new Error(`Missing necessary parameter: addon_uuid`);
+		}
+	}
 }
