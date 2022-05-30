@@ -30,19 +30,21 @@ export async function files(client: Client, request: Request)
 {
 	console.log(`Request received: ${JSON.stringify(request)}`);
 
+	validateFilesQueryParams(request);
+
 	switch (request.method) 
 	{
 	case "GET": {
+		const dal = Helper.DalFactory(client, request);
+		const pfs = new PfsService(client, request, dal, dal);
+
 		if (request.query.folder) 
-		{
-			const dal = Helper.DalFactory(client, request);
-			const pfs = new PfsService(client, request, dal, dal);
-				
-			return pfs.listFiles();
+		{				
+			return pfs.listFolderContent();
 		}
 		else 
 		{
-			throw new Error(`Missing necessary parameter: folder`);
+			return pfs.listObjects();
 		}
 	}
 	case "POST": {

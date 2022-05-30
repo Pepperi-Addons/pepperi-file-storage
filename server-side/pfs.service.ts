@@ -625,7 +625,7 @@ export class PfsService
 		return await this.pfsGetter.downloadFileMetadata(downloadKeyRes)
 	}
 
-	async listFiles()
+	async listFolderContent()
 	{
 		try 
 		{
@@ -650,6 +650,11 @@ export class PfsService
 				throw err;
 			}
 		}
+	}
+
+	async listObjects(){
+		//TODO order by creation date, to support DIMX export.
+		return this.pfsGetter.getObjects();
 	}
 
 	async recordRemoved() 

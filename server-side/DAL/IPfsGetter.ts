@@ -1,3 +1,5 @@
+import { AddonData } from "@pepperi-addons/papi-sdk";
+
 export interface IPfsGetter
 {
 	/**
@@ -17,4 +19,10 @@ export interface IPfsGetter
      * @param FolderName The folder's content to be listed.
      */
     listFolderContents(FolderName: string): Promise<any>;
+
+    /**
+     * Get a list of objects (files and folders). Standard Pepperi flags apply (i.e. where clause, include_deleted, etc.).
+     */
+     getObjects(): Promise<AddonData[]>;
+
 }
