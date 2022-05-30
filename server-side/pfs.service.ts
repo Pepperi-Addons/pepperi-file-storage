@@ -1,7 +1,7 @@
 import { PapiClient } from '@pepperi-addons/papi-sdk'
 import { Client, Request } from '@pepperi-addons/debug-server';
 import jwtDecode from 'jwt-decode';
-import { dataURLRegex, DESCRIPTION_DEFAULT_VALUE, HIDDEN_DEFAULT_VALUE, CACHE_DEFAULT_VALUE,  SYNC_DEFAULT_VALUE, MAXIMAL_TREE_DEPTH, TestError } from './constants';
+import { dataURLRegex, DESCRIPTION_DEFAULT_VALUE, HIDDEN_DEFAULT_VALUE, CACHE_DEFAULT_VALUE,  SYNC_DEFAULT_VALUE, MAXIMAL_TREE_DEPTH, TestError, EXTENSIONS_WHITELIST } from './constants';
 import fetch from 'node-fetch';
 import * as path from 'path';
 import { ImageResizer } from './imageResizer';
@@ -155,22 +155,17 @@ export class PfsService
 	/**
 	 * Throw an error if the file's extension is not part of the whitelist.
 	 */
-	private async validateExtension() {
+	private async validateExtension() 
+	{
 		if(!this.request.body.Key.endsWith('/')) // Don't validate folders
 		{
-			const validExtensions = await this.getPfsExtensionsWhitelist();
 			const extension = path.extname(this.request.body.Key);
 			
-			if(!validExtensions.includes(extension))
+			if(!EXTENSIONS_WHITELIST.includes(extension))
 			{
-				throw new Error(`The requested file extension '${extension}' is not supported.`);
+				throw new Error(extension ? `The requested file extension '${extension}' is not supported.` : 'The requested file does not have an extension.');
 			}
 		}
-		
-	}
-	private async getPfsExtensionsWhitelist() 
-	{
-		return Object.values(JSON.parse((await this.papiClient.get(`/configuration_fields?key=PFSExtensionsWhitelist`)).Value));
 	}
 
 	private async mutatePfs() 
@@ -649,7 +644,7 @@ export class PfsService
 				if(data.Description) newFileFields.Description = data.Description;
 				if(data.hasOwnProperty('Cache')) newFileFields.Cache = data.Cache;
 
-				var uploadedBy: string = '';
+				let uploadedBy = '';
 				if(data.URI && (uploadedBy = await this.getUploadedByUUID()) !== existingFile.UploadedBy) 
 				// Assignment to uploadedBy var inside the if-statement is intentional.
 				// Check if URI was passed to avoid calling async getUploadedByUUID() unnecessarily.
@@ -675,9 +670,10 @@ export class PfsService
 	 * Return the UUID of the user that uploads the file. Return blank string if it is the support admin user.
 	 * @returns UUID of the user that uploaded the file
 	 */
-	private async getUploadedByUUID(): Promise<any> {
+	private async getUploadedByUUID(): Promise<any> 
+	{
 		const userId = (jwtDecode(this.client.OAuthAccessToken))["pepperi.id"];
-        const isSupportAdminUser: Boolean = (await this.papiClient.get(`/users/${userId}?fields=IsSupportAdminUser`)).IsSupportAdminUser;
+		const isSupportAdminUser: boolean = (await this.papiClient.get(`/users/${userId}?fields=IsSupportAdminUser`)).IsSupportAdminUser;
 
 		//Leave files uploaded by support admin user (i.e. uploading using integration) with a blank 
 		return isSupportAdminUser ? '' : jwtDecode(this.client.OAuthAccessToken)['pepperi.useruuid'];
