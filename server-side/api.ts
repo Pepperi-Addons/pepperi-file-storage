@@ -86,6 +86,9 @@ export async function record_removed(client: Client, request: Request)
 	switch (request.method) 
 	{
 	case "POST": {
+		request.query.addon_uuid = request.body.FilterAttributes.AddonUUID;
+		request.query.resource_name = request.body.FilterAttributes.Resource;
+
 		const dal = Helper.DalFactory(client, request);
 		const pfs = new PfsService(client, request, dal, dal);
 

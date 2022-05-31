@@ -15,3 +15,17 @@ export async function create(client: Client, request: Request)
 	}
 	}
 }
+
+export async function purge(client: Client, request: Request) 
+{
+	switch (request.method) 
+	{
+	case "POST": {
+		const pfsSchemeService = new PfsSchemeService(client, request);
+		return await pfsSchemeService.purge();
+	}
+	default: {
+		throw new Error(`Unsupported method: ${request.method}`);
+	}
+	}
+}
