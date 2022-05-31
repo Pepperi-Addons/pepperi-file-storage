@@ -2,7 +2,7 @@ export interface IPfsMutator
 {
 	/**
      * Delete the given file's given VersionID.
-     * @param Key The key hows version is to be deleted.
+     * @param Key The key whos version is to be deleted.
      * @param s3FileVersion The version to be deleted.
      */
     deleteS3FileVersion(Key: any, s3FileVersion: any);
@@ -62,4 +62,10 @@ export interface IPfsMutator
      * Return the maximal lock time
      */
     getMaximalLockTime();
+
+    /**
+     * Batch deletes the received keys from S3.
+     * @param keys The array of keys to delete
+     */
+    batchDeleteS3(keys: Array<string>);
 }

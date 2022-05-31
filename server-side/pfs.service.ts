@@ -1,16 +1,16 @@
 import { PapiClient } from '@pepperi-addons/papi-sdk'
 import { Client, Request } from '@pepperi-addons/debug-server';
 import jwtDecode from 'jwt-decode';
-import { dataURLRegex, DESCRIPTION_DEFAULT_VALUE, HIDDEN_DEFAULT_VALUE, CACHE_DEFAULT_VALUE,  SYNC_DEFAULT_VALUE, MAXIMAL_TREE_DEPTH, TestError, EXTENSIONS_WHITELIST } from './constants';
+import { dataURLRegex, DESCRIPTION_DEFAULT_VALUE, HIDDEN_DEFAULT_VALUE, CACHE_DEFAULT_VALUE,  SYNC_DEFAULT_VALUE, MAXIMAL_TREE_DEPTH, TestError, SECRETKEY_HEADER, AWS_MAX_DELETE_OBJECTS_NUMBER, EXTENSIONS_WHITELIST} from './constants';
 import fetch from 'node-fetch';
 import * as path from 'path';
 import { ImageResizer } from './imageResizer';
 import { IPfsMutator } from './DAL/IPfsMutator';
 import { IPfsGetter } from './DAL/IPfsGetter';
+import { Helper } from './helper';
 
 export class PfsService 
 {
-	papiClient: PapiClient;
 	DistributorUUID: string;
 	AddonUUID: string;
 	readonly environment: string;
@@ -20,13 +20,7 @@ export class PfsService
 
 	constructor(private client: Client, private request: Request, private pfsMutator: IPfsMutator, private pfsGetter: IPfsGetter ) 
 	{
-		this.papiClient = new PapiClient({
-			baseURL: client.BaseURL,
-			token: client.OAuthAccessToken,
-			addonUUID: client.AddonUUID,
-			addonSecretKey: client.AddonSecretKey,
-			actionUUID: client.AddonUUID
-		});
+		request.header = Helper.getLowerCaseHeaders(request.header);
 				 
 		this.environment = jwtDecode(client.OAuthAccessToken)['pepperi.datacenter'];
 		this.DistributorUUID = jwtDecode(client.OAuthAccessToken)['pepperi.distributoruuid'];
@@ -132,7 +126,7 @@ export class PfsService
 
 	private async validateUploadRequest() 
 	{
-		await this.validateAddonSecretKey();
+		await Helper.validateAddonSecretKey(this.request.header, this.client, this.AddonUUID);
 
 		if (!this.request.body.Key) 
 		{
@@ -498,8 +492,11 @@ export class PfsService
 
 	private async validateNoContentsBeforeFolderDeletion() 
 	{
-		const folderContents = await this.pfsGetter.listFolderContents(this.request.body.Key);
-		if (folderContents.length > 0) // Currently deleting folder that has exisitng content is not supported.
+		
+		const whereClause = `Folder='${this.request.body.Key.slice(0, -1)}'`;
+		const folderContents = await this.pfsGetter.getObjects(whereClause);
+
+		if (folderContents.length > 0) // Deleting a folder that has exisitng content is not currently supported.
 		{
 			const err: any = new Error(`Bad request. Folder content must be deleted before the deletion of the folder.`);
 			err.code = 400;
@@ -524,47 +521,6 @@ export class PfsService
 		{
 			// a folder's MIME type should always be 'pepperi/folder', otherwise the POST should fail
 			throw new Error("A filename cannot contain a '/'.");
-		}
-	}
-
-	private async validateAddonSecretKey() 
-	{
-		
-		for (const [key, value] of Object.entries(this.request.header)) 
-		{
-			this.request.header[key.toLowerCase()] = value;
-		}
-
-		if (!this.request.header["x-pepperi-secretkey"] || !await this.isValidRequestedAddon(this.client, this.request.header["x-pepperi-secretkey"], this.AddonUUID)) 
-		{
-			const err: any = new Error(`Authorization request denied. ${this.request.header["x-pepperi-secretkey"]? "check secret key" : "Missing secret key header"} `);
-			err.code = 401;
-			throw err;
-		}
-	}
-
-	private async isValidRequestedAddon(client: Client, secretKey, addonUUID)
-	{
-		const papiClient = new PapiClient({
-		  baseURL: client.BaseURL,
-		  token: client.OAuthAccessToken,
-		  addonUUID: addonUUID,
-		  actionUUID: client.ActionUUID,
-		  addonSecretKey: secretKey
-		});
-
-		try
-		{
-			const res = await papiClient.get(`/var/sk/addons/${addonUUID}/validate`);
-			return true;
-		}
-		catch (err) 
-		{
-			if (err instanceof Error) 
-			{
-				console.error(`${err.message}`);
-			}
-			return false;
 		}
 	}
 
@@ -617,7 +573,7 @@ export class PfsService
 		if(!existingFile.doesFileExist)
 		{
 			newFileFields.Name = `${fileName}${data.Key.endsWith('/') ? '/' :''}`; // Add the dropped '/' for folders.
-			newFileFields.Folder = containingFolder;
+			newFileFields.Folder = containingFolder ? containingFolder : '/'; // Set '/' for root folder
 			newFileFields.MIME = this.getMimeType(data);
 			newFileFields.Hidden = data.Hidden ?? HIDDEN_DEFAULT_VALUE;
 
@@ -673,7 +629,8 @@ export class PfsService
 	private async getUploadedByUUID(): Promise<any> 
 	{
 		const userId = (jwtDecode(this.client.OAuthAccessToken))["pepperi.id"];
-		const isSupportAdminUser: boolean = (await this.papiClient.get(`/users/${userId}?fields=IsSupportAdminUser`)).IsSupportAdminUser;
+		const papiClient: PapiClient = Helper.createPapiClient(this.client, this.AddonUUID, this.request.header[SECRETKEY_HEADER]);
+		const isSupportAdminUser: boolean = (await papiClient.get(`/users/${userId}?fields=IsSupportAdminUser`)).IsSupportAdminUser;
 
 		//Leave files uploaded by support admin user (i.e. uploading using integration) with a blank 
 		return isSupportAdminUser ? '' : jwtDecode(this.client.OAuthAccessToken)['pepperi.useruuid'];
@@ -686,10 +643,23 @@ export class PfsService
 	async downloadFile(downloadKey? : string) 
 	{
 		const downloadKeyRes: string = downloadKey ?? ((this.request.body && this.request.body.Key) ? this.request.body.Key : this.request.query.Key); 
-		return await this.pfsGetter.downloadFileMetadata(downloadKeyRes)
+		const whereClause = `Key='${downloadKeyRes}'`;
+		const res = await this.pfsGetter.getObjects(whereClause);
+		if (res.length === 1) 
+		{
+			console.log(`File Downloaded`);
+			return res[0];
+		}
+		else 
+		{ //Couldn't find results
+			console.error(`Could not find requested item: '${downloadKeyRes}'`);
+			const err: any = new Error(`Could not find requested item: '${downloadKeyRes}'`);
+			err.code = 404;
+			throw err;
+		}
 	}
 
-	async listFiles()
+	async listFolderContent()
 	{
 		try 
 		{
@@ -704,7 +674,9 @@ export class PfsService
 				throw err;
 			}
 
-			return this.pfsGetter.listFolderContents(requestedFolder);
+			const whereClause = `Folder='${requestedFolder == '/' ? requestedFolder : requestedFolder.slice(0, -1)}'${(this.request.query && this.request.query.where) ? "AND(" + this.request.query.where + ")" :""}`
+			return this.pfsGetter.getObjects(whereClause)
+
 		}
 		catch (err) 
 		{
@@ -716,13 +688,26 @@ export class PfsService
 		}
 	}
 
+	async listObjects(whereClause?:string)
+	{
+		//TODO order by creation date, to support DIMX export.
+		return this.pfsGetter.getObjects(whereClause);
+	}
+
 	async recordRemoved() 
 	{
-		const removedKeys: [string] = this.request.body.Message.ModifiedObjects.map(modifiedObject => modifiedObject.ObjectKey);
-		for(const removedKey of removedKeys)
+		// Get a list of the removed keys.
+		const removedKeys: string[] = this.request.body.Message.ModifiedObjects.map(modifiedObject => modifiedObject.ObjectKey);
+
+		// S3's DeleteObjects supports requests with up to 1000 objects.
+		// Break array to smaller arrays with size up to 1000.
+		const arrayOfArraysInSizeForDelete: string[][] = Helper.chunkArray(removedKeys, AWS_MAX_DELETE_OBJECTS_NUMBER);
+
+		// Create a promise for each array, and await for all of them to settle.
+		Promise.allSettled(arrayOfArraysInSizeForDelete.map(keys => (async () => 
 		{
-			await this.pfsMutator.mutateS3(null, {Key: removedKey, isFileExpired: true});
-		}
+			await this.pfsMutator.batchDeleteS3(keys);
+		})()));
 	}
 }
 
