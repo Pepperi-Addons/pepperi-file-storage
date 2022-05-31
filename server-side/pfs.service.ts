@@ -1,7 +1,7 @@
 import { PapiClient } from '@pepperi-addons/papi-sdk'
 import { Client, Request } from '@pepperi-addons/debug-server';
 import jwtDecode from 'jwt-decode';
-import { dataURLRegex, DESCRIPTION_DEFAULT_VALUE, HIDDEN_DEFAULT_VALUE, CACHE_DEFAULT_VALUE,  SYNC_DEFAULT_VALUE, MAXIMAL_TREE_DEPTH, TestError, SECRETKEY_HEADER, AWS_MAX_DELETE_OBJECTS_NUMBER } from './constants';
+import { dataURLRegex, DESCRIPTION_DEFAULT_VALUE, HIDDEN_DEFAULT_VALUE, CACHE_DEFAULT_VALUE,  SYNC_DEFAULT_VALUE, MAXIMAL_TREE_DEPTH, TestError, SECRETKEY_HEADER, AWS_MAX_DELETE_OBJECTS_NUMBER, EXTENSIONS_WHITELIST} from './constants';
 import fetch from 'node-fetch';
 import * as path from 'path';
 import { ImageResizer } from './imageResizer';
@@ -133,6 +133,8 @@ export class PfsService
 			throw new Error("Missing mandatory field 'Key'");
 		}
 
+		await this.validateExtension();
+
 		if(this.getPathDepth() > MAXIMAL_TREE_DEPTH)
 		{
 			throw new Error(`Requested path is deeper than the maximum allowed depth of ${MAXIMAL_TREE_DEPTH}.`);
@@ -141,6 +143,22 @@ export class PfsService
 		if (this.request.body.Thumbnails) 
 		{
 			this.validateThumbnailsRequest(this.request.body.Thumbnails);
+		}
+	}
+
+	/**
+	 * Throw an error if the file's extension is not part of the whitelist.
+	 */
+	private async validateExtension() 
+	{
+		if(!this.request.body.Key.endsWith('/')) // Don't validate folders
+		{
+			const extension = path.extname(this.request.body.Key);
+			
+			if(!EXTENSIONS_WHITELIST.includes(extension))
+			{
+				throw new Error(extension ? `The requested file extension '${extension}' is not supported.` : 'The requested file does not have an extension.');
+			}
 		}
 	}
 
