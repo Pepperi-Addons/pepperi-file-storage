@@ -63,6 +63,21 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
                 }
             }
         }
+
+		// Hiding the file is done last, to provide a user who, for some reason,
+		// decided to both update the file content and delete it in a single call
+		// a consistent behavior.
+		
+		// In the future, when unhide will be developed, upon unhiding the file
+		// the user will get their latest data.
+		if(newFileFields.Hidden){
+			await this.deleteFileData(newFileFields.Key);
+			if (Array.isArray(existingFile.Thumbnails)) { //delete thumbnails from S3.
+                for (const thumbnail of existingFile.Thumbnails) {
+                    await this.deleteThumbnail(newFileFields.Key, thumbnail.Size);
+                }
+            }
+		}
 	}
 
 	private shouldUseCache(newFileFields: any, existingFile: any) {
