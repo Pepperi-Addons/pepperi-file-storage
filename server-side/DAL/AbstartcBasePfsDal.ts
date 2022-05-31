@@ -1,4 +1,5 @@
 import { Client, Request } from '@pepperi-addons/debug-server';
+import { AddonData } from '@pepperi-addons/papi-sdk';
 import jwtDecode from 'jwt-decode';
 import { IPfsGetter } from './IPfsGetter';
 import { IPfsMutator } from './IPfsMutator';
@@ -47,13 +48,11 @@ export abstract class AbstractBasePfsDal implements IPfsGetter, IPfsMutator
 
 	//#region IPfsGetter
 
-	abstract listFolderContents(folderName: string): Promise<any>;
-
-	abstract downloadFileMetadata(Key: string): Promise<any>;
-
 	abstract isObjectLocked(key: string);
 
 	abstract getObjectS3FileVersion(Key: any);
+
+	abstract getObjects(whereClause?: string): Promise<AddonData[]>;
 	//#endregion
 	
 
@@ -74,7 +73,7 @@ export abstract class AbstractBasePfsDal implements IPfsGetter, IPfsMutator
 	}
 
 	protected removeSlashPrefix(path: string){
-		if (path != '/' && path.startsWith('/')) {
+		if (path != '/' && path?.startsWith('/')) {
 			path = path.slice(1);
 		}
 		return path;

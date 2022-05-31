@@ -2,7 +2,7 @@ import { Client, Request } from '@pepperi-addons/debug-server';
 import { CdnServers, LOCK_ADAL_TABLE_NAME, SECRETKEY_HEADER } from "../constants";
 import { PapiClient } from '@pepperi-addons/papi-sdk/dist/papi-client';
 import config from '../../addon.config.json';
-import { FindOptions } from '@pepperi-addons/papi-sdk';
+import { AddonData, FindOptions } from '@pepperi-addons/papi-sdk';
 import { AbstractS3PfsDal } from './AbstractS3PfsDal';
 
 export class IndexedDataS3PfsDal extends AbstractS3PfsDal 
@@ -35,12 +35,11 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 
 	//#region IPfsGetter
 
-	async listFolderContents(folderName: string): Promise<any> 
+	async getObjects(whereClause?: string): Promise<AddonData[]>
 	{
-		folderName = this.removeSlashPrefix(folderName);
-
 		const findOptions: FindOptions = {
-			where: `Folder='${folderName == '/' ? folderName : folderName.slice(0, -1)}'${(this.request.query && this.request.query.where) ? "AND(" + this.request.query.where + ")" :""}`,
+			...(this.request.query && this.request.query.where && {where: this.request.query.where}),
+			...(whereClause && {where: whereClause}),
 			...(this.request.query && this.request.query.page_size && {page_size: parseInt(this.request.query.page_size)}),
 			...(this.request.query && this.request.query.page && {page: this.getRequestedPageNumber()}),
 			...(this.request.query && this.request.query.fields && {fields: this.request.query.fields}),
@@ -53,13 +52,6 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 
 		console.log(`Files listing done successfully.`);
 		return res;
-	}
-
-	async downloadFileMetadata(Key: string): Promise<any> 
-	{
-		const downloadRes = await this.getObjectFromTable(this.removeSlashPrefix(Key), this.clientSchemaName);
-
-		return downloadRes;
 	}
 
 	private async getObjectFromTable(key, tableName, papiClient: PapiClient = this.hostedAddonPapiClient, tableOwnerUUID: string = this.clientAddonUUID, getHidden: boolean = false){

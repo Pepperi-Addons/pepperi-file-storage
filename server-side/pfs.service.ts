@@ -474,8 +474,11 @@ export class PfsService
 
 	private async validateNoContentsBeforeFolderDeletion() 
 	{
-		const folderContents = await this.pfsGetter.listFolderContents(this.request.body.Key);
-		if (folderContents.length > 0) // Currently deleting folder that has exisitng content is not supported.
+		
+		const whereClause = `Folder='${this.request.body.Key.slice(0, -1)}'`;
+		const folderContents = await this.pfsGetter.getObjects(whereClause);
+
+		if (folderContents.length > 0) // Deleting a folder that has exisitng content is not currently supported.
 		{
 			const err: any = new Error(`Bad request. Folder content must be deleted before the deletion of the folder.`);
 			err.code = 400;
@@ -622,10 +625,23 @@ export class PfsService
 	async downloadFile(downloadKey? : string) 
 	{
 		const downloadKeyRes: string = downloadKey ?? ((this.request.body && this.request.body.Key) ? this.request.body.Key : this.request.query.Key); 
-		return await this.pfsGetter.downloadFileMetadata(downloadKeyRes)
+		const whereClause = `Key='${downloadKeyRes}'`;
+		const res = await this.pfsGetter.getObjects(whereClause);
+		if (res.length === 1) 
+		{
+			console.log(`File Downloaded`);
+			return res[0];
+		}
+		else 
+		{ //Couldn't find results
+			console.error(`Could not find requested item: '${downloadKeyRes}'`);
+			const err: any = new Error(`Could not find requested item: '${downloadKeyRes}'`);
+			err.code = 404;
+			throw err;
+		}
 	}
 
-	async listFiles()
+	async listFolderContent()
 	{
 		try 
 		{
@@ -640,7 +656,9 @@ export class PfsService
 				throw err;
 			}
 
-			return this.pfsGetter.listFolderContents(requestedFolder);
+			const whereClause = `Folder='${requestedFolder == '/' ? requestedFolder : requestedFolder.slice(0, -1)}'${(this.request.query && this.request.query.where) ? "AND(" + this.request.query.where + ")" :""}`
+			return this.pfsGetter.getObjects(whereClause)
+
 		}
 		catch (err) 
 		{
@@ -650,6 +668,12 @@ export class PfsService
 				throw err;
 			}
 		}
+	}
+
+	async listObjects(whereClause?:string)
+	{
+		//TODO order by creation date, to support DIMX export.
+		return this.pfsGetter.getObjects(whereClause);
 	}
 
 	async recordRemoved() 
