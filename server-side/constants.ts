@@ -44,34 +44,31 @@ export interface IPfsListFilesResultObject {
     ModificationDateTime?: string // Folders don't have a ModificationDateTime, only files do.
 }
 
-export const pfsSchemeData: any = {
-	Type: 'indexed_data',
+export const pfsSchemaData: any = {
 	Fields: {
 		Description: {
 			Type: 'String',
-			// Indexed: true // Description field is defined optional, while the currently used indexed_data tabke doesn't support an empty value indexed key. 
-							 // Until a solution is found, this field cannot be indexed.
-		},
-		// ModificationDateTime:{
-		// 	Type: "Integer",
-		// 	Indexed: true // Indexing Date fields is currntly buggy in ADAL. 
-		// },
-		MIME: {
-			Type: 'String',
 			Indexed: true
 		},
-		Sync: {
+		MIME: {
 			Type: 'String',
+			Indexed: true,
+			Keyword: true
+		},
+		Sync: {
+			Type: 'String'
 		},
 		Thumbnails: {
 			Type: 'String'
 		},
 		Folder: {
 			Type: 'String',
-			Indexed: true
+			Indexed: true,
+			Keyword: true
 		},
 		Name: {
-			Type: 'String'
+			Type: 'String',
+			index: true,
 		},
 		URL: {
 			Type: 'String'
@@ -83,7 +80,9 @@ export const pfsSchemeData: any = {
 			Type: 'Boolean'
 		},
 		UploadedBy: {
-			Type: 'String'
+			Type: 'String',
+			Indexed: true,
+			Keyword: true
 		},
 	} as any,
 }
@@ -95,10 +94,14 @@ export const dataURLRegex = /^\s*data:([a-z]+\/[\w-+\d.]+(;[a-z\-]+\=[a-z\-]+)?)
 export const METADATA_ADAL_TABLE_NAME = "S3ObjectsMetadata";
 export const LOCK_ADAL_TABLE_NAME = "PfsLockTable";
 
+export const SECRETKEY_HEADER = 'x-pepperi-secretkey';
+
 export const MAXIMAL_LOCK_TIME: number = 1000 * 60 * 5; // Set to 5 minutes.
 export const DEBUG_MAXIMAL_LOCK_TIME = 1; // Debug
 
 export const MAXIMAL_TREE_DEPTH = 7;
+
+export const AWS_MAX_DELETE_OBJECTS_NUMBER = 1000;
 
 export const HIDDEN_DEFAULT_VALUE = false;
 export const DESCRIPTION_DEFAULT_VALUE = "";

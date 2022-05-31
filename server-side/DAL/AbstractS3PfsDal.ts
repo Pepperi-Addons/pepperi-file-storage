@@ -153,6 +153,28 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		return deletedVersionRes;
 	}
 
+	async batchDeleteS3(keys: string[]){
+		// Only files can be deleted from S3, filter out any folder names
+		keys = keys.filter(key => !key.endsWith('/'));
+		
+		// Create the deleteObjetcs parameters
+		const params: any = {};
+		params.Bucket = this.S3Bucket;
+        
+		params['Delete'] = {};
+		params.Delete.Quiet = true; //Non verbose, returns info only for failed deletes.
+		params.Delete.Objects = keys.map(key => {return {Key: this.getAbsolutePath(key)}})
+
+		// For more information on S3's deleteObjets function see: https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/S3.html#deleteObjects-property
+		const deleteObjetcsRes = await this.s3.deleteObjects(params).promise();
+
+		for (const error of deleteObjetcsRes.Errors) {
+			console.error(`Delete objects encountered an error:${JSON.stringify(error)}`);
+		}
+
+		console.log(`Successfully deleted batch.`);
+	}
+
 	//#endregion
 
 	//#region IPfsGetter
