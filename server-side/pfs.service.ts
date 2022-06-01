@@ -32,7 +32,7 @@ export class PfsService
 		}
 	}
 
-	async uploadFile(): Promise<boolean> 
+	async uploadFile(): Promise<any> 
 	{
 		let res: any = {};
 
