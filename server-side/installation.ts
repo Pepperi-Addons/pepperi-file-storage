@@ -8,7 +8,7 @@ The error Message is importent! it will be written in the audit log and help the
 */
 
 import { Client, Request } from '@pepperi-addons/debug-server'
-import { PapiClient } from '@pepperi-addons/papi-sdk';
+import { PapiClient, Relation } from '@pepperi-addons/papi-sdk';
 import { LOCK_ADAL_TABLE_NAME, METADATA_ADAL_TABLE_NAME, pfsSchemaData } from './constants';
 import config from './../addon.config.json';
 import semver from 'semver';
@@ -18,6 +18,7 @@ export async function install(client: Client, request: Request): Promise<any>
 
 	const papiClient = createPapiClient(client);
 	await createLockADALTable(papiClient);
+	await createDimxRelations(papiClient, client);
 
 	return { success: true, resultObject: {} }
 }
@@ -45,6 +46,11 @@ export async function upgrade(client: Client, request: Request): Promise<any>
 		await unsubscribeToExpiredRecords(papiClient);
 		// The previous schema should be purged
 		await papiClient.post(`/addons/data/schemes/${METADATA_ADAL_TABLE_NAME}/purge`);
+	}
+
+	if (request.body.FromVersion && semver.compare(request.body.FromVersion, '0.5.16') < 0) 
+	{
+		await createDimxRelations(papiClient, client);
 	}
 
 	return { success: true, resultObject: {} }
@@ -76,7 +82,6 @@ async function createLockADALTable(papiClient: PapiClient)
 }
 
 
-// TODO: should be done on purge
 async function unsubscribeToExpiredRecords(papiClient: PapiClient) 
 {
 	await papiClient.notification.subscriptions.upsert({
@@ -91,4 +96,32 @@ async function unsubscribeToExpiredRecords(papiClient: PapiClient)
 		AddonRelativeURL: '/api/record_removed',
 		Hidden: true
 	});
+}
+
+async function createDimxRelations(papiClient: PapiClient, client: Client) 
+{
+	const importRelation: Relation = {
+		RelationName: "DataImportSource",
+		AddonUUID: client.AddonUUID,
+		Name: 'DataImportSourcePFS',
+		KeyName: "Key",
+		Type: 'AddonAPI',
+		AddonRelativeURL:'/data-source-api/batch'
+	}
+
+	const exportRelation: Relation = {
+		RelationName: "DataExportSource",
+		AddonUUID: client.AddonUUID,
+		Name: 'DataExportSourcePFS',
+		Type: 'AddonAPI',
+		AddonRelativeURL:'/data-source-api/files'
+	}
+	
+	await upsertRelation(papiClient, importRelation);
+	await upsertRelation(papiClient, exportRelation);
+}
+
+async function upsertRelation(papiClient: PapiClient, relation: Relation) 
+{
+	return papiClient.post('/addons/data/relations', relation);
 }
