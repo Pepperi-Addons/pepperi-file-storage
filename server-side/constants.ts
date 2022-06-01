@@ -115,7 +115,7 @@ export class TestError extends Error
 // When editing this list, please make sure to maintain alphabetical
 // order, to make it more readable.
 export const EXTENSIONS_WHITELIST: Array<string> = [
-	"bmp", "csv", "doc", "docx", "gif", "jpg", "jpeg", "js",
-	"json", "log", "mp4", "mpeg", "pdf", "png", "ppt",
-	"pptx", "svg", "txt", "xls", "xlsx", "xml", "zip"
+	".bmp", ".csv", ".doc", ".docx", ".gif", ".jpg", ".jpeg", ".js",
+	".json", ".log", ".mp4", ".mpeg", ".pdf", ".png", ".ppt",
+	".pptx", ".svg", ".txt", ".xls", ".xlsx", ".xml", ".zip"
 ]
