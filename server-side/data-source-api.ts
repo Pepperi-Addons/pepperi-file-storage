@@ -1,6 +1,6 @@
 import { Client, Request } from '@pepperi-addons/debug-server';
 import { PfsSchemeService } from './pfs-scheme.service';
-export { files } from './api';
+export { files, file } from './api';
 
 export async function create(client: Client, request: Request) 
 {
