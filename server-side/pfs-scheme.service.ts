@@ -101,8 +101,7 @@ export class PfsSchemeService
 	{
 		if (!this.schema || this.schema.Type !== 'pfs') 
 		{
-			//Uncomment when we actually have a pfs type
-			// throw new Error("The schema must be of type 'pfs'")
+			throw new Error("The schema must be of type 'pfs'")
 		}
 	}
 
