@@ -601,16 +601,16 @@ export class PfsService
 				if(data.hasOwnProperty('Cache')) newFileFields.Cache = data.Cache;
 
 				let uploadedBy = '';
-				if(data.URI && (uploadedBy = await this.getUploadedByUUID()) !== existingFile.UploadedBy) 
+				if((data.URI || (data.hasOwnProperty('Cache') && data.Hidden != existingFile.Hidden)) && (uploadedBy = await this.getUploadedByUUID()) !== existingFile.UploadedBy) 
 				// Assignment to uploadedBy var inside the if-statement is intentional.
-				// Check if URI was passed to avoid calling async getUploadedByUUID() unnecessarily.
+				// Check if URI was passed, or the Hidden property is changed to avoid calling async getUploadedByUUID() unnecessarily.
 				// Check if there's a discrepancy between current uploader and pervious to avoid updating the file's UploadedBy field unnecessarily.
 				{
 					newFileFields.UploadedBy = uploadedBy;
 				}
 			}
 			
-			if(data.hasOwnProperty('Hidden')) newFileFields.Hidden = data.Hidden;
+			if(data.hasOwnProperty('Cache') && data.Hidden != existingFile.Hidden) newFileFields.Hidden = data.Hidden;
 		}
 
 		if(data.Thumbnails && Array.isArray(data.Thumbnails))
