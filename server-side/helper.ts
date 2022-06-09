@@ -76,14 +76,14 @@ export class Helper
 		}
 	}
 
-	public static createPapiClient(client: Client, addonUUID: any, secretKey: any = '') 
+	public static createPapiClient(client: Client, addonUUID: string, secretKey: string = '') 
 	{
 		return new PapiClient({
 			baseURL: client.BaseURL,
 			token: client.OAuthAccessToken,
 			addonUUID: addonUUID,
 			actionUUID: client.ActionUUID,
-			addonSecretKey: secretKey
+			...(secretKey && {addonSecretKey: secretKey})
 		});
 	}
 	
@@ -116,6 +116,10 @@ export class Helper
 
 	public static validateResourceNameQueryParam(request: Request) 
 	{
+		if(request.query?.Resource){
+			request.query.resource_name = request.query.Resource;
+		}
+		
 		if (!(request.query && request.query.resource_name)) 
 		{
 			throw new Error(`Missing necessary parameter: resource_name`);

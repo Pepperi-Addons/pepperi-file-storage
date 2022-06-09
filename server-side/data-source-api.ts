@@ -6,6 +6,8 @@ import { files } from './api';
 
 export async function create(client: Client, request: Request) 
 {
+	console.log(`Request received: ${JSON.stringify(request)}`);
+
 	switch (request.method) 
 	{
 	case "POST": {
@@ -35,6 +37,7 @@ export async function batch(client: Client, request: Request)
 
 async function naiveBatch(client: Client, request: Request) 
 {
+	console.log(`Request received: ${JSON.stringify(request)}`);
 
 	const promiseResults = await Promise.allSettled(request.body.Objects.map(obj => (async () => 
 	{
@@ -75,6 +78,8 @@ async function naiveBatch(client: Client, request: Request)
 
 export async function purge(client: Client, request: Request) 
 {
+	console.log(`Request received: ${JSON.stringify(request)}`);
+
 	switch (request.method) 
 	{
 	case "POST": {

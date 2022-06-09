@@ -77,7 +77,7 @@ export const pfsSchemaData: any = {
 			Type: 'String'
 		},
 		Cache: {
-			Type: 'Boolean'
+			Type: 'Bool'
 		},
 		UploadedBy: {
 			Type: 'String',

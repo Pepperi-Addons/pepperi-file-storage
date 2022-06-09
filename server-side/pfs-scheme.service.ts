@@ -45,7 +45,7 @@ export class PfsSchemeService
 
 	private async expiredRecordsSubscription(hidden: boolean): Promise<Subscription> 
 	{
-		const papiClient: PapiClient = Helper.createPapiClient(this.client, config.AddonUUID);
+		const papiClient: PapiClient = Helper.createPapiClient(this.client, config.AddonUUID, this.client.AddonSecretKey);
 		return papiClient.notification.subscriptions.upsert({
 			AddonUUID: config.AddonUUID,
 			Name: `pfs-expired-adal-records-subscription-${this.schema.Name}`, // Names of subscriptions should be unique
