@@ -59,7 +59,10 @@ export const pfsSchemaData: any = {
 			Type: 'String'
 		},
 		Thumbnails: {
-			Type: 'String'
+			Type: 'Array',
+			Items: {
+				Type: 'Object'
+			}
 		},
 		Folder: {
 			Type: 'String',
@@ -119,3 +122,5 @@ export const EXTENSIONS_WHITELIST: Array<string> = [
 	".json", ".log", ".mp4", ".mpeg", ".pdf", ".png", ".ppt",
 	".pptx", ".svg", ".txt", ".xls", ".xlsx", ".xml", ".zip"
 ]
+
+export const DIMX_ADDON_UUID = '44c97115-6d14-4626-91dc-83f176e9a0fc';

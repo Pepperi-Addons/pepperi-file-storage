@@ -4,6 +4,7 @@ import { PapiClient } from '@pepperi-addons/papi-sdk/dist/papi-client';
 import config from '../../addon.config.json';
 import { AddonData, FindOptions } from '@pepperi-addons/papi-sdk';
 import { AbstractS3PfsDal } from './AbstractS3PfsDal';
+import { Helper } from '../helper';
 
 export class IndexedDataS3PfsDal extends AbstractS3PfsDal 
 {
@@ -24,12 +25,13 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 		});
 
 		// Used for other operations, GET and POST to the client addon's PFS table.
+		const lowerCaseHeader = Helper.getLowerCaseHeaders(this.request.header);
 		this.hostedAddonPapiClient = new PapiClient({
 			baseURL: client.BaseURL,
 			token: client.OAuthAccessToken,
 			addonUUID: this.clientAddonUUID,
 			actionUUID: client.ActionUUID,
-			addonSecretKey: this.request.header[SECRETKEY_HEADER]
+			addonSecretKey: lowerCaseHeader[SECRETKEY_HEADER]
 		});
 	}
 
@@ -184,6 +186,7 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 
 	private async uploadFileMetadata(newFileFields: any, existingFile: any): Promise<any> 
 	{
+		let res: any;
 		newFileFields.Key = this.removeSlashPrefix(newFileFields.Key);
 		newFileFields.Folder = this.removeSlashPrefix(newFileFields.Folder);
 		// Set Urls
@@ -192,15 +195,34 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 		const presignedURL = newFileFields.PresignedURL;
 		delete newFileFields.PresignedURL //Don't store PresignedURL in ADAL
 
-		const res =  await this.hostedAddonPapiClient.addons.data.uuid(this.clientAddonUUID).table(this.clientSchemaName).upsert(newFileFields);
+		// The following line works well when doing a simple upsert, but fails on Btach operation, since the DIMX's 
+        // secret key is passed, and not the actual owner's.
+        // const res = await this.hostedAddonPapiClient.addons.data.uuid(this.clientAddonUUID).table(this.clientSchemaName).upsert(newFileFields);
 
-		if(presignedURL){ // Return PresignedURL if there was one
-			res.PresignedURL = presignedURL;
+        // Instead, we call batchUpsert, which works whther DIMX's or the owner's seret key is passed.
+        // Create a batch object
+        const batchObj = {
+            Objects: [newFileFields]
+        };
+		const url = `/addons/data/batch/${this.clientAddonUUID}/${this.clientSchemaName}`;
+
+		const batchRes = await this.hostedAddonPapiClient.post(url, batchObj);
+		if(batchRes.length === 1 && (batchRes[0].Status === 'Update' || batchRes[0].Status === 'Insert')){
+			// Return the upserted value
+			res = await this.getObjectFromTable(newFileFields.Key, this.clientSchemaName, this.hostedAddonPapiClient, this.clientAddonUUID, true);
+
+			if(presignedURL){ // Return PresignedURL if there was one
+				res.PresignedURL = presignedURL;
+			}
+	
+			return res;
 		}
-
-		return res;
+		else{
+			const err = new Error(`Failed writing object to schema: ${batchRes}`);
+			console.log(err.message);
+			throw err;
+		}
 	}
-
 
 	private setUrls(newFileFields: any, existingFile: any) 
 	{

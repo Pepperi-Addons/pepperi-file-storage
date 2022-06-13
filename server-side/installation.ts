@@ -114,7 +114,7 @@ async function createDimxRelations(papiClient: PapiClient, client: Client)
 		AddonUUID: client.AddonUUID,
 		Name: 'pfs',
 		Type: 'AddonAPI',
-		AddonRelativeURL:'/data-source-api/files'
+		AddonRelativeURL:'/data-source-api/pfs_export'
 	}
 	
 	await upsertRelation(papiClient, importRelation);
