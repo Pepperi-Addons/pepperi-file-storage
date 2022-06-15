@@ -704,6 +704,21 @@ export class PfsService
 			await this.pfsMutator.batchDeleteS3(keys);
 		})()));
 	}
+
+	async invalidate() 
+	{
+
+		if (!this.request.query.key) 
+		{
+			throw new Error("Missing mandatory parameter 'Key'");
+		}
+
+		const file = await this.downloadFile(this.request.query.key);
+		const fileCopy = {...file, doesFileExist: true};
+  		await this.pfsMutator.invalidateCDN(fileCopy);
+
+		return file;
+	}
 }
 
 export default PfsService;
