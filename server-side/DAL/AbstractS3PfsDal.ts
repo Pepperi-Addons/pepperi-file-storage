@@ -92,10 +92,10 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 
 		// Collect all invalidation paths - The requested path, and its thumbnails
 		const invalidationPaths: string[] = [];
-		invalidationPaths.push(keyInvalidationPath);
+		invalidationPaths.push(encodeURI(keyInvalidationPath));
 
 		if(file.Thumbnails){
-			file.Thumbnails.map(thumbnail => invalidationPaths.push(`/thumbnails${keyInvalidationPath}_${thumbnail.Size}`));
+			file.Thumbnails.map(thumbnail => invalidationPaths.push(encodeURI(`/thumbnails${keyInvalidationPath}_${thumbnail.Size}`)));
 		}
 
 		console.log(`Trying to invlidate ${invalidationPaths}...`);

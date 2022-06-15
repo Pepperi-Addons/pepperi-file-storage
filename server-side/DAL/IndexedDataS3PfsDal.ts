@@ -207,7 +207,7 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 		const url = `/addons/data/batch/${this.clientAddonUUID}/${this.clientSchemaName}`;
 
 		const batchRes = await this.hostedAddonPapiClient.post(url, batchObj);
-		if(batchRes.length === 1 && (batchRes[0].Status === 'Update' || batchRes[0].Status === 'Insert')){
+		if(batchRes.length === 1 && (batchRes[0].Status === 'Update' || batchRes[0].Status === 'Insert' || batchRes[0].Status === 'Ignore')){
 			// Return the upserted value
 			res = await this.getObjectFromTable(newFileFields.Key, this.clientSchemaName, this.hostedAddonPapiClient, this.clientAddonUUID, true);
 
