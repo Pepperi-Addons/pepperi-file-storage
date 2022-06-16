@@ -79,3 +79,24 @@ export async function record_removed(client: Client, request: Request)
 	}
 	}
 }
+
+export async function invalidate(client: Client, request: Request) 
+{
+	console.log(`Request received: ${JSON.stringify(request)}`);
+
+	switch (request.method) 
+	{
+	case "POST": {
+		Helper.validateFilesQueryParams(request);
+
+
+		const dal = Helper.DalFactory(client, request);
+		const pfs = new PfsService(client, request, dal, dal);
+
+		return await pfs.invalidate();
+	}
+	default: {
+		throw new Error(`Unsupported method: ${request.method}`);
+	}
+	}
+}

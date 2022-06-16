@@ -76,22 +76,23 @@ async function naiveBatch(client: Client, request: Request)
 	return res;
 }
 
-export async function pfs_export(client: Client, request: Request){
+export async function pfs_export(client: Client, request: Request)
+{
 
 	console.log(`Request received: ${JSON.stringify(request)}`);
 
 	request.query['where'] = request.body['Where'];
-    request.query['fields'] = request.body['Fields'];
-    request.query['page'] = request.body['Page'];
-    request.query['page_size'] = request.body['MaxPageSize'];
-    request.query['order_by'] = request.body['OrderBy'];
-    request.query['include_deleted'] = request.body["IncludeDeleted"];
-    request.query['resource_name'] = request.body["Resource"];
-    request.query['addon_uuid'] = request.body["AddonUUID"];
+	request.query['fields'] = request.body['Fields'];
+	request.query['page'] = request.body['Page'];
+	request.query['page_size'] = request.body['MaxPageSize'];
+	request.query['order_by'] = request.body['OrderBy'];
+	request.query['include_deleted'] = request.body["IncludeDeleted"];
+	request.query['resource_name'] = request.body["Resource"];
+	request.query['addon_uuid'] = request.body["AddonUUID"];
 
-    request.method = 'GET';
+	request.method = 'GET';
 
-    request.body = {};
+	request.body = {};
 
 	const exportResult = await files(client, request);
 

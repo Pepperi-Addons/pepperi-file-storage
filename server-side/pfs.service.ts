@@ -81,9 +81,6 @@ export class PfsService
 		// Remove lock
 		await this.pfsMutator.unlock(this.request.body.Key);
 
-		// Invalidate CDN server (including thumbnails if exist)
-		await this.pfsMutator.invalidateCDN(this.existingFile);
-
 		return res;
 	}
 
@@ -315,8 +312,6 @@ export class PfsService
 		console.log("Done unlocking the file.");
 
 		console.error(`Rollback algorithm has finished running for key: ${lockedFile.Key}`);
-
-		await this.pfsMutator.invalidateCDN(lockedFile);
 
 		if(this.request.query.testRollback) // If testing rollback, throw exception to stop the process after rollback.
 		{
@@ -708,6 +703,21 @@ export class PfsService
 		{
 			await this.pfsMutator.batchDeleteS3(keys);
 		})()));
+	}
+
+	async invalidate() 
+	{
+
+		if (!this.request.query.key) 
+		{
+			throw new Error("Missing mandatory parameter 'Key'");
+		}
+
+		const file = await this.downloadFile(this.request.query.key);
+		const fileCopy = {...file, doesFileExist: true};
+  		await this.pfsMutator.invalidateCDN(fileCopy);
+
+		return file;
 	}
 }
 

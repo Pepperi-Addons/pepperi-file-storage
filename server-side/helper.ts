@@ -79,7 +79,7 @@ export class Helper
 		}
 	}
 
-	public static createPapiClient(client: Client, addonUUID: string, secretKey: string = '') 
+	public static createPapiClient(client: Client, addonUUID: string, secretKey = '') 
 	{
 		return new PapiClient({
 			baseURL: client.BaseURL,
@@ -119,10 +119,12 @@ export class Helper
 
 	public static validateResourceNameQueryParam(request: Request) 
 	{
-		if(request.query?.Resource){
+		if(request.query?.Resource)
+		{
 			request.query.resource_name = request.query.Resource;
 		}
-		else if(request.body?.Resource){
+		else if(request.body?.Resource)
+		{
 			request.query.resource_name = request.body.Resource;
 		}
 
@@ -134,10 +136,12 @@ export class Helper
 
 	public static  validateAddonUUIDQueryParam(request: Request) 
 	{
-		if(request.query?.AddonUUID){
+		if(request.query?.AddonUUID)
+		{
 			request.query.addon_uuid = request.query.AddonUUID;
 		}
-		else if(request.body?.AddonUUID){
+		else if(request.body?.AddonUUID)
+		{
 			request.query.addon_uuid = request.body.AddonUUID;
 		}
 

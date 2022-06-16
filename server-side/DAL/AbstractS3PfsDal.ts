@@ -102,23 +102,20 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 
 	async invalidateCDN(file: any){
 		const keyInvalidationPath = `/${this.getAbsolutePath(file.Key)}`; //Invalidation path must start with a '/'.
+
+		this.validateInvalidationRequest(keyInvalidationPath/*, file*/);
+
+		// Collect all invalidation paths - The requested path, and its thumbnails
 		const invalidationPaths: string[] = [];
-		invalidationPaths.push(keyInvalidationPath);
+		invalidationPaths.push(encodeURI(keyInvalidationPath));
 
 		if(file.Thumbnails){
-			file.Thumbnails.map(thumbnail => invalidationPaths.push(`/thumbnails${keyInvalidationPath}_${thumbnail.Size}`));
+			file.Thumbnails.map(thumbnail => invalidationPaths.push(encodeURI(`/thumbnails${keyInvalidationPath}_${thumbnail.Size}`)));
 		}
 
 		console.log(`Trying to invlidate ${invalidationPaths}...`);
 
-		const { shouldSkipInvalidation, skipReason }: { shouldSkipInvalidation: boolean; skipReason: string; } = this.shouldSkipInvalidation(keyInvalidationPath, file); // If it used Cache=false flag, there's no need to invalidate.
-
-		if(shouldSkipInvalidation)
-		{ 
-			console.log(`Invalidation was not carried out since ${skipReason}`);
-			return;
-		}
-
+		// Create invalidation request
 		const cloudfront = new AWS.CloudFront({apiVersion: '2020-05-31'});
 		const invalidationParams = {
 			DistributionId: this.CloudfrontDistribution,
@@ -138,19 +135,19 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		return invlidation;
 	}
 
-	private shouldSkipInvalidation(keyInvalidationPath: string, file: any) {
-		const shouldSkipInvalidation: boolean = keyInvalidationPath.endsWith('/') || !file.doesFileExist || !file.Cache;
-
+	private validateInvalidationRequest(keyInvalidationPath: string/*, file: any*/) {
 		let skipReason: string = '';
 
 		if (keyInvalidationPath.endsWith('/'))
-			skipReason = 'requested path is a folder.'; // If this is a folder or if this file doesn't exist, it has no CDN representation, and there's no need to invalidate it.
-		else if (!file.doesFileExist)
-			skipReason = 'the file does not exist.';
-		else if (!file.Cache)
-			skipReason = "the file doesn't use cache."; // If it used Cache=false flag, there's no need to invalidate.
+			skipReason = 'Requested path is a folder.'; // If this is a folder or if this file doesn't exist, it has no CDN representation, and there's no need to invalidate it.
+		// else if (!file.Cache)
+		// 	skipReason = "The file doesn't use cache."; // If Cache=false, there's no need to invalidate.
 
-		return { shouldSkipInvalidation, skipReason };
+		if(skipReason){
+			const errorMessage = `Invalidation request is invalid: ${skipReason}`;
+			console.log(errorMessage);
+			throw new Error(errorMessage);
+		}
 	}
 
 	async deleteS3FileVersion(Key: any, s3FileVersion: any) {
