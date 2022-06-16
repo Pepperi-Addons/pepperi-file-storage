@@ -103,7 +103,7 @@ async function createDimxRelations(papiClient: PapiClient, client: Client)
 	const importRelation: Relation = {
 		RelationName: "DataImportSource",
 		AddonUUID: client.AddonUUID,
-		Name: 'DataImportSourcePFS',
+		Name: 'pfs',
 		KeyName: "Key",
 		Type: 'AddonAPI',
 		AddonRelativeURL:'/data-source-api/batch'
@@ -112,9 +112,9 @@ async function createDimxRelations(papiClient: PapiClient, client: Client)
 	const exportRelation: Relation = {
 		RelationName: "DataExportSource",
 		AddonUUID: client.AddonUUID,
-		Name: 'DataExportSourcePFS',
+		Name: 'pfs',
 		Type: 'AddonAPI',
-		AddonRelativeURL:'/data-source-api/files'
+		AddonRelativeURL:'/data-source-api/pfs_export'
 	}
 	
 	await upsertRelation(papiClient, importRelation);

@@ -1,6 +1,6 @@
 import { Client, Request } from "@pepperi-addons/debug-server/dist";
 import { PapiClient } from "@pepperi-addons/papi-sdk";
-import { DEBUG_MAXIMAL_LOCK_TIME, MAXIMAL_LOCK_TIME } from "./constants";
+import { DEBUG_MAXIMAL_LOCK_TIME, DIMX_ADDON_UUID, MAXIMAL_LOCK_TIME } from "./constants";
 import { IndexedDataS3PfsDal } from "./DAL/IndexedDataS3PfsDal";
 import { FailAfterLock, FailAfterMutatingAdal, FailAfterMutatingS3 } from "./DAL/TestLockMechanism";
 
@@ -39,7 +39,10 @@ export class Helper
 	{
 		const lowerCaseHeaders = Helper.getLowerCaseHeaders(header);
 
-		if (!lowerCaseHeaders["x-pepperi-secretkey"] || !await this.isValidRequestedAddon(client, lowerCaseHeaders["x-pepperi-secretkey"], addonUUID)) 
+		if (!lowerCaseHeaders["x-pepperi-secretkey"] || (
+			!await this.isValidRequestedAddon(client, lowerCaseHeaders["x-pepperi-secretkey"], addonUUID) && // Given secret key doesn't match the client addon's.
+			!await this.isValidRequestedAddon(client, lowerCaseHeaders["x-pepperi-secretkey"], DIMX_ADDON_UUID) // Given secret key doesn't match the DIMX's.
+		)) 
 		{
 			const err: any = new Error(`Authorization request denied. ${lowerCaseHeaders["x-pepperi-secretkey"]? "check secret key" : "Missing secret key header"} `);
 			err.code = 401;
@@ -76,14 +79,14 @@ export class Helper
 		}
 	}
 
-	public static createPapiClient(client: Client, addonUUID: any, secretKey: any = '') 
+	public static createPapiClient(client: Client, addonUUID: string, secretKey: string = '') 
 	{
 		return new PapiClient({
 			baseURL: client.BaseURL,
 			token: client.OAuthAccessToken,
 			addonUUID: addonUUID,
 			actionUUID: client.ActionUUID,
-			addonSecretKey: secretKey
+			...(secretKey && {addonSecretKey: secretKey})
 		});
 	}
 	
@@ -116,6 +119,13 @@ export class Helper
 
 	public static validateResourceNameQueryParam(request: Request) 
 	{
+		if(request.query?.Resource){
+			request.query.resource_name = request.query.Resource;
+		}
+		else if(request.body?.Resource){
+			request.query.resource_name = request.body.Resource;
+		}
+
 		if (!(request.query && request.query.resource_name)) 
 		{
 			throw new Error(`Missing necessary parameter: resource_name`);
@@ -124,6 +134,13 @@ export class Helper
 
 	public static  validateAddonUUIDQueryParam(request: Request) 
 	{
+		if(request.query?.AddonUUID){
+			request.query.addon_uuid = request.query.AddonUUID;
+		}
+		else if(request.body?.AddonUUID){
+			request.query.addon_uuid = request.body.AddonUUID;
+		}
+
 		if (!(request.query && request.query.addon_uuid)) 
 		{
 			throw new Error(`Missing necessary parameter: addon_uuid`);
