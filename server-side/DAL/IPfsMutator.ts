@@ -64,7 +64,7 @@ export interface IPfsMutator
     getMaximalLockTime();
 
     /**
-     * Batch deletes the received keys from S3.
+     * Batch deletes the received keys from S3. Any thumbnails that are referenced by these keys will also be deleted.
      * @param keys The array of keys to delete
      */
     batchDeleteS3(keys: Array<string>);
