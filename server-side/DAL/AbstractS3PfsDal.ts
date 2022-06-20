@@ -170,10 +170,10 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		keys = keys.filter(key => !key.endsWith('/'));
 		
 		// Call DeleteObjects
-		const deleteObjetcsRes = await this.deleteObjects(keys);
+		const deleteObjetcsRes = await this.deleteObjects(keys.map(key => this.getAbsolutePath(key)));
 		
 		// Delete all thumbnails for the deleted files
-		await this.batchDeleteThumbnails(keys.map(key => this.getAbsolutePath(key)));
+		await this.batchDeleteThumbnails(keys);
 
 		for (const error of deleteObjetcsRes.Errors) {
 			console.error(`Delete objects encountered an error:${JSON.stringify(error)}`);
@@ -363,6 +363,6 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		const deleteObjetcsRes = await this.s3.deleteObjects(params).promise();
 		return deleteObjetcsRes;
 	}
-	
+
 	//#endregion
 }
