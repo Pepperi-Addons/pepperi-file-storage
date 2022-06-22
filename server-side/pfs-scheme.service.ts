@@ -146,7 +146,8 @@ export class PfsSchemeService
 	public async purge() 
 	{
 		// Delete the PFS's 'data' schema
-		await Helper.createPapiClient(this.client, config.AddonUUID, this.client.AddonSecretKey).post(`addons/data/schemes/${this.getPfsSchemaName}/purge`);
+		const papiClient = Helper.createPapiClient(this.client, config.AddonUUID, this.client.AddonSecretKey);
+		await papiClient.post(`addons/data/schemes/${this.getPfsSchemaName()}/purge`);
 
 		// Unsubscribe from the PFS's 'remove' notifications
 		return await this.unsubscribeToExpiredRecords()
