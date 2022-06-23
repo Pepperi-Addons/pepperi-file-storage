@@ -15,20 +15,46 @@ export class PfsSchemeService
 	}
 
 	/**
-     * Completes the schema creation process by adding the PFS's fields to the schema.
-     * @returns the addon data scheme after the PFS's fields addition.
+     * Add PFS's fields to the client's schem, and create a new 'data' typed schema for the PFS use.
+     * @returns the client addon's 'pfs' typed schema after the PFS's fields addition.
      */
 	public async create(): Promise<AddonDataScheme> 
 	{
 		await this.validateSchemaCreationRequest();
 
-		// Upsert the schema as requested by the client, adding PFS's default fields and indices.
-		const schemaCreationRes = this.upsertSchemaWithPfsFields();
+		// Upsert the client's schema as requested by the client, adding PFS's default fields and indices.
+		const clientSchemaUpsertRes = this.upsertClientSchemaWithPfsFields();
 
-		// Subscribe to Remove events on the schema
+		// Create a data scheme for the PFS's fields.
+		const pfsSchema = await this.createPfsSchema();
+
+		// Subscribe to Remove events on the PFS's schema
 		await this.subscribeToExpiredRecords();
 
-		return schemaCreationRes;
+		return clientSchemaUpsertRes;
+	}
+
+	/**
+	 * Creates a data scheme with PFS's and client's requested fields.
+	 */
+	private async createPfsSchema() 
+	{
+		const pfsMetadataTable = {
+			...pfsSchemaData,
+			...this.schema
+		};
+		
+		// Set the schema's name to pfs_{{addon_uuid}}_{{schema_name}}
+		pfsMetadataTable.Name = this.getPfsSchemaName();
+		pfsMetadataTable.Type = 'data';
+
+		const papiClient: PapiClient = Helper.createPapiClient(this.client, config.AddonUUID, this.client.AddonSecretKey);
+		return await papiClient.post('/addons/schemes', pfsMetadataTable);
+	}
+
+	private getPfsSchemaName(): string 
+	{
+		return `pfs_${this.request.query.addon_uuid}_${this.schema.Name}`;
 	}
 
 	private async subscribeToExpiredRecords(): Promise<Subscription>
@@ -48,12 +74,12 @@ export class PfsSchemeService
 		const papiClient: PapiClient = Helper.createPapiClient(this.client, config.AddonUUID, this.client.AddonSecretKey);
 		return papiClient.notification.subscriptions.upsert({
 			AddonUUID: config.AddonUUID,
-			Name: `pfs-expired-adal-records-subscription-${this.schema.Name}`, // Names of subscriptions should be unique
+			Name: `pfs-expired-records-${this.getPfsSchemaName()}`, // Names of subscriptions should be unique
 			Type: "data",
 			FilterPolicy: {
-				Resource: [this.schema.Name],
+				Resource: [this.getPfsSchemaName()],
 				Action: ["remove"],
-				AddonUUID: [this.request.query.addon_uuid]
+				AddonUUID: [config.AddonUUID]
 			},
 			AddonRelativeURL: '/api/record_removed',
 			Hidden: hidden,
@@ -76,7 +102,7 @@ export class PfsSchemeService
      * Upsert the PFS's fields to the requested schema.
      * @returns the addon data scheme after the PFS's fields addition.
      */
-	private async upsertSchemaWithPfsFields(): Promise<AddonDataScheme> 
+	private async upsertClientSchemaWithPfsFields(): Promise<AddonDataScheme> 
 	{
 		const pfsMetadataTable = {
 			...pfsSchemaData,
