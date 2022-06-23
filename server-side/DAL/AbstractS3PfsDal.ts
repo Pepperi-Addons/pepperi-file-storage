@@ -165,26 +165,23 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		return deletedVersionRes;
 	}
 
-	async batchDeleteS3(keys: string[]){
+	async batchDeleteS3(keys: string[]) {
 		// Only files can be deleted from S3, filter out any folder names
 		keys = keys.filter(key => !key.endsWith('/'));
 		
-		// Create the deleteObjetcs parameters
-		const params: any = {};
-		params.Bucket = this.S3Bucket;
-        
-		params['Delete'] = {};
-		params.Delete.Quiet = true; //Non verbose, returns info only for failed deletes.
-		params.Delete.Objects = keys.map(key => {return {Key: this.getAbsolutePath(key)}})
-
-		// For more information on S3's deleteObjets function see: https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/S3.html#deleteObjects-property
-		const deleteObjetcsRes = await this.s3.deleteObjects(params).promise();
+		// Call DeleteObjects
+		const deleteObjetcsRes = await this.deleteObjects(keys.map(key => this.getAbsolutePath(key)));
+		
+		// Delete all thumbnails for the deleted files
+		await this.batchDeleteThumbnails(keys);
 
 		for (const error of deleteObjetcsRes.Errors) {
 			console.error(`Delete objects encountered an error:${JSON.stringify(error)}`);
 		}
 
 		console.log(`Successfully deleted batch.`);
+
+		return deleteObjetcsRes;
 	}
 
 	//#endregion
@@ -262,7 +259,7 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 
 	private async deleteFileData(removedKey: string): Promise<any> 
 	{
-		console.log(`Trying to delete Key: ${removedKey}`)
+		console.log(`Trying to delete Key: ${removedKey}`);
 		const params: any = {};
 
 		// Create S3 params
@@ -326,6 +323,45 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 			
 		const urlString = await this.s3.getSignedUrl('putObject',params);
 		return urlString;
+	}
+
+	private async batchDeleteThumbnails(keys: string[])
+	{
+		// This implementation issues a delete request for 200x200 thumbnails whether or not they exist.
+		// A more complete implementation would list each file's existing thumbnails in S3, and only delete those that exist.
+		// Since this is quite expensive to do, and since we currently we only have 200x200 thumbnails, we have decided to
+		// go for a naive approach.
+
+		// Only files can be deleted from S3, filter out any folder names
+		keys = keys.filter(key => !key.endsWith('/'));
+
+		// Create a list of thumbnails to delete
+		keys = keys.map(key => `thumbnails/${this.getAbsolutePath(key)}_200x200`);
+
+		// Call DeleteObjects
+		const deleteObjetcsRes = await this.deleteObjects(keys);
+
+		for (const error of deleteObjetcsRes.Errors) {
+			console.error(`Delete objects encountered an error:${JSON.stringify(error)}`);
+		}
+
+		console.log(`Successfully deleted batch.`);
+
+		return deleteObjetcsRes;
+	}
+
+	private async deleteObjects(absolutePaths: string[]) 
+	{
+		const params: any = {};
+		params.Bucket = this.S3Bucket;
+
+		params['Delete'] = {};
+		params.Delete.Quiet = true; // Non verbose, returns info only for failed deletes.
+		params.Delete.Objects = absolutePaths.map(key => { return { Key: key }; });
+
+		// For more information on S3's deleteObjets function see: https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/S3.html#deleteObjects-property
+		const deleteObjetcsRes = await this.s3.deleteObjects(params).promise();
+		return deleteObjetcsRes;
 	}
 
 	//#endregion

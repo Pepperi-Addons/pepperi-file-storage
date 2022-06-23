@@ -84,7 +84,7 @@ export class PfsSchemeService
 		};
 
 		const papiClient: PapiClient = Helper.createPapiClient(this.client, this.request.query.addon_uuid, this.request.header["x-pepperi-secretkey"]);
-		return papiClient.post('/addons/schemes', pfsMetadataTable);
+		return await papiClient.post('/addons/schemes', pfsMetadataTable);
 	}
 
 	
