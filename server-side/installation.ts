@@ -35,22 +35,9 @@ export async function upgrade(client: Client, request: Request): Promise<any>
 {
 	const papiClient = createPapiClient(client);
 
-	if (request.body.FromVersion && semver.compare(request.body.FromVersion, '0.0.86') < 0) 
+	if (request.body.FromVersion && semver.compare(request.body.FromVersion, '0.5.14') < 0) 
 	{
-		await createLockADALTable(papiClient);
-	}
-
-	if (request.body.FromVersion && semver.compare(request.body.FromVersion, '0.5.12') < 0) 
-	{
-		// Subscription should be done to the specific schema on its creation.
-		await unsubscribeToExpiredRecords(papiClient);
-		// The previous schema should be purged
-		await papiClient.post(`/addons/data/schemes/${METADATA_ADAL_TABLE_NAME}/purge`);
-	}
-
-	if (request.body.FromVersion && semver.compare(request.body.FromVersion, '0.5.16') < 0) 
-	{
-		await createDimxRelations(papiClient, client);
+		throw new Error('Upgarding from versions ealier than 0.5.14 is not supported. Please uninstall the addon and install it again.');
 	}
 
 	return { success: true, resultObject: {} }
