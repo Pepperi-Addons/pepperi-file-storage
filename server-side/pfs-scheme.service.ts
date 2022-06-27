@@ -56,7 +56,8 @@ export class PfsSchemeService
 	/**
 	 * @returns Return the client addon's scheme (of type 'pfs') with PFS's default fields.
 	 */
-	private getMergedSchema(): AddonDataScheme{
+	private getMergedSchema(): AddonDataScheme
+	{
 		return {
 			...pfsSchemaData,
 			...this.schema

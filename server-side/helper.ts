@@ -151,7 +151,8 @@ export class Helper
 		}
 	}
 
-	public static getPfsTableName(clientAddonUUID: string, schemaName: string){
+	public static getPfsTableName(clientAddonUUID: string, schemaName: string)
+	{
 		return `${PFS_TABLE_PREFIX}_${clientAddonUUID}_${schemaName}`;
 	}
 }
