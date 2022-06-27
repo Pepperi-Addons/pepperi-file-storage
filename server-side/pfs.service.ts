@@ -202,8 +202,9 @@ export class PfsService
 	 */
 	private async getMissingParentFolders(): Promise<string[]> 
 	{
-		let canonizedPath = this.request.body.Key.startsWith('/') ? this.request.body.Key : `/${this.request.body.Key}`;
 		const missingFoldersList: string[] = [];
+
+			let canonizedPath = this.request.body.Key.startsWith('/') ? this.request.body.Key.slice(1) : this.request.body.Key;
 
 		while(path.dirname(canonizedPath) !== '/')
 		{
