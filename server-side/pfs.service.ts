@@ -218,8 +218,6 @@ export class PfsService
 				else
 				{
 					// if the direct parent folder exists, the entire path up to it also exists. 
-				// if the direct parent folder exists, the entire path up to it also exists. 
-					// if the direct parent folder exists, the entire path up to it also exists. 
 					// There's no need to further investigate whether containing folders exist or not.
 					break;
 				}
@@ -383,11 +381,13 @@ export class PfsService
 	{
 		let res: any = {};
 
-		await this.getMetadata();
 		if(this.request.body.URI)
 		{
 			this.newFileFields.buffer = await this.getFileDataBuffer(this.request.body.URI);
 		}
+
+		await this.getMetadata();
+		
 		const shouldCreateThumbnails = (this.request.body.Thumbnails && this.request.body.Thumbnails.length > 0) ||  (this.existingFile.Thumbnails && this.request.body.URI); //The user asked for thumbnails, or the file already has thumbnails, and the file data is updated.
 		if (shouldCreateThumbnails)
 		{
@@ -584,6 +584,10 @@ export class PfsService
 				newFileFields.Description = data.Description ?? DESCRIPTION_DEFAULT_VALUE;
 				newFileFields.Cache = data.Cache ?? CACHE_DEFAULT_VALUE;
 				newFileFields.UploadedBy = await this.getUploadedByUUID();
+				if(newFileFields.buffer)
+				{
+					newFileFields.FileSize = Buffer.byteLength(newFileFields.buffer);
+				}
 			}
 			else //this is a folder
 			{
@@ -608,6 +612,11 @@ export class PfsService
 				// Check if there's a discrepancy between current uploader and pervious to avoid updating the file's UploadedBy field unnecessarily.
 				{
 					newFileFields.UploadedBy = uploadedBy;
+				}
+				
+				if(newFileFields.buffer)
+				{
+					newFileFields.FileSize = Buffer.byteLength(newFileFields.buffer);
 				}
 			}
 			

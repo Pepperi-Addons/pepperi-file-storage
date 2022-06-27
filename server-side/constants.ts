@@ -87,6 +87,9 @@ export const pfsSchemaData: any = {
 			Indexed: true,
 			Keyword: true
 		},
+		FileSize: {
+			Type: 'Integer'
+		},
 	} as any,
 }
 
