@@ -644,7 +644,8 @@ export class PfsService
 	async downloadFile(downloadKey? : string) 
 	{
 		const downloadKeyRes: string = downloadKey ?? ((this.request.body && this.request.body.Key) ? this.request.body.Key : this.request.query.Key); 
-		const whereClause = `Key='${downloadKeyRes}'`;
+		const canonizedPath = downloadKeyRes.startsWith('/') ? downloadKeyRes.slice(1) : downloadKeyRes;
+		const whereClause = `Key='${canonizedPath}'`;
 		const res = await this.pfsGetter.getObjects(whereClause);
 		if (res.length === 1) 
 		{
