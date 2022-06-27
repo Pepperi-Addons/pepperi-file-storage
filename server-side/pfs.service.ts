@@ -204,23 +204,28 @@ export class PfsService
 	{
 		const missingFoldersList: string[] = [];
 
+		if(!this.existingFile?.doesFileExist) // If the file does exist, there are no missing folders.
+		{
 			let canonizedPath = this.request.body.Key.startsWith('/') ? this.request.body.Key.slice(1) : this.request.body.Key;
 
-		while(path.dirname(canonizedPath) !== '/')
-		{
-			const parentFolder = `${path.dirname(canonizedPath)}/`;
-			if(!await this.doesParentFolderExist(canonizedPath))
+			while(path.dirname(canonizedPath) !== '/')
 			{
-				missingFoldersList.unshift(parentFolder);
-			}
-			else
-			{
+				const parentFolder = `${path.dirname(canonizedPath)}/`;
+				if(!await this.doesParentFolderExist(canonizedPath))
+				{
+					missingFoldersList.unshift(parentFolder);
+				}
+				else
+				{
+					// if the direct parent folder exists, the entire path up to it also exists. 
 				// if the direct parent folder exists, the entire path up to it also exists. 
-				// There's no need to further investigate whether containing folders exist or not.
-				break;
-			}
+					// if the direct parent folder exists, the entire path up to it also exists. 
+					// There's no need to further investigate whether containing folders exist or not.
+					break;
+				}
 
-			canonizedPath = parentFolder;
+				canonizedPath = parentFolder;
+			}
 		}
 
 		return missingFoldersList;
