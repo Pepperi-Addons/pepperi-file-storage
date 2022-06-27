@@ -39,9 +39,9 @@ export class Helper
 	{
 		const lowerCaseHeaders = Helper.getLowerCaseHeaders(header);
 
-		if (!lowerCaseHeaders["x-pepperi-secretkey"] || (
-			!await this.isValidRequestedAddon(client, lowerCaseHeaders["x-pepperi-secretkey"], addonUUID) && // Given secret key doesn't match the client addon's.
-			!await this.isValidRequestedAddon(client, lowerCaseHeaders["x-pepperi-secretkey"], DIMX_ADDON_UUID) // Given secret key doesn't match the DIMX's.
+		if (!lowerCaseHeaders["x-pepperi-secretkey"] || !(
+			await this.isValidRequestedAddon(client, lowerCaseHeaders["x-pepperi-secretkey"], addonUUID) || // Given secret key doesn't match the client addon's.
+			await this.isValidRequestedAddon(client, lowerCaseHeaders["x-pepperi-secretkey"], DIMX_ADDON_UUID) // Given secret key doesn't match the DIMX's.
 		)) 
 		{
 			const err: any = new Error(`Authorization request denied. ${lowerCaseHeaders["x-pepperi-secretkey"]? "check secret key" : "Missing secret key header"} `);
