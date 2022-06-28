@@ -208,7 +208,7 @@ export class PfsService
 		{
 			let canonizedPath = this.request.body.Key.startsWith('/') ? this.request.body.Key.slice(1) : this.request.body.Key;
 
-			while(path.dirname(canonizedPath) !== '/')
+			while(path.dirname(canonizedPath) !== '.')
 			{
 				const parentFolder = `${path.dirname(canonizedPath)}/`;
 				if(!await this.doesParentFolderExist(canonizedPath))
