@@ -620,7 +620,7 @@ export class PfsService
 				}
 			}
 			
-			if(data.hasOwnProperty('Cache') && data.Hidden != existingFile.Hidden) newFileFields.Hidden = data.Hidden;
+			if(data.hasOwnProperty('Hidden') && data.Hidden != existingFile.Hidden) newFileFields.Hidden = data.Hidden;
 		}
 
 		if(data.Thumbnails && Array.isArray(data.Thumbnails))
