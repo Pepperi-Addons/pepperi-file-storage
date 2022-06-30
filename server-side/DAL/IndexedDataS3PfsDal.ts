@@ -189,6 +189,9 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 		const tableName = Helper.getPfsTableName(this.request.query.addon_uuid, this.clientSchemaName);
         res = await this.papiClient.addons.data.uuid(config.AddonUUID).table(tableName).upsert(newFileFields);
 		
+		// Add back the PresignedURL
+		res.PresignedURL = presignedURL;
+		
 		return res;
 	}
 
