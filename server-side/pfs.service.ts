@@ -202,24 +202,28 @@ export class PfsService
 	 */
 	private async getMissingParentFolders(): Promise<string[]> 
 	{
-		let canonizedPath = this.request.body.Key.startsWith('/') ? this.request.body.Key : `/${this.request.body.Key}`;
 		const missingFoldersList: string[] = [];
 
-		while(path.dirname(canonizedPath) !== '/')
+		if(!this.existingFile?.doesFileExist) // If the file does exist, there are no missing folders.
 		{
-			const parentFolder = `${path.dirname(canonizedPath)}/`;
-			if(!await this.doesParentFolderExist(canonizedPath))
-			{
-				missingFoldersList.unshift(parentFolder);
-			}
-			else
-			{
-				// if the direct parent folder exists, the entire path up to it also exists. 
-				// There's no need to further investigate whether containing folders exist or not.
-				break;
-			}
+			let canonizedPath = this.request.body.Key.startsWith('/') ? this.request.body.Key.slice(1) : this.request.body.Key;
 
-			canonizedPath = parentFolder;
+			while(path.dirname(canonizedPath) !== '.')
+			{
+				const parentFolder = `${path.dirname(canonizedPath)}/`;
+				if(!await this.doesParentFolderExist(canonizedPath))
+				{
+					missingFoldersList.unshift(parentFolder);
+				}
+				else
+				{
+					// if the direct parent folder exists, the entire path up to it also exists. 
+					// There's no need to further investigate whether containing folders exist or not.
+					break;
+				}
+
+				canonizedPath = parentFolder;
+			}
 		}
 
 		return missingFoldersList;
@@ -377,11 +381,13 @@ export class PfsService
 	{
 		let res: any = {};
 
-		await this.getMetadata();
 		if(this.request.body.URI)
 		{
 			this.newFileFields.buffer = await this.getFileDataBuffer(this.request.body.URI);
 		}
+
+		await this.getMetadata();
+		
 		const shouldCreateThumbnails = (this.request.body.Thumbnails && this.request.body.Thumbnails.length > 0) ||  (this.existingFile.Thumbnails && this.request.body.URI); //The user asked for thumbnails, or the file already has thumbnails, and the file data is updated.
 		if (shouldCreateThumbnails)
 		{
@@ -578,6 +584,10 @@ export class PfsService
 				newFileFields.Description = data.Description ?? DESCRIPTION_DEFAULT_VALUE;
 				newFileFields.Cache = data.Cache ?? CACHE_DEFAULT_VALUE;
 				newFileFields.UploadedBy = await this.getUploadedByUUID();
+				if(newFileFields.buffer)
+				{
+					newFileFields.FileSize = Buffer.byteLength(newFileFields.buffer);
+				}
 			}
 			else //this is a folder
 			{
@@ -603,9 +613,14 @@ export class PfsService
 				{
 					newFileFields.UploadedBy = uploadedBy;
 				}
+				
+				if(newFileFields.buffer)
+				{
+					newFileFields.FileSize = Buffer.byteLength(newFileFields.buffer);
+				}
 			}
 			
-			if(data.hasOwnProperty('Cache') && data.Hidden != existingFile.Hidden) newFileFields.Hidden = data.Hidden;
+			if(data.hasOwnProperty('Hidden') && data.Hidden != existingFile.Hidden) newFileFields.Hidden = data.Hidden;
 		}
 
 		if(data.Thumbnails && Array.isArray(data.Thumbnails))
@@ -638,7 +653,8 @@ export class PfsService
 	async downloadFile(downloadKey? : string) 
 	{
 		const downloadKeyRes: string = downloadKey ?? ((this.request.body && this.request.body.Key) ? this.request.body.Key : this.request.query.Key); 
-		const whereClause = `Key='${downloadKeyRes}'`;
+		const canonizedPath = downloadKeyRes.startsWith('/') ? downloadKeyRes.slice(1) : downloadKeyRes;
+		const whereClause = `Key='${canonizedPath}'`;
 		const res = await this.pfsGetter.getObjects(whereClause);
 		if (res.length === 1) 
 		{

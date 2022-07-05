@@ -87,6 +87,9 @@ export const pfsSchemaData: any = {
 			Indexed: true,
 			Keyword: true
 		},
+		FileSize: {
+			Type: 'Integer'
+		},
 	} as any,
 }
 
@@ -124,3 +127,5 @@ export const EXTENSIONS_WHITELIST: Array<string> = [
 ]
 
 export const DIMX_ADDON_UUID = '44c97115-6d14-4626-91dc-83f176e9a0fc';
+
+export const PFS_TABLE_PREFIX = "pfs";

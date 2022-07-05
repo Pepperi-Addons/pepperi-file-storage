@@ -1,6 +1,6 @@
 {
   "AddonUUID": "00000000-0000-0000-0000-0000000f11e5",
-  "AddonVersion": "0.5.43",
+  "AddonVersion": "0.5.54",
   "DebugPort": 4500,
   "WebappBaseUrl": "https://app.sandbox.pepperi.com",
   "DefaultEditor": "main",
@@ -16,7 +16,7 @@
     "ClientStack": "ng10",
     "Editors": [],
     "Dependencies": {
-      "adal": "1.0.208"
+      "adal": "1.0.229"
     },
     "CPISide": []
   }

@@ -9,7 +9,6 @@ import { Helper } from '../helper';
 export class IndexedDataS3PfsDal extends AbstractS3PfsDal 
 {
 	private papiClient: PapiClient;
-	private hostedAddonPapiClient: PapiClient;
     
 	constructor(client: Client, request: Request, maximalLockTime:number)
 	{
@@ -23,16 +22,6 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 			actionUUID: client.ActionUUID,
 			addonSecretKey: client.AddonSecretKey
 		});
-
-		// Used for other operations, GET and POST to the client addon's PFS table.
-		const lowerCaseHeader = Helper.getLowerCaseHeaders(this.request.header);
-		this.hostedAddonPapiClient = new PapiClient({
-			baseURL: client.BaseURL,
-			token: client.OAuthAccessToken,
-			addonUUID: this.clientAddonUUID,
-			actionUUID: client.ActionUUID,
-			addonSecretKey: lowerCaseHeader[SECRETKEY_HEADER]
-		});
 	}
 
 	//#region IPfsGetter
@@ -41,7 +30,7 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 	{
 		const findOptions: FindOptions = {
 			...(this.request.query && this.request.query.where && {where: this.request.query.where}),
-			...(whereClause && {where: whereClause}),
+			...(whereClause && {where: whereClause}), // If there's a where clause, use it instead 
 			...(this.request.query && this.request.query.page_size && {page_size: parseInt(this.request.query.page_size)}),
 			...(this.request.query && this.request.query.page && {page: this.getRequestedPageNumber()}),
 			...(this.request.query && this.request.query.fields && {fields: this.request.query.fields}),
@@ -50,13 +39,14 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 			...(this.request.query && this.request.query.include_deleted && {include_deleted: this.request.query.include_deleted}),
 		}
 
-		const res =  await this.hostedAddonPapiClient.addons.data.uuid(this.clientAddonUUID).table(this.clientSchemaName).find(findOptions);
+		const getPfsTableName = Helper.getPfsTableName(this.request.query.addon_uuid, this.clientSchemaName);
+		const res =  await this.papiClient.addons.data.uuid(config.AddonUUID).table(getPfsTableName).find(findOptions);
 
 		console.log(`Files listing done successfully.`);
 		return res;
 	}
 
-	private async getObjectFromTable(key, tableName, papiClient: PapiClient = this.hostedAddonPapiClient, tableOwnerUUID: string = this.clientAddonUUID, getHidden: boolean = false){
+	private async getObjectFromTable(key, tableName, getHidden: boolean = false){
 		console.log(`Attempting to download the following key from ADAL: ${key}, Table name: ${tableName}`);
 		try 
 		{
@@ -66,7 +56,7 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 				include_deleted: getHidden
 			}
 
-			const downloaded = await papiClient.addons.data.uuid(tableOwnerUUID).table(tableName).find(findOptions);
+			const downloaded = await this.papiClient.addons.data.uuid(config.AddonUUID).table(tableName).find(findOptions);
 			if(downloaded.length === 1)
 			{
 				console.log(`File Downloaded`);
@@ -110,7 +100,7 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 		{
 			const lockAbsoluteKey = this.getAbsolutePath(key).replace(new RegExp("/", 'g'), "~");
 			const getHidden: boolean = true;
-			res = await this.getObjectFromTable(lockAbsoluteKey, tableName, this.papiClient, config.AddonUUID ,getHidden);
+			res = await this.getObjectFromTable(lockAbsoluteKey, tableName, getHidden);
 			res.Key = this.getRelativePath(res.Key.replace(new RegExp("~", 'g'), "/"));
 		}
 		catch // If the object isn't locked, the getObjectFromTable will throw an "object not found" error. Return null to indicate this object isn't locked.
@@ -195,33 +185,11 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 		const presignedURL = newFileFields.PresignedURL;
 		delete newFileFields.PresignedURL //Don't store PresignedURL in ADAL
 
-		// The following line works well when doing a simple upsert, but fails on Btach operation, since the DIMX's 
-        // secret key is passed, and not the actual owner's.
-        // const res = await this.hostedAddonPapiClient.addons.data.uuid(this.clientAddonUUID).table(this.clientSchemaName).upsert(newFileFields);
 
-        // Instead, we call batchUpsert, which works whther DIMX's or the owner's seret key is passed.
-        // Create a batch object
-        const batchObj = {
-            Objects: [newFileFields]
-        };
-		const url = `/addons/data/batch/${this.clientAddonUUID}/${this.clientSchemaName}`;
-
-		const batchRes = await this.hostedAddonPapiClient.post(url, batchObj);
-		if(batchRes.length === 1 && (batchRes[0].Status === 'Update' || batchRes[0].Status === 'Insert' || batchRes[0].Status === 'Ignore')){
-			// Return the upserted value
-			res = await this.getObjectFromTable(newFileFields.Key, this.clientSchemaName, this.hostedAddonPapiClient, this.clientAddonUUID, true);
-
-			if(presignedURL){ // Return PresignedURL if there was one
-				res.PresignedURL = presignedURL;
-			}
-	
-			return res;
-		}
-		else{
-			const err = new Error(`Failed writing object to schema: ${batchRes}`);
-			console.log(err.message);
-			throw err;
-		}
+		const tableName = Helper.getPfsTableName(this.request.query.addon_uuid, this.clientSchemaName);
+        res = await this.papiClient.addons.data.uuid(config.AddonUUID).table(tableName).upsert(newFileFields);
+		
+		return res;
 	}
 
 	private setUrls(newFileFields: any, existingFile: any) 

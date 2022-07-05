@@ -15,20 +15,53 @@ export class PfsSchemeService
 	}
 
 	/**
-     * Completes the schema creation process by adding the PFS's fields to the schema.
-     * @returns the addon data scheme after the PFS's fields addition.
+     * Create a new 'data' typed schema for the PFS use, and subscribe to 'remove' events.
+	 * Return the client addon's scheme (of type 'pfs') with PFS's default fields.
+     * @returns Return the client addon's scheme (of type 'pfs') with PFS's default fields.
      */
 	public async create(): Promise<AddonDataScheme> 
 	{
 		await this.validateSchemaCreationRequest();
 
-		// Upsert the schema as requested by the client, adding PFS's default fields and indices.
-		const schemaCreationRes = this.upsertSchemaWithPfsFields();
+		// Create a data schema for the PFS's fields.
+		await this.createPfsSchema();
 
-		// Subscribe to Remove events on the schema
+		// Subscribe to Remove events on the PFS's schema
 		await this.subscribeToExpiredRecords();
 
-		return schemaCreationRes;
+		// Return the client addon's scheme (of type 'pfs') with PFS's default fields.
+		return this.getMergedSchema();
+	}
+
+	/**
+	 * Creates a data scheme with PFS's and client's requested fields.
+	 */
+	private async createPfsSchema() 
+	{
+		const pfsMetadataTable = this.getMergedSchema();
+		
+		// Set the schema's name to pfs_{{addon_uuid}}_{{schema_name}}
+		pfsMetadataTable.Name = this.getPfsSchemaName();
+		pfsMetadataTable.Type = 'data';
+
+		const papiClient: PapiClient = Helper.createPapiClient(this.client, config.AddonUUID, this.client.AddonSecretKey);
+		return await papiClient.post('/addons/data/schemes', pfsMetadataTable);
+	}
+
+	private getPfsSchemaName(): string 
+	{
+		return Helper.getPfsTableName(this.request.query.addon_uuid, this.schema.Name);
+	}
+
+	/**
+	 * @returns Return the client addon's scheme (of type 'pfs') with PFS's default fields.
+	 */
+	private getMergedSchema(): AddonDataScheme
+	{
+		return {
+			...pfsSchemaData,
+			...this.schema
+		}
 	}
 
 	private async subscribeToExpiredRecords(): Promise<Subscription>
@@ -37,7 +70,7 @@ export class PfsSchemeService
 		return this.expiredRecordsSubscription(shouldHideSubscription);
 	}
 
-	private async unsubscribeToExpiredRecords(): Promise<Subscription>
+	private async unsubscribeFromExpiredRecords(): Promise<Subscription>
 	{
 		const shouldHideSubscription = true;
 		return this.expiredRecordsSubscription(shouldHideSubscription);
@@ -48,12 +81,12 @@ export class PfsSchemeService
 		const papiClient: PapiClient = Helper.createPapiClient(this.client, config.AddonUUID, this.client.AddonSecretKey);
 		return papiClient.notification.subscriptions.upsert({
 			AddonUUID: config.AddonUUID,
-			Name: `pfs-expired-adal-records-subscription-${this.schema.Name}`, // Names of subscriptions should be unique
+			Name: `pfs-expired-records-${this.getPfsSchemaName()}`, // Names of subscriptions should be unique
 			Type: "data",
 			FilterPolicy: {
-				Resource: [this.schema.Name],
+				Resource: [this.getPfsSchemaName()],
 				Action: ["remove"],
-				AddonUUID: [this.request.query.addon_uuid]
+				AddonUUID: [config.AddonUUID]
 			},
 			AddonRelativeURL: '/api/record_removed',
 			Hidden: hidden,
@@ -71,22 +104,6 @@ export class PfsSchemeService
 		// Validate that the requested schema is valid
 		this.validateSchema();
 	}
-
-	/**
-     * Upsert the PFS's fields to the requested schema.
-     * @returns the addon data scheme after the PFS's fields addition.
-     */
-	private async upsertSchemaWithPfsFields(): Promise<AddonDataScheme> 
-	{
-		const pfsMetadataTable = {
-			...pfsSchemaData,
-			...this.schema
-		};
-
-		const papiClient: PapiClient = Helper.createPapiClient(this.client, this.request.query.addon_uuid, this.request.header["x-pepperi-secretkey"]);
-		return await papiClient.post('/addons/schemes', pfsMetadataTable);
-	}
-
 	
 	private validateSchema(): void 
 	{
@@ -114,11 +131,16 @@ export class PfsSchemeService
 	}
 
 	/**
-	 * Completes the schema purge process. ADAL is called first, where the table's records are deleted (S3 clean up is done by the subscription to the 'remove' notifications).
+	 * Purges the PFS's schema. Purge the PFS's 'data' schema, which deletes the table's records (S3 clean up is done by the subscription to the 'remove' notifications).
 	 * All that is left to do is to remove the subscription.
 	 */
 	public async purge() 
 	{
-		return await this.unsubscribeToExpiredRecords()
+		// Delete the PFS's 'data' schema
+		const papiClient = Helper.createPapiClient(this.client, config.AddonUUID, this.client.AddonSecretKey);
+		await papiClient.post(`/addons/data/schemes/${this.getPfsSchemaName()}/purge`);
+
+		// Unsubscribe from the PFS's 'remove' notifications
+		return await this.unsubscribeFromExpiredRecords()
 	}
 }

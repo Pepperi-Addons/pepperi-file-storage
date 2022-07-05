@@ -1,6 +1,6 @@
 import { Client, Request } from "@pepperi-addons/debug-server/dist";
 import { PapiClient } from "@pepperi-addons/papi-sdk";
-import { DEBUG_MAXIMAL_LOCK_TIME, DIMX_ADDON_UUID, MAXIMAL_LOCK_TIME } from "./constants";
+import { DEBUG_MAXIMAL_LOCK_TIME, DIMX_ADDON_UUID, MAXIMAL_LOCK_TIME, PFS_TABLE_PREFIX } from "./constants";
 import { IndexedDataS3PfsDal } from "./DAL/IndexedDataS3PfsDal";
 import { FailAfterLock, FailAfterMutatingAdal, FailAfterMutatingS3 } from "./DAL/TestLockMechanism";
 
@@ -39,9 +39,9 @@ export class Helper
 	{
 		const lowerCaseHeaders = Helper.getLowerCaseHeaders(header);
 
-		if (!lowerCaseHeaders["x-pepperi-secretkey"] || (
-			!await this.isValidRequestedAddon(client, lowerCaseHeaders["x-pepperi-secretkey"], addonUUID) && // Given secret key doesn't match the client addon's.
-			!await this.isValidRequestedAddon(client, lowerCaseHeaders["x-pepperi-secretkey"], DIMX_ADDON_UUID) // Given secret key doesn't match the DIMX's.
+		if (!lowerCaseHeaders["x-pepperi-secretkey"] || !(
+			await this.isValidRequestedAddon(client, lowerCaseHeaders["x-pepperi-secretkey"], addonUUID) || // Given secret key doesn't match the client addon's.
+			await this.isValidRequestedAddon(client, lowerCaseHeaders["x-pepperi-secretkey"], DIMX_ADDON_UUID) // Given secret key doesn't match the DIMX's.
 		)) 
 		{
 			const err: any = new Error(`Authorization request denied. ${lowerCaseHeaders["x-pepperi-secretkey"]? "check secret key" : "Missing secret key header"} `);
@@ -134,7 +134,7 @@ export class Helper
 		}
 	}
 
-	public static  validateAddonUUIDQueryParam(request: Request) 
+	public static validateAddonUUIDQueryParam(request: Request) 
 	{
 		if(request.query?.AddonUUID)
 		{
@@ -149,5 +149,10 @@ export class Helper
 		{
 			throw new Error(`Missing necessary parameter: addon_uuid`);
 		}
+	}
+
+	public static getPfsTableName(clientAddonUUID: string, schemaName: string)
+	{
+		return `${PFS_TABLE_PREFIX}_${clientAddonUUID}_${schemaName}`;
 	}
 }
