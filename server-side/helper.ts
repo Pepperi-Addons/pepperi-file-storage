@@ -1,6 +1,6 @@
 import { Client, Request } from "@pepperi-addons/debug-server/dist";
 import { PapiClient } from "@pepperi-addons/papi-sdk";
-import { DEBUG_MAXIMAL_LOCK_TIME, DIMX_ADDON_UUID, MAXIMAL_LOCK_TIME } from "./constants";
+import { DEBUG_MAXIMAL_LOCK_TIME, DIMX_ADDON_UUID, MAXIMAL_LOCK_TIME, PFS_TABLE_PREFIX } from "./constants";
 import { IndexedDataS3PfsDal } from "./DAL/IndexedDataS3PfsDal";
 import { FailAfterLock, FailAfterMutatingAdal, FailAfterMutatingS3 } from "./DAL/TestLockMechanism";
 
@@ -134,7 +134,7 @@ export class Helper
 		}
 	}
 
-	public static  validateAddonUUIDQueryParam(request: Request) 
+	public static validateAddonUUIDQueryParam(request: Request) 
 	{
 		if(request.query?.AddonUUID)
 		{
@@ -149,5 +149,9 @@ export class Helper
 		{
 			throw new Error(`Missing necessary parameter: addon_uuid`);
 		}
+	}
+
+	public static getPfsTableName(clientAddonUUID: string, schemaName: string){
+		return `${PFS_TABLE_PREFIX}_${clientAddonUUID}_${schemaName}`;
 	}
 }
