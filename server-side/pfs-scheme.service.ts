@@ -140,11 +140,16 @@ export class PfsSchemeService
 	}
 
 	/**
-	 * Completes the schema purge process. ADAL is called first, where the table's records are deleted (S3 clean up is done by the subscription to the 'remove' notifications).
+	 * Purges the PFS's schema. Purge the PFS's 'data' schema, which deletes the table's records (S3 clean up is done by the subscription to the 'remove' notifications).
 	 * All that is left to do is to remove the subscription.
 	 */
 	public async purge() 
 	{
+		// Delete the PFS's 'data' schema
+		const papiClient = Helper.createPapiClient(this.client, config.AddonUUID, this.client.AddonSecretKey);
+		await papiClient.post(`addons/data/schemes/${this.getPfsSchemaName()}/purge`);
+
+		// Unsubscribe from the PFS's 'remove' notifications
 		return await this.unsubscribeToExpiredRecords()
 	}
 }
