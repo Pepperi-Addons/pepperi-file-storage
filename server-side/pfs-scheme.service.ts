@@ -141,6 +141,7 @@ export class PfsSchemeService
 		await papiClient.post(`/addons/data/schemes/${this.getPfsSchemaName()}/purge`);
 
 		// Unsubscribe from the PFS's 'remove' notifications
-		return await this.unsubscribeFromExpiredRecords()
+		// Since the Remove messages take a while to propegate, we can't unsubscribe immediately.
+		// return await this.unsubscribeFromExpiredRecords();
 	}
 }
