@@ -56,7 +56,8 @@ export class PfsSchemeService
 	/**
 	 * @returns Return the client addon's scheme (of type 'pfs') with PFS's default fields.
 	 */
-	private getMergedSchema(): AddonDataScheme{
+	private getMergedSchema(): AddonDataScheme
+	{
 		return {
 			...pfsSchemaData,
 			...this.schema
@@ -140,6 +141,7 @@ export class PfsSchemeService
 		await papiClient.post(`/addons/data/schemes/${this.getPfsSchemaName()}/purge`);
 
 		// Unsubscribe from the PFS's 'remove' notifications
-		return await this.unsubscribeFromExpiredRecords()
+		// Since the Remove messages take a while to propegate, we can't unsubscribe immediately.
+		// return await this.unsubscribeFromExpiredRecords();
 	}
 }

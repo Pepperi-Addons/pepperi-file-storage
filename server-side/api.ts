@@ -61,13 +61,24 @@ export async function files(client: Client, request: Request)
 
 export async function record_removed(client: Client, request: Request) 
 {
-	console.log(`On Record Removed. received: ${JSON.stringify(request)}`);
+	console.log(`On Record Removed`);
 
 	switch (request.method) 
 	{
 	case "POST": {
-		request.query.addon_uuid = request.body.FilterAttributes.AddonUUID;
-		request.query.resource_name = request.body.FilterAttributes.Resource;
+		// The addon uuid is embbeded in the resource name: pfs_{{addon_uuid}}_{{resource_name}}.
+		// Extract addon uuid from resource name:
+		const splitResourceName = request.body.FilterAttributes.Resource.split('_');
+		if(splitResourceName.length != 3)
+		{
+			// Something very strange happend...
+			const errorMessage = `Invalid resource name: ${request.body.FilterAttributes.Resource}`;
+			console.error(errorMessage);
+			throw new Error(errorMessage);
+		}
+
+		request.query.addon_uuid = splitResourceName[1];
+		request.query.resource_name = splitResourceName[2];
 
 		const dal = Helper.DalFactory(client, request);
 		const pfs = new PfsService(client, request, dal, dal);

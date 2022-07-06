@@ -264,7 +264,7 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 
 		// Create S3 params
 		params.Bucket = this.S3Bucket;
-		params.Key = removedKey;
+		params.Key = this.getAbsolutePath(removedKey);
 		
 		// Delete from S3 bucket.
 		const deletedFile = await this.s3.deleteObject(params).promise();
