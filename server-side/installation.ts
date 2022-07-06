@@ -35,9 +35,9 @@ export async function upgrade(client: Client, request: Request): Promise<any>
 {
 	const papiClient = createPapiClient(client);
 
-	if (request.body.FromVersion && semver.compare(request.body.FromVersion, '0.5.14') < 0) 
+	if (request.body.FromVersion && semver.compare(request.body.FromVersion, '1.0.1') < 0) 
 	{
-		throw new Error('Upgarding from versions ealier than 0.5.14 is not supported. Please uninstall the addon and install it again.');
+		throw new Error('Upgarding from versions ealier than 1.0.1 is not supported. Please uninstall the addon and install it again.');
 	}
 
 	return { success: true, resultObject: {} }
