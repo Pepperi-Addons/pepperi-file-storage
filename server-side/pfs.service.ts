@@ -570,6 +570,7 @@ export class PfsService
 		const containingFolder = pathFoldersList.join('/');
 
 		newFileFields.Key = data.Key;
+		newFileFields.ExpirationDateTime = data.ExpirationDateTime;
 
 		if(!existingFile.doesFileExist)
 		{
@@ -577,6 +578,7 @@ export class PfsService
 			newFileFields.Folder = containingFolder ? containingFolder : '/'; // Set '/' for root folder
 			newFileFields.MIME = this.getMimeType(data);
 			newFileFields.Hidden = data.Hidden ?? HIDDEN_DEFAULT_VALUE;
+			newFileFields.ExpirationDateTime = data.ExpirationDateTime;
 
 			if(!data.Key.endsWith('/')) // This is not a folder
 			{
