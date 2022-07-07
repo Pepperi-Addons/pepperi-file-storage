@@ -1,6 +1,12 @@
-import { PfsService } from './pfs.service'
+import { AbstractCommand } from './PfsCommands/abstractCommand'
 import { Client, Request } from '@pepperi-addons/debug-server'
 import { Helper } from './helper';
+import { PostTransactionalCommand } from './PfsCommands/TransactionalCommands/postTransactionalCommand';
+import { ListFolderContentsCommand } from './PfsCommands/AtomicCommands/listFolderContetntsCommand';
+import { ListObjectsCommand } from './PfsCommands/AtomicCommands/listObjectsCommand';
+import { downloadFileCommand } from './PfsCommands/AtomicCommands/downloadFileCommand';
+import { RecordRemovedCommand } from './PfsCommands/AtomicCommands/recordRemovedCommand';
+import { InvalidateCommand } from './PfsCommands/AtomicCommands/invalidateCommand';
 
 export async function file(client: Client, request: Request) 
 {
@@ -16,9 +22,9 @@ export async function file(client: Client, request: Request)
 	{
 	case "GET": {
 		const dal = Helper.DalFactory(client, request);
-		const pfs = new PfsService(client, request, dal, dal);
+		const pfsCommand = new downloadFileCommand(client, request, dal, dal);
 
-		return pfs.downloadFile();
+		return pfsCommand.execute();
 	}
 	default: {
 		throw new Error(`Unsupported method: ${request.method}`);
@@ -32,26 +38,29 @@ export async function files(client: Client, request: Request)
 
 	Helper.validateFilesQueryParams(request);
 
+	let pfsCommand: AbstractCommand;
+
 	switch (request.method) 
 	{
 	case "GET": {
 		const dal = Helper.DalFactory(client, request);
-		const pfs = new PfsService(client, request, dal, dal);
-
+		
 		if (request.query.folder) 
 		{				
-			return pfs.listFolderContent();
+			pfsCommand = new ListFolderContentsCommand(client, request, dal, dal);
 		}
 		else 
 		{
-			return pfs.listObjects();
+			pfsCommand = new ListObjectsCommand(client, request, dal, dal);
 		}
+
+		return pfsCommand.execute();
 	}
 	case "POST": {
 		const dal = Helper.DalFactory(client, request);
-		const pfs = new PfsService(client, request, dal, dal);
+		pfsCommand = new PostTransactionalCommand(client, request, dal, dal);
 
-		return pfs.uploadFile();
+		return pfsCommand.execute();
 	}
 	default: {
 		throw new Error(`Unsupported method: ${request.method}`);
@@ -81,9 +90,9 @@ export async function record_removed(client: Client, request: Request)
 		request.query.resource_name = splitResourceName[2];
 
 		const dal = Helper.DalFactory(client, request);
-		const pfs = new PfsService(client, request, dal, dal);
+		const pfsCommand = new RecordRemovedCommand(client, request, dal, dal);
 
-		return await pfs.recordRemoved();
+		return await pfsCommand.execute();
 	}
 	default: {
 		throw new Error(`Unsupported method: ${request.method}`);
@@ -102,9 +111,9 @@ export async function invalidate(client: Client, request: Request)
 
 
 		const dal = Helper.DalFactory(client, request);
-		const pfs = new PfsService(client, request, dal, dal);
+		const pfsCommand = new InvalidateCommand(client, request, dal, dal);
 
-		return await pfs.invalidate();
+		return await pfsCommand.execute();
 	}
 	default: {
 		throw new Error(`Unsupported method: ${request.method}`);
