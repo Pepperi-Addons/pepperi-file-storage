@@ -17,7 +17,7 @@ export interface IPfsMutator
      * Lock the item.
      * @param relativeKey the key to be locked.
      */
-    lock(key: string);
+    lock(key: string, transactionType: "post" | "hide" | "unhide");
 
     /**
      * Save the given data on the lock. This data will be later used in case a rollback is executed.

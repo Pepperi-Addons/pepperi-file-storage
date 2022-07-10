@@ -8,8 +8,8 @@ The error Message is importent! it will be written in the audit log and help the
 */
 
 import { Client, Request } from '@pepperi-addons/debug-server'
-import { PapiClient, Relation } from '@pepperi-addons/papi-sdk';
-import { LOCK_ADAL_TABLE_NAME, METADATA_ADAL_TABLE_NAME, pfsSchemaData } from './constants';
+import { AddonData, AddonDataScheme, PapiClient, Relation } from '@pepperi-addons/papi-sdk';
+import { LOCK_ADAL_TABLE_NAME, METADATA_ADAL_TABLE_NAME, pfsSchemaData, PFS_TABLE_PREFIX } from './constants';
 import config from './../addon.config.json';
 import semver from 'semver';
 
@@ -37,7 +37,17 @@ export async function upgrade(client: Client, request: Request): Promise<any>
 
 	if (request.body.FromVersion && semver.compare(request.body.FromVersion, '1.0.1') < 0) 
 	{
-		throw new Error('Upgarding from versions ealier than 1.0.1 is not supported. Please uninstall the addon and install it again.');
+		throw new Error('Upgarding from versions earlier than 1.0.1 is not supported. Please uninstall the addon and install it again.');
+	}
+
+	if (request.body.FromVersion && semver.compare(request.body.FromVersion, '1.0.4') < 0) 
+	{
+		// Add the new TransactionType field to the lock table schema
+		await createLockADALTable(papiClient);
+
+		// Add the new DeletedBy field to every pfs schema
+		await addDeletedByFieldToPfsSchemas(papiClient);
+
 	}
 
 	return { success: true, resultObject: {} }
@@ -65,24 +75,15 @@ async function createLockADALTable(papiClient: PapiClient)
 		...pfsSchemaData,
 		Name: LOCK_ADAL_TABLE_NAME
 	}
+
+	//Add Transaction Type field to schema
+	pfsMetadataTable.Fields.TransactionType = {
+		Type: 'String',
+		Indexed: true,
+		Keyword: true,
+	};
+	
 	await papiClient.addons.data.schemes.post(pfsMetadataTable);
-}
-
-
-async function unsubscribeToExpiredRecords(papiClient: PapiClient) 
-{
-	await papiClient.notification.subscriptions.upsert({
-		AddonUUID: config.AddonUUID,
-		Name: "pfs--expired-adal-records-subscription",
-		Type: "data",
-		FilterPolicy: {
-			Resource: [METADATA_ADAL_TABLE_NAME],
-			Action: ["remove"],
-			AddonUUID: [config.AddonUUID]
-		},
-		AddonRelativeURL: '/api/record_removed',
-		Hidden: true
-	});
 }
 
 async function createDimxRelations(papiClient: PapiClient, client: Client) 
@@ -112,3 +113,29 @@ async function upsertRelation(papiClient: PapiClient, relation: Relation)
 {
 	return papiClient.post('/addons/data/relations', relation);
 }
+
+/**
+ * Add the new DeletedBy field to every pfs data schema
+ */
+async function addDeletedByFieldToPfsSchemas(papiClient: PapiClient) 
+{
+	// Get all schemas whos name starts with 'pfs_%'
+	const pfsSchemas: Array<AddonDataScheme> = await papiClient.addons.data.schemes.get({ where: `Name like '${PFS_TABLE_PREFIX}_%'` });
+
+	// Add the new DeletedBy field to every pfs schema
+	for (const pfsSchema of pfsSchemas) 
+	{
+		//Add DeletedBy field to schema
+		if(pfsSchema.Fields)
+		{
+			pfsSchema.Fields.DeletedBy = {
+				Type: 'String',
+				Indexed: true,
+				Keyword: true,
+			};
+		}
+		
+		await papiClient.addons.data.schemes.post(pfsSchema);
+	}
+}
+

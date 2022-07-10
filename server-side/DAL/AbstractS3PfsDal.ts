@@ -92,7 +92,7 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		return isCache;
 	}
 
-	abstract lock(item: any);
+	abstract lock(item: any, transactionType: "post" | "hide" | "unhide");
 
 	abstract mutateADAL(newFileFields: any, existingFile: any);
 

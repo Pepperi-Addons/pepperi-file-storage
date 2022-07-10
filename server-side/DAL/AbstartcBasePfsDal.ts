@@ -26,7 +26,7 @@ export abstract class AbstractBasePfsDal implements IPfsGetter, IPfsMutator
 	}
 	
 	//#region IPfsMutator
-	abstract lock(key: string);
+	abstract lock(key: string, transactionType: "post" | "hide" | "unhide");
 
 	abstract setRollbackData(item: any);
 

@@ -1,14 +1,15 @@
 import { TestError } from "../../constants";
 import AbstractCommand from "../abstractCommand";
 import { ITransactionalCommand } from "./iTransactionalCommand";
+import { IRollbackAlgorithm } from "./RollbackAlgorithms/iRollbackAlgorithm";
+import { PostRollbackAlgorithm } from "./RollbackAlgorithms/postRollback";
 
 export abstract class ABaseTransactionalCommand extends AbstractCommand implements ITransactionalCommand {
     abstract preLockValidations(): Promise<void>;
     abstract lock(): Promise<void>;
     abstract executeTransaction(): Promise<any>;
-    abstract rollback(lockedFile: any): Promise<void>;
     abstract unlock(key: string): Promise<void>;
-
+	
     public async execute(): Promise<any>{
         let res: any = {};
 
@@ -46,7 +47,7 @@ export abstract class ABaseTransactionalCommand extends AbstractCommand implemen
 				const lockedFile = await this.pfsMutator.isObjectLocked(this.request.body.Key);
 				if (lockedFile) 
 				{
-					await this.rollback(lockedFile);
+					await this.getRollbackAlgorithm(lockedFile).rollback();
 				}
 			}
 			
@@ -62,5 +63,39 @@ export abstract class ABaseTransactionalCommand extends AbstractCommand implemen
     protected errorLogger(error: Error)
     {
         console.error(`${error.message}`);
+    }
+
+    public async performRollback(): Promise<void> {
+        const lockedFile = await this.pfsMutator.isObjectLocked(this.request.body.Key);
+
+		if (lockedFile) 
+		{
+			await this.getRollbackAlgorithm(lockedFile).rollback();
+		}
+    }
+
+    protected getRollbackAlgorithm(lockedFile: any): IRollbackAlgorithm
+    {
+        // Creating a new concrete class that implements the ITransactionalCommand interface
+        // must also include a new implementation of the IRollbackAlgorithm interface. 
+        // This new IRollbackAlgorithm implementation should be added to the
+        // ABaseTransactionalCommand.getRollbackAlgorithm() factory.
+
+        switch(lockedFile.TransactionType)
+        {
+            case "post":
+                return new PostRollbackAlgorithm(this.client, this.request, this.pfsMutator, this.pfsGetter, lockedFile);
+            default:
+                throw new Error(`Unknown TransactionType: ${lockedFile.TransactionType}`);
+        }
+    }
+
+    public async rollback(): Promise<void>{
+        const lockedFile = await this.pfsMutator.isObjectLocked(this.request.body.Key);
+
+		if (lockedFile) 
+		{
+			await this.getRollbackAlgorithm(lockedFile).rollback();
+		}
     }
 }

@@ -1,4 +1,3 @@
-import { ITransactionalCommand } from "./iTransactionalCommand";
 import * as path from 'path';
 import fetch from 'node-fetch';
 import jwtDecode from 'jwt-decode';
@@ -78,29 +77,15 @@ export class PostTransactionalCommand extends ABaseTransactionalCommand{
 		}
 	}
 
-    async lock(): Promise<void>{
-        const lockedFile = await this.pfsMutator.isObjectLocked(this.request.body.Key);
-		const timePassedSinceLock = lockedFile ? (new Date().getTime()) - (new Date(lockedFile.CreationDateTime)).getTime() : (new Date().getTime());
+    async lock(): Promise<void>
+	{
+        await super.performRollback();
 
-		if (lockedFile) 
-		{
-			if (timePassedSinceLock > this.pfsMutator.getMaximalLockTime()) 
-			{
-				await this.rollback(lockedFile);
-			}
-
-			else 
-			{
-				const err: any = new Error(`The requested key ${this.request.body.Key} is currently locked for ${timePassedSinceLock} ms, which is less then the maixmal ${this.pfsMutator.getMaximalLockTime()} ms. To allow the current transaction to finish executing, please try again later.`);
-				err.code = 409; // Conflict code. This response is sent when a request conflicts with the current state of the server.
-				throw err;
-			}
-		}
-
-		await this.pfsMutator.lock(this.request.body.Key);
+		await this.pfsMutator.lock(this.request.body.Key, "post");
     }
 
-    async executeTransaction(): Promise<any>{
+    async executeTransaction(): Promise<any>
+	{
         // Download the current saved metadata, if exists
 		await this.getCurrentItemData();
 
@@ -407,80 +392,6 @@ export class PostTransactionalCommand extends ABaseTransactionalCommand{
 				Size: thumbnail.Size
 			};
 		}));
-	}
-
-    async rollback(lockedFile: any): Promise<void>{
-        console.error(`Rollback algorithm invoked for key: ${lockedFile.Key}`);
-
-		await this.getCurrentItemData();
-		console.log("Trying to determine where the transaction failed...");
-		if(this.existingFile.doesFileExist && !this.areExistingAndLockedFileSame(lockedFile)) 
-		// Changes have already been committed to (S3, if there were changes to the file's data and to) the metadata table. 
-		// The transaction can be completed. Since there's no way of telling whether a notification has already been sent or not,
-		// A notification will be sent anyway (PNS philosophy is "Notify at least once").
-		{
-			//Now the metadata table holds the updated data, and the lock table holds the outdated data.
-			console.log("Changes have already been committed to the metadata table (and S3, if they were needed). The transaction can be completed. Notifying subscribers...");
-			await this.pfsMutator.notify(this.existingFile, lockedFile);
-		}
-		else
-		{
-			console.log("No changes were committed to the metadata table. Checking if S3 has been updated...");
-			const s3FileVersion = await this.pfsGetter.getObjectS3FileVersion(this.existingFile.Key);
-			if (s3FileVersion != this.existingFile.FileVersion) //We have to get the file version from S3 since S3 has been updated, but the metadata table hasn't.
-			// A change has been made to S3, but was not yet applied to ADAL. At this stage there's not enough data to complete
-			// the transaction, so a rollback is needed. Permanently delete the newer S3 version, to revert the latest version to the previous one.
-			{	
-				console.log(`Changes have been committed to S3 (S3's VersionId = ${s3FileVersion}, metadata FileVersion = ${this.existingFile.FileVersion}). Reverting S3 to previous version (if exists. Otherwise delete S3 object.)`);
-				await this.pfsMutator.deleteS3FileVersion(this.existingFile.Key, s3FileVersion);
-				console.log("Done reverting S3 to previous state.");
-
-			}	
-			else
-			{
-				console.log("No changes have been committed to S3 either.");
-			}
-		} 
-
-		console.log("Unlocking file...");
-		await this.pfsMutator.unlock(lockedFile.Key);
-		console.log("Done unlocking the file.");
-
-		console.error(`Rollback algorithm has finished running for key: ${lockedFile.Key}`);
-
-		if(this.request.query.testRollback) // If testing rollback, throw exception to stop the process after rollback.
-		{
-			throw new TestError("Testing rollback - finishing execution after rollback was done.");
-		}
-    }
-
-    private areExistingAndLockedFileSame(lockedFile: any) 
-	{
-		console.log("Comparing locked object data and the stored metadata...");
-
-		const files = [{...lockedFile}, {...this.existingFile}];
-
-		for(const file of files)
-		{
-			delete file.ModificationDateTime
-			delete file.CreationDateTime
-			delete file.doesFileExist;
-		}
-
-		files[1].Key = files[1].Key.startsWith('/') ? files[1].Key.substring(1) : files[1].Key
-
-		const res = shallowCompareObjects();
-
-		console.log(`Comparison results - lockeFile === storedFile: ${res}`);
-
-		return res;
-
-		function shallowCompareObjects() 
-		{
-			return Object.keys(files[0]).length === Object.keys(files[1]).length &&
-				Object.keys(files[0]).every(key => files[1].hasOwnProperty(key) && files[0][key] === files[1][key]
-				);
-		}
 	}
 
     async unlock(key: string): Promise<void>{

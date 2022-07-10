@@ -90,6 +90,11 @@ export const pfsSchemaData: any = {
 		FileSize: {
 			Type: 'Integer'
 		},
+		DeletedBy:{
+			Type: 'String',
+			Indexed: true,
+			Keyword: true
+		}
 	} as any,
 }
 
