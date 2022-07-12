@@ -7,6 +7,7 @@ import { ListObjectsCommand } from './PfsCommands/AtomicCommands/listObjectsComm
 import { downloadFileCommand } from './PfsCommands/AtomicCommands/downloadFileCommand';
 import { RecordRemovedCommand } from './PfsCommands/AtomicCommands/recordRemovedCommand';
 import { InvalidateCommand } from './PfsCommands/AtomicCommands/invalidateCommand';
+import { HideFolderTransactionalCommand } from './PfsCommands/TransactionalCommands/hideFolderTransactionalCommand';
 
 export async function file(client: Client, request: Request) 
 {
@@ -112,6 +113,26 @@ export async function invalidate(client: Client, request: Request)
 
 		const dal = Helper.DalFactory(client, request);
 		const pfsCommand = new InvalidateCommand(client, request, dal, dal);
+
+		return await pfsCommand.execute();
+	}
+	default: {
+		throw new Error(`Unsupported method: ${request.method}`);
+	}
+	}
+}
+
+export async function hide_folder(client: Client, request: Request) 
+{
+	console.log(`Request received: ${JSON.stringify(request)}`);
+
+	switch (request.method) 
+	{
+	case "POST": {
+		Helper.validateFilesQueryParams(request);
+
+		const dal = Helper.DalFactory(client, request);
+		const pfsCommand = new HideFolderTransactionalCommand(client, request, dal, dal);
 
 		return await pfsCommand.execute();
 	}

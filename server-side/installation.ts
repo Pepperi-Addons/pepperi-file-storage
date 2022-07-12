@@ -8,9 +8,8 @@ The error Message is importent! it will be written in the audit log and help the
 */
 
 import { Client, Request } from '@pepperi-addons/debug-server'
-import { AddonData, AddonDataScheme, PapiClient, Relation } from '@pepperi-addons/papi-sdk';
-import { LOCK_ADAL_TABLE_NAME, METADATA_ADAL_TABLE_NAME, pfsSchemaData, PFS_TABLE_PREFIX } from './constants';
-import config from './../addon.config.json';
+import { AddonDataScheme, PapiClient, Relation } from '@pepperi-addons/papi-sdk';
+import { LOCK_ADAL_TABLE_NAME, pfsSchemaData, PFS_TABLE_PREFIX } from './constants';
 import semver from 'semver';
 
 export async function install(client: Client, request: Request): Promise<any> 

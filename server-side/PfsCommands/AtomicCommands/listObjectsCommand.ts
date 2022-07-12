@@ -1,9 +1,10 @@
+import { AddonData } from '@pepperi-addons/papi-sdk';
 import AbstractCommand from '../abstractCommand';
 
 export class ListObjectsCommand extends AbstractCommand 
 {
 
-	public async execute(): Promise<any>{
+	public async execute(): Promise<AddonData[]>{
 		return await this.listObjects();
 	}
 

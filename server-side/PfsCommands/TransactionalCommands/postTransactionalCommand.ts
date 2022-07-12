@@ -243,10 +243,11 @@ export class PostTransactionalCommand extends ABaseTransactionalCommand{
 			pathFoldersList.pop();
 		}
 		const fileName = pathFoldersList.pop();
-		const containingFolder = pathFoldersList.join('/');
+		const containingFolder = pathFoldersList.join('/') + '/';
 
 		newFileFields.Key = data.Key;
 		newFileFields.ExpirationDateTime = data.ExpirationDateTime;
+		newFileFields.DeletedBy = data.DeletedBy;
 
 		if(!existingFile.doesFileExist)
 		{

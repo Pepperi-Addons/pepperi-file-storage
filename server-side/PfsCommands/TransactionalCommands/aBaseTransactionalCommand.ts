@@ -55,7 +55,7 @@ export abstract class ABaseTransactionalCommand extends AbstractCommand implemen
 		}
 
 		// Remove lock
-		await this.unlock(this.request.body.Key);
+		await this.unlock(this.request.body.Key ?? this.request.query.Key);
 
 		return res;
     }
@@ -66,7 +66,7 @@ export abstract class ABaseTransactionalCommand extends AbstractCommand implemen
     }
 
     public async performRollback(): Promise<void> {
-        const lockedFile = await this.pfsMutator.isObjectLocked(this.request.body.Key);
+        const lockedFile = await this.pfsMutator.isObjectLocked(this.request.body.Key ?? this.request.query.Key);
 
 		if (lockedFile) 
 		{

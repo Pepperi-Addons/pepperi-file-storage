@@ -1,6 +1,7 @@
 import { Client, Request } from '@pepperi-addons/debug-server';
 import { AddonData } from '@pepperi-addons/papi-sdk';
 import jwtDecode from 'jwt-decode';
+import { TransactionType } from '../constants';
 import { IPfsGetter } from './IPfsGetter';
 import { IPfsMutator } from './IPfsMutator';
 
@@ -26,7 +27,7 @@ export abstract class AbstractBasePfsDal implements IPfsGetter, IPfsMutator
 	}
 	
 	//#region IPfsMutator
-	abstract lock(key: string, transactionType: "post" | "hide" | "unhide");
+	abstract lock(key: string, transactionType: TransactionType);
 
 	abstract setRollbackData(item: any);
 
