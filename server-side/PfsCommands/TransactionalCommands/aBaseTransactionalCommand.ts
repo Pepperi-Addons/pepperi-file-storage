@@ -1,6 +1,7 @@
 import { TestError } from "../../constants";
 import AbstractCommand from "../abstractCommand";
 import { ITransactionalCommand } from "./iTransactionalCommand";
+import { HideFolderRollbackAlgorithm } from "./RollbackAlgorithms/hideFolderRollback";
 import { IRollbackAlgorithm } from "./RollbackAlgorithms/iRollbackAlgorithm";
 import { PostRollbackAlgorithm } from "./RollbackAlgorithms/postRollback";
 
@@ -85,8 +86,10 @@ export abstract class ABaseTransactionalCommand extends AbstractCommand implemen
         {
             case "post":
                 return new PostRollbackAlgorithm(this.client, this.request, this.pfsMutator, this.pfsGetter, lockedFile);
+			case "hide":
+                return new HideFolderRollbackAlgorithm(this.client, this.request, this.pfsMutator, this.pfsGetter, lockedFile);
             default:
-                throw new Error(`Unknown TransactionType: ${lockedFile.TransactionType}`);
+                throw new Error(`Could not find a rollback algorithm for transaction of type: '${lockedFile.TransactionType}'`);
         }
     }
 
