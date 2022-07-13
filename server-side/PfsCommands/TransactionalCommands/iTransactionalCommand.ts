@@ -1,6 +1,6 @@
 export interface ITransactionalCommand
 {
-    preLockValidations(): Promise<void>;
+    preLockLogic(): Promise<void>;
     lock(): Promise<void>;
     executeTransaction(): Promise<any>;
     unlock(key: string): Promise<void>;
@@ -8,5 +8,5 @@ export interface ITransactionalCommand
     // Creating a new concrete class that implements the ITransactionalCommand interface must also 
     // include a new implementation of the IRollbackAlgorithm interface. 
     // This new IRollbackAlgorithm implementation should be added to the
-    // ABaseTransactionalCommand.getRollbackAlgorithm() factory.
+    // RollbackAlgorithmFactory.getRollbackAlgorithm() factory.
 }

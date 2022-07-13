@@ -1,7 +1,7 @@
 import * as path from 'path';
 import fetch from 'node-fetch';
 import jwtDecode from 'jwt-decode';
-import { CACHE_DEFAULT_VALUE, dataURLRegex, DESCRIPTION_DEFAULT_VALUE, EXTENSIONS_WHITELIST, HIDDEN_DEFAULT_VALUE, MAXIMAL_TREE_DEPTH, SECRETKEY_HEADER, SYNC_DEFAULT_VALUE, TestError } from "../../constants";
+import { CACHE_DEFAULT_VALUE, dataURLRegex, DESCRIPTION_DEFAULT_VALUE, EXTENSIONS_WHITELIST, HIDDEN_DEFAULT_VALUE, MAXIMAL_TREE_DEPTH, SECRETKEY_HEADER, SYNC_DEFAULT_VALUE, TestError, TransactionType } from "../../constants";
 import { ImageResizer } from "../../imageResizer";
 import { PapiClient } from "@pepperi-addons/papi-sdk";
 import { Helper } from "../../helper";
@@ -9,8 +9,10 @@ import { ABaseTransactionalCommand } from "./aBaseTransactionalCommand";
 
 export class PostTransactionalCommand extends ABaseTransactionalCommand{
 	readonly MIME_FIELD_IS_MISSING = "Missing mandatory field 'MIME'";
+	readonly TRANSACTION_TYPE: TransactionType = 'post' ;
 
-	async preLockValidations() 
+
+	async preLockLogic() 
 	{
 		await Helper.validateAddonSecretKey(this.request.header, this.client, this.AddonUUID);
 
@@ -81,7 +83,7 @@ export class PostTransactionalCommand extends ABaseTransactionalCommand{
 	{
         await super.performRollback();
 
-		await this.pfsMutator.lock(this.request.body.Key, "post");
+		await this.pfsMutator.lock(this.request.body.Key, this.TRANSACTION_TYPE);
     }
 
     async executeTransaction(): Promise<any>

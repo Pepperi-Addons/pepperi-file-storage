@@ -2,16 +2,51 @@ import { Helper } from "../../helper";
 import { ListObjectsCommand } from "../AtomicCommands/listObjectsCommand";
 import { ABaseTransactionalCommand } from "./aBaseTransactionalCommand";
 import { PapiClient } from "@pepperi-addons/papi-sdk";
+import { TransactionType } from "../../constants";
 
 export class HideFolderTransactionalCommand extends ABaseTransactionalCommand{
 
-	async preLockValidations() 
+	readonly TRANSACTION_TYPE: TransactionType = 'hide' ;
+	protected isRollbackRequested = false;
+
+	async preLockLogic() 
+	{
+		await this.preLockValidations();
+
+	}
+
+	private async preLockValidations()
 	{
 		// Validate secret key
 		await Helper.validateAddonSecretKey(this.request.header, this.client, this.AddonUUID);
 
 		// Validate that the folder exists or that there's a 'hide' lock on it.
 		await this.validateFolder();
+
+		this.isRollbackRequested = await this.getIsRollbackRequested();
+	}
+	
+	private async getIsRollbackRequested()
+	{
+		let isRollbackRequested:boolean = !!this.request.body?.rollbackUUID;
+		let lockedFile: any;
+
+		if(this.request.body.rollbackUUID && isRollbackRequested)
+		{
+			lockedFile = await this.pfsMutator.isObjectLocked(this.request.query.Key);
+			isRollbackRequested = isRollbackRequested && lockedFile?.rollbackUUID;
+
+			if(isRollbackRequested)
+			{
+				isRollbackRequested = isRollbackRequested && lockedFile.rollbackUUID === this.request.body.rollbackUUID;
+			}
+			else
+			{
+				throw new Error(`Another rollback is already running on key '${this.request.query.Key}'`);
+			}
+		}
+
+		return isRollbackRequested;
 	}
 
 	/**
@@ -23,17 +58,29 @@ export class HideFolderTransactionalCommand extends ABaseTransactionalCommand{
 		this.request.query.Key = this.request.query.Key.endsWith('/') ? this.request.query.Key : `${this.request.query.Key}/`;
 		await this.getCurrentItemData();
 		
-		if (!(this.existingFile.doesFileExist || (await this.pfsMutator.isObjectLocked(this.request.query.Key))?.TransactionType === 'hide'))
+		if (!this.existingFile.doesFileExist)
 		{
-			console.log(`${this.request.query.Key} does not exist`);
+			const lockedObject = await this.pfsMutator.isObjectLocked(this.request.query.Key);
+			// We run the transaction if the folder does not exist, but there's a 'hide' lock on it, and a rollbackUUID is provided.
+			// We check if the rollbackUUID in the request's body matches the one on the lock, to ensure a single rollback is run.
+			// This allows us to use the function itself as its own rollback.
+			if(!(lockedObject?.transactionType === 'hide' && this.request.body?.rollbackUUID === lockedObject?.rollbackUUID)){
+				console.log(`${this.request.query.Key} does not exist`);
+				throw new Error(`${this.request.query.Key} does not exist`);
+			}
 		}
 	}
 
     async lock(): Promise<void>
 	{
-		await super.performRollback();
+		// If a rollback is requested, there's no need to lock the file.
+		// A lock is already in place.
+		if(!this.isRollbackRequested)
+		{
+			await super.performRollback();
 
-		await this.pfsMutator.lock(this.request.query.Key, "hide");
+			await this.pfsMutator.lock(this.request.query.Key, this.TRANSACTION_TYPE);
+		}
     }
 
     async executeTransaction(): Promise<any>
