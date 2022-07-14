@@ -432,7 +432,7 @@ export class PostTransactionalCommand extends ABaseTransactionalCommand{
 
     private async validateNoContentsBeforeFolderDeletion() 
 	{
-		const whereClause = `Folder='${this.request.body.Key.slice(0, -1)}'`;
+		const whereClause = `Folder='${this.request.body.Key}'`;
 		const folderContents = await this.pfsGetter.getObjects(whereClause);
 
 		if (folderContents.length > 0) // Deleting a folder that has exisitng content is not currently supported.
