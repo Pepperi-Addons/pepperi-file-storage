@@ -1,5 +1,5 @@
 import { Client, Request } from '@pepperi-addons/debug-server';
-import { dataURLRegex, S3Buckets, CloudfrontDistributions, CACHE_DEFAULT_VALUE } from "../constants";
+import { dataURLRegex, S3Buckets, CloudfrontDistributions, CACHE_DEFAULT_VALUE, TransactionType } from "../constants";
 import { AbstractBasePfsDal } from './AbstartcBasePfsDal';
 
 const AWS = require('aws-sdk'); // AWS is part of the lambda's environment. Importing it will result in it being rolled up redundently.
@@ -92,7 +92,7 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		return isCache;
 	}
 
-	abstract lock(item: any);
+	abstract lock(item: any, transactionType: TransactionType);
 
 	abstract mutateADAL(newFileFields: any, existingFile: any);
 

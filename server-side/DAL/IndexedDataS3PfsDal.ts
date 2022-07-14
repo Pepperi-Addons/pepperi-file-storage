@@ -1,5 +1,5 @@
 import { Client, Request } from '@pepperi-addons/debug-server';
-import { CdnServers, LOCK_ADAL_TABLE_NAME, SECRETKEY_HEADER } from "../constants";
+import { CdnServers, LOCK_ADAL_TABLE_NAME, SECRETKEY_HEADER, TransactionType } from "../constants";
 import { PapiClient } from '@pepperi-addons/papi-sdk/dist/papi-client';
 import config from '../../addon.config.json';
 import { AddonData, FindOptions } from '@pepperi-addons/papi-sdk';
@@ -112,10 +112,14 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 	//#endregion
 
 	//#region IPfsMutator
-	async lock(Key: any){
+	async lock(Key: any, transactionType: TransactionType){
 		console.log(`Attempting to lock key: ${Key}`);
 
-		const item: any = {Key : this.getAbsolutePath(Key).replace(new RegExp("/", 'g'), "~")};
+		const item: any = 
+						{
+							Key : this.getAbsolutePath(Key).replace(new RegExp("/", 'g'), "~"),
+							TransactionType : transactionType
+						};
 
 		const lockRes =  await this.papiClient.addons.data.uuid(config.AddonUUID).table(LOCK_ADAL_TABLE_NAME).upsert(item);
 

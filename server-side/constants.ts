@@ -44,6 +44,8 @@ export interface IPfsListFilesResultObject {
     ModificationDateTime?: string // Folders don't have a ModificationDateTime, only files do.
 }
 
+export type TransactionType = 'post'|'hide';
+
 export const pfsSchemaData: any = {
 	Fields: {
 		Description: {
@@ -90,6 +92,11 @@ export const pfsSchemaData: any = {
 		FileSize: {
 			Type: 'Integer'
 		},
+		DeletedBy:{
+			Type: 'String',
+			Indexed: true,
+			Keyword: true
+		}
 	} as any,
 }
 

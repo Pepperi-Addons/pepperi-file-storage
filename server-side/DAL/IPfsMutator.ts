@@ -1,3 +1,5 @@
+import { TransactionType } from "../constants";
+
 export interface IPfsMutator
 {
 	/**
@@ -11,19 +13,20 @@ export interface IPfsMutator
      * Returns the lock data if the key is locked, null otherwise.
      * @param relativeKey the key to check.
      */
-     isObjectLocked(relativeKey: string);
+    isObjectLocked(relativeKey: string);
      
     /**
      * Lock the item.
      * @param relativeKey the key to be locked.
+     * @param transactionType the type of transaction.
      */
-    lock(key: string);
+    lock(key: string, transactionType: TransactionType);
 
     /**
      * Save the given data on the lock. This data will be later used in case a rollback is executed.
      * @param item the item's data to be saved.
      */
-     setRollbackData(item: any);
+    setRollbackData(item: any);
 
     /**
      * Write needed changes to S3 bucket - create a new file if needed, update file data, update or create file's thumbnails, etc.
