@@ -8,7 +8,7 @@ The error Message is importent! it will be written in the audit log and help the
 */
 
 import { Client, Request } from '@pepperi-addons/debug-server'
-import { AddonDataScheme, PapiClient, Relation } from '@pepperi-addons/papi-sdk';
+import { AddonDataScheme, FindOptions, PapiClient, Relation } from '@pepperi-addons/papi-sdk';
 import { LOCK_ADAL_TABLE_NAME, pfsSchemaData, PFS_TABLE_PREFIX } from './constants';
 import semver from 'semver';
 
@@ -47,6 +47,11 @@ export async function upgrade(client: Client, request: Request): Promise<any>
 		// Add the new DeletedBy field to every pfs schema
 		await addDeletedByFieldToPfsSchemas(papiClient);
 
+	}
+
+	if (request.body.FromVersion && semver.compare(request.body.FromVersion, '1.0.8') < 0) 
+	{
+		await addTrailingSlashToFolderProperty(papiClient, client);
 	}
 
 	return { success: true, resultObject: {} }
@@ -135,6 +140,58 @@ async function addDeletedByFieldToPfsSchemas(papiClient: PapiClient)
 		}
 		
 		await papiClient.addons.data.schemes.post(pfsSchema);
+	}
+}
+
+export async function addTrailingSlashToFolderProperty(papiClient: PapiClient, client: Client) 
+{
+	// Get all pfs schemas
+	const pfsSchemas: Array<AddonDataScheme> = await papiClient.addons.data.schemes.get({fields: ["Name"]});
+
+	// Add the new DeletedBy field to every pfs schema
+	for (const pfsSchema of pfsSchemas) 
+	{
+		if(pfsSchema.Name)
+		{
+			let objects: any[] = [];
+			let page = 1;
+			do
+			{
+				const findParams: FindOptions = {
+					fields: ["Key", "Folder", "Hidden"],
+					page: page,
+					include_deleted: true,
+					// No need to get objects on the root folder, which already have a trailing '/'
+					where: 'Folder != "/"'
+				};
+				// Get a page of objects from the schema
+				objects = await papiClient.addons.data.uuid(client.AddonUUID).table(pfsSchema.Name).find(findParams);
+
+				// Keep only objects whos obj.Folder is missing a trailing '/'
+				objects = objects.filter(obj => obj.Folder && !obj.Folder.endsWith('/'));
+
+				// Create the updated Folder value
+				objects = objects.map(obj => 
+				{
+					return {
+						Key: obj.Key,
+						Folder: `${obj.Folder}/`,
+						// Upserting a Hidden object will mark it Hidden=false. 
+						// We have to keep the Hidden value unchanged to keep the object hidden.
+						Hidden: obj.Hidden,
+					}
+				})
+
+				// Check if there are objects, to avoid a redundant api call
+				if(objects.length > 0)
+				{
+					await papiClient.post(`/addons/data/batch/${client.AddonUUID}/${pfsSchema.Name}`, {Objects: objects});
+				}
+
+				page++;
+			}
+			while(objects.length > 0);
+		}
 	}
 }
 
