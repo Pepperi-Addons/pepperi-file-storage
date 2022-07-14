@@ -1,0 +1,10 @@
+name: PublishAddon
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  publish-addon:
+    uses:  Pepperi-Addons/development-guidelines/.github/workflows/publish.yml@master
