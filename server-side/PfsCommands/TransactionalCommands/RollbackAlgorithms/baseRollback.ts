@@ -17,13 +17,13 @@ export abstract class BaseRollbackAlgorithm extends PfsService implements IRollb
 
 	abstract rollbackImplementation(): Promise<void>;
 
-	async rollback(): Promise<void>
+	async rollback(force? : boolean): Promise<void>
 	{
 		if (this.lockedFile) 
 		{
 			const timePassedSinceLock = (new Date().getTime()) - (new Date(this.lockedFile.CreationDateTime)).getTime();
 
-			if (timePassedSinceLock > this.pfsMutator.getMaximalLockTime()) 
+			if (force || timePassedSinceLock > this.pfsMutator.getMaximalLockTime()) 
 			{
 				await this.rollbackImplementation();
 			}

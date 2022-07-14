@@ -77,7 +77,7 @@ export class HideFolderTransactionalCommand extends ABaseTransactionalCommand{
 		// A lock is already in place.
 		if(!this.isRollbackRequested)
 		{
-			await super.performRollback();
+			await super.rollback();
 
 			await this.pfsMutator.lock(this.request.query.Key, this.TRANSACTION_TYPE);
 		}

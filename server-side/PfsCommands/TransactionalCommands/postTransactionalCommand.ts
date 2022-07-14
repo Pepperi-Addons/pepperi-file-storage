@@ -81,7 +81,7 @@ export class PostTransactionalCommand extends ABaseTransactionalCommand{
 
     async lock(): Promise<void>
 	{
-        await super.performRollback();
+        await super.rollback();
 
 		await this.pfsMutator.lock(this.request.body.Key, this.TRANSACTION_TYPE);
     }

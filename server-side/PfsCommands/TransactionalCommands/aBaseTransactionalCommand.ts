@@ -42,12 +42,9 @@ export abstract class ABaseTransactionalCommand extends AbstractCommand implemen
 			
 			if(!(err instanceof TestError))
 			{
-				// Perform rollback
-				const lockedFile = await this.pfsMutator.isObjectLocked(this.request.body.Key);
-				if (lockedFile) 
-				{
-					await RollbackAlgorithmFactory.getRollbackAlgorithm(this.client, this.request, this.pfsMutator, this.pfsGetter, lockedFile).rollback();
-				}
+				// If an exception is thrown, we rollback the transaction
+				const shouldForceRollback = true;
+				await this.rollback(shouldForceRollback)
 			}
 			
 			throw err;
@@ -64,21 +61,12 @@ export abstract class ABaseTransactionalCommand extends AbstractCommand implemen
         console.error(`${error.message}`);
     }
 
-    public async performRollback(): Promise<void> {
-        const lockedFile = await this.pfsMutator.isObjectLocked(this.request.body.Key ?? this.request.query.Key);
-
-		if (lockedFile) 
-		{
-			await RollbackAlgorithmFactory.getRollbackAlgorithm(this.client, this.request, this.pfsMutator, this.pfsGetter, lockedFile).rollback();
-		}
-    }
-
-    public async rollback(): Promise<void>{
+    public async rollback(force?: boolean): Promise<void>{
         const lockedFile = await this.pfsMutator.isObjectLocked(this.request.body.Key);
 
 		if (lockedFile) 
 		{
-			await RollbackAlgorithmFactory.getRollbackAlgorithm(this.client, this.request, this.pfsMutator, this.pfsGetter, lockedFile).rollback();
+			await RollbackAlgorithmFactory.getRollbackAlgorithm(this.client, this.request, this.pfsMutator, this.pfsGetter, lockedFile).rollback(force);
 		}
     }
 }
