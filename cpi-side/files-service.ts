@@ -1,18 +1,31 @@
 import fetch from "node-fetch";
-
 import fs from "fs";
 import { AddonDataScheme } from "@pepperi-addons/papi-sdk";
 import { URL } from "url";
 class FilesService {
 
-    async getFileUrl(addonUUID: string, fileKey: string): Promise<string> {
-        const file = await this.getFile(fileKey, addonUUID);
-        const filePath = await this.downloadFileIfNeeded(file)
-        if(filePath){
-            const baseURL = await pepperi["files"].baseURL()
-            return `${baseURL}/PFS${filePath}`;
+    private _pfsFolder = '';
+    get pfsFolder() {
+        return (async () => {
+            if (!this._pfsFolder) {
+                this._pfsFolder = await this.getPFSFolder();
+            }
+            return this._pfsFolder;
+        })();
+    }
+
+    async getFileUrl(addonUUID: string, schemaName: string, fileKey: string): Promise<string> {
+        const file = await this.getFile(fileKey, addonUUID, schemaName);
+        if (file) {
+            const filePath = await this.downloadFileIfNeeded(file)
+            if(filePath){
+                const baseURL = await pepperi["files"].baseURL()
+                return `${baseURL}/PFS${filePath}`;
+            } else {
+                return file.URL;
+            }
         } else {
-            return file.URL;
+            throw new Error(`File ${fileKey} not found`);
         }
     }
    
@@ -32,14 +45,14 @@ class FilesService {
         const fileStatusItem = fileStatus.files[fixedPathname];
         const isFileDownloaded = fileStatusItem && fileStatusItem.status === 'downloaded';
         const isFileVersionMatched = fileStatusItem && fileStatusItem.fileVersion === file.FileVersion;
-        const isFileExists = fs.existsSync(`${await this.getPFSFolder()}/${fixedPathname}`);
+        const isFileExists = fs.existsSync(`${await this.pfsFolder}/${fixedPathname}`);
         // 1. file is already downloaded and version is ok
         if (isFileDownloaded && isFileVersionMatched && isFileExists) { 
             console.log(`File ${file.Name} is up to date`);
             return retFilePath;
         }
         // 2. file is not downloaded or version changed
-        const pfsRootDir = await this.getPFSFolder();
+        const pfsRootDir = await this.pfsFolder;
         let status = {} as FileStatusItem;
         try {
             await this.downloadFile(file, fixedPathname, pfsRootDir);     
@@ -93,23 +106,18 @@ class FilesService {
         });        
     }
 
-    async getFile(key, addonUUID: string | undefined = undefined): Promise<any> {
-        if(addonUUID){
-            // get file directly from table
-            const addonSchema = await this.getAddonSchema(addonUUID);
-            if (addonSchema) {
-                const file = await pepperi.api.adal.get({
-                    addon: addonUUID,
-                    table: addonSchema.Name,
-                    key: key,
-                });
-                return file.object;
-            }
+    async getFile(key, addonUUID: string, schemaName: string): Promise<any> {
+        // get file directly from table
+        const addonSchema = await this.getAddonSchema(addonUUID, schemaName);
+        if (addonSchema) {
+            const file = await pepperi.api.adal.get({
+                addon: addonUUID,
+                table: schemaName,
+                key: key,
+            });
+            return file.object;
         } else {
-            // look in all schemas
-            const files = await this.getFiles();
-            const file = files.find(file => file.Key === key);
-            return file;
+            return undefined;
         }
     }
 
@@ -117,7 +125,7 @@ class FilesService {
         const schemes = await this.getSchemesToDownload();
         const pfsFiles = await Promise.all(schemes.map(async schema => {
             return (await pepperi.api.adal.getList({
-                addon: schema["AddonUUID"],
+                addon: schema.AddonUUID!,
                 table: schema.Name,
             })).objects;
         })) as any[];
@@ -136,9 +144,9 @@ class FilesService {
         return res;      
         
     }
-    async getAddonSchema(addonUUID): Promise<AddonDataScheme> {
+    async getAddonSchema(addonUUID: string, schemaName: string): Promise<AddonDataScheme> {
         const schemas = await this.getSchemas();
-        return schemas.find(schema => schema.Type === 'pfs' && schema.AddonUUID === addonUUID);
+        return schemas.find(schema => schema.Type === 'pfs' && schema.AddonUUID === addonUUID && schema.Name === schemaName);
     }
     async getSchemesToDownload(): Promise<AddonDataScheme[]> {
         // get schemas that its type is 'pfs'
@@ -166,7 +174,7 @@ class FilesService {
     }
 
     async getFileStatus(): Promise<FileStatus>  {
-        const fileStatusPath = `${await this.getPFSFolder()}/file-status.json`;
+        const fileStatusPath = `${await this.pfsFolder}/file-status.json`;
         if (!fs.existsSync(fileStatusPath)) {
             fs.writeFileSync(fileStatusPath, JSON.stringify({
                 files: {},
@@ -176,7 +184,7 @@ class FilesService {
         return fileStatus;
     }
     async updateFileStatus(fileKey: string, status: FileStatusItem) {
-        const pfsRootDir = await this.getPFSFolder();
+        const pfsRootDir = await this.pfsFolder;
         const fileStatus = await this.getFileStatus();
         fileStatus.files[fileKey] = status; 
         fs.writeFileSync(`${pfsRootDir}/file-status.json`, JSON.stringify(fileStatus));
