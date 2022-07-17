@@ -1,7 +1,7 @@
 import { TestError } from "../../constants";
 import AbstractCommand from "../abstractCommand";
 import { ITransactionalCommand } from "./iTransactionalCommand";
-import { RollbackAlgorithmFactory } from "./RollbackAlgorithms/RollbackAlgorithmFactory";
+import { RollbackAlgorithmFactory } from "./RollbackAlgorithms/rollbackAlgorithmFactory";
 
 export abstract class ABaseTransactionalCommand extends AbstractCommand implements ITransactionalCommand {
     abstract preLockLogic(): Promise<void>;
