@@ -1,23 +1,17 @@
-import fetch from "node-fetch";
-import fs from "fs";
 import { AddonDataScheme } from "@pepperi-addons/papi-sdk";
-import { URL } from "url";
-class FilesService {
+import { FileDownloadManager } from "./file-download-manager";
 
-    private _pfsFolder = '';
-    get pfsFolder() {
-        return (async () => {
-            if (!this._pfsFolder) {
-                this._pfsFolder = await this.getPFSFolder();
-            }
-            return this._pfsFolder;
-        })();
+class FilesService {  
+    
+    fdm: FileDownloadManager;
+    constructor() {
+        this.fdm = FileDownloadManager.getInstance();
     }
 
     async getFileUrl(addonUUID: string, schemaName: string, fileKey: string): Promise<string> {
         const file = await this.getFile(fileKey, addonUUID, schemaName);
         if (file) {
-            const filePath = await this.downloadFileIfNeeded(file)
+            const filePath = await this.fdm.downloadFileIfNeeded(file)
             if(filePath){
                 const baseURL = await pepperi["files"].baseURL()
                 return `${baseURL}/PFS${filePath}`;
@@ -28,82 +22,14 @@ class FilesService {
             throw new Error(`File ${fileKey} not found`);
         }
     }
-   
+
 
     async downloadFiles(lastSyncDataTime: number) { 
+        debugger;
+        console.log(`Downloading PFS files since ${new Date(lastSyncDataTime)}`);
         const files = await this.getFiles(lastSyncDataTime);
         console.log(`PFS - Found ${files.length} files to download`);
-        await Promise.all(files.map(async file => {;
-           return this.downloadFileIfNeeded(file);        
-        }));
-    }
-    async downloadFileIfNeeded(file: any): Promise<string> {
-        const { hostname, pathname } = new URL(file.URL);
-        const fileStatus = await this.getFileStatus();
-        const fixedPathname = pathname.substring(pathname.slice(1).indexOf('/') + 1); // remove account uuid from path
-        let retFilePath = fixedPathname;
-        const fileStatusItem = fileStatus.files[fixedPathname];
-        const isFileDownloaded = fileStatusItem && fileStatusItem.status === 'downloaded';
-        const isFileVersionMatched = fileStatusItem && fileStatusItem.fileVersion === file.FileVersion;
-        const isFileExists = fs.existsSync(`${await this.pfsFolder}/${fixedPathname}`);
-        // 1. file is already downloaded and version is ok
-        if (isFileDownloaded && isFileVersionMatched && isFileExists) { 
-            console.log(`File ${file.Name} is up to date`);
-            return retFilePath;
-        }
-        // 2. file is not downloaded or version changed
-        const pfsRootDir = await this.pfsFolder;
-        let status = {} as FileStatusItem;
-        try {
-            await this.downloadFile(file, fixedPathname, pfsRootDir);     
-            // 3. download was successful
-            status = {
-                status: 'downloaded',
-                downloadedDateTime: Date.now(),
-                modificationDateTime: file.ModificationDateTime,
-                fileVersion: file.FileVersion,
-                fileURL: file.URL,
-            }            
-            console.log(`File ${file.Name} downloaded from PFS`);
-               
-        } catch (error) {
-            // 4. download failed
-            status = {
-                status: 'error',
-                error: `${error}`,
-                downloadedDateTime: Date.now(),
-                fileURL: file.URL,
-            }
-            console.log(`Error downloading PFS file ${file.Name}`);
-            // 4.1. try to get chached file, if not exists, return empty string
-            retFilePath = isFileExists ? fixedPathname : '';
-        }
-        // 5. save file status
-        await this.updateFileStatus(fixedPathname, status);
-        return retFilePath;
-    }
-
-    downloadFile(file: any, destPath: string,  pfsRootDir: string): Promise<void> {
-        const filePath = `${pfsRootDir}/${destPath}`
-        console.log(`Downloading file ${file.Name} from ${file.URL} to ${filePath}`);
-        
-        return new Promise((resolve, reject) => {
-            fetch(file.URL).then(res => res.buffer()).then(buffer => {
-                // write file to disk
-                const dir = filePath.substring(0, filePath.lastIndexOf('/'));
-                // create dir if needed
-                if (!fs.existsSync(dir)) {
-                    fs.mkdirSync(dir, { recursive: true });
-                }
-                return fs.promises.writeFile(filePath, buffer);
-            }).then(() => {
-                console.log(`Downloaded file ${filePath}`);
-                resolve();
-            }).catch(err => {
-                console.log(err);
-                reject(err);
-            });
-        });        
+        return this.fdm.downloadFiles(files);      
     }
 
     async getFile(key, addonUUID: string, schemaName: string): Promise<any> {
@@ -164,43 +90,8 @@ class FilesService {
         })
         return schemas.objects;
     }
-    async getPFSFolder(): Promise<any> {
-        const filesRootDir = await pepperi["files"].rootDir();
-        const pfsRootDir = `${filesRootDir}/PFS`;
-        if (!fs.existsSync(pfsRootDir)) {
-            fs.mkdirSync(pfsRootDir);
-        }
-        return pfsRootDir;
-    }
-
-    async getFileStatus(): Promise<FileStatus>  {
-        const fileStatusPath = `${await this.pfsFolder}/file-status.json`;
-        if (!fs.existsSync(fileStatusPath)) {
-            fs.writeFileSync(fileStatusPath, JSON.stringify({
-                files: {},
-            } as FileStatus));   
-        }
-        const fileStatus = JSON.parse(fs.readFileSync(fileStatusPath).toString());
-        return fileStatus;
-    }
-    async updateFileStatus(fileKey: string, status: FileStatusItem) {
-        const pfsRootDir = await this.pfsFolder;
-        const fileStatus = await this.getFileStatus();
-        fileStatus.files[fileKey] = status; 
-        fs.writeFileSync(`${pfsRootDir}/file-status.json`, JSON.stringify(fileStatus));
-    }
-
 
 }
 export default FilesService;
-export interface FileStatusItem {    
-        status: 'downloading' | 'downloaded' | 'error';
-        error?: string;
-        downloadedDateTime?: number;
-        modificationDateTime?: number;
-        fileVersion?: string,
-        fileURL?: string;
-}
-export interface FileStatus {
-    files: { [key: string]: FileStatusItem };
-}     
+
+    
