@@ -23,3 +23,5 @@ export class RollbackAlgorithmFactory{
         }
     }
 }
+
+export default RollbackAlgorithmFactory;
