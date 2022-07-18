@@ -1,8 +1,18 @@
 import fetch from "node-fetch";
 import fs from "fs";
 import { URL } from "url";
- 
+declare global {
+    //  for singleton
+    var fms: FileDownloadManager;
+}
 export class FileDownloadManager {
+    
+    static get instance(): FileDownloadManager {
+        if (!global.fms) {
+            global.fms = new FileDownloadManager();
+        }
+        return global.fms;
+    }
 
     private _fileStatus: FileStatus | undefined;
     get fileStatus () {
@@ -30,15 +40,11 @@ export class FileDownloadManager {
     private isDownloadAvailable: boolean = true;
 
 
-    //  singleton
-    private static instance: FileDownloadManager;    
-    public static getInstance(): FileDownloadManager {
-        if (!FileDownloadManager.instance) {
-            FileDownloadManager.instance = new FileDownloadManager();
-        }
-        return FileDownloadManager.instance;
+    
+    rebuild() {
+        // rebuild file status - setting to undefined will force to load files statuses from disk if exists
+        this._fileStatus = undefined;
     }
-
 
     // download files in bulks of `filesToDownloadAtOnce` files at once
     downloadFiles(files: any[]): Promise<void> {
