@@ -3,10 +3,9 @@ import { FileDownloadManager } from "./file-download-manager";
 
 class FilesService {  
     
-    fdm: FileDownloadManager;
-    constructor() {
-        this.fdm = FileDownloadManager.getInstance();
-    }
+    private get fdm(): FileDownloadManager {
+        return FileDownloadManager.instance;
+    }  
 
     async getFileUrl(addonUUID: string, schemaName: string, fileKey: string): Promise<string> {
         const file = await this.getFile(fileKey, addonUUID, schemaName);
@@ -29,6 +28,9 @@ class FilesService {
         console.log(`Downloading PFS files since ${new Date(lastSyncDataTime)}`);
         const files = await this.getFiles(lastSyncDataTime);
         console.log(`PFS - Found ${files.length} files to download`);
+        if(lastSyncDataTime == 0) { // is resync
+            this.fdm.rebuild(); // rebuild file download manager
+        }
         return this.fdm.downloadFiles(files);      
     }
 
