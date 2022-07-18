@@ -1,12 +1,15 @@
 import fetch from "node-fetch";
 import fs from "fs";
 import { URL } from "url";
+import PQueue from 'p-queue';
+
 declare global {
     //  for singleton
     var fms: FileDownloadManager;
 }
 export class FileDownloadManager {
     
+
     static get instance(): FileDownloadManager {
         if (!global.fms) {
             global.fms = new FileDownloadManager();
@@ -14,6 +17,10 @@ export class FileDownloadManager {
         return global.fms;
     }
 
+    filesQueue: PQueue;
+    constructor() {
+        this.filesQueue = new PQueue({ concurrency: this.downloadConcurrency });
+    }
     private _fileStatus: FileStatus | undefined;
     get fileStatus () {
         return (async () => {
@@ -35,32 +42,38 @@ export class FileDownloadManager {
     }
 
     // amount of files to download at once
-    private readonly filesToDownloadAtOnce: number = 10;
+    private readonly downloadConcurrency: number = 10;
     // flag to indicate if download is available
     private isDownloadAvailable: boolean = true;
 
-
-    
     rebuild() {
+        // rebuild pfs folder - setting to undefined will create the folder if it doesn't exist
+        this._pfsFolder = '';
         // rebuild file status - setting to undefined will force to load files statuses from disk if exists
         this._fileStatus = undefined;
-    }
+    }       
 
-    // download files in bulks of `filesToDownloadAtOnce` files at once
-    downloadFiles(files: any[]): Promise<void> {
-        return new Promise<void>(async (resolve, reject) => {
-            if (!this.isDownloadAvailable) {
-                reject(new Error('File download is not available'));
-            }
-            for (let i = 0; i < files.length; i += this.filesToDownloadAtOnce) {
-                const endBulkIndex = i + this.filesToDownloadAtOnce > files.length ? undefined : i + this.filesToDownloadAtOnce; // If end is undefined, then the slice extends to the end of the array (From slice docs).
-                const filesToDownload = files.slice(i, endBulkIndex);
-                await Promise.all(filesToDownload.map(async file => {
-                    return this.downloadFileIfNeeded(file);                    
-                }));
-            }            
-            resolve();
-        });        
+    downloadFiles(files: any[]) {
+        // add download function to queue for each file
+        this.filesQueue.addAll(files.map(file => {
+            return () => this.downloadFileIfNeeded(file);
+        }));       
+    }
+    
+    // download files that failed to download (e.g. due to network error)
+    async downloadFailedFiles() {
+        const fileStatus = await this.fileStatus;
+        const files = Object.keys(fileStatus.files).filter(fileStatusKey => fileStatus.files[fileStatusKey].status === 'error');
+        if (files.length > 0) {
+            console.log(`Downloading ${files.length} files that failed to download`);
+            return this.downloadFiles(files.map(fileStatusKey => {
+                const file = fileStatus.files[fileStatusKey] as FileStatusItem;
+                return {
+                    Name: file.fileName,
+                    URL: file.fileURL,
+                };
+            }));
+        }
     }
 
         
@@ -147,6 +160,7 @@ export class FileDownloadManager {
                     modificationDateTime: file.ModificationDateTime,
                     fileVersion: file.FileVersion,
                     fileURL: file.URL,
+                    fileName: file.Name,
                 }  
                 break;
             case 'error':
@@ -155,6 +169,7 @@ export class FileDownloadManager {
                     error: `${error}`,
                     downloadedDateTime: Date.now(),
                     fileURL: file.URL,
+                    fileName: file.Name,
                 }
                 break;
             }
@@ -187,6 +202,7 @@ export interface FileStatusItem {
         modificationDateTime?: number;
         fileVersion?: string,
         fileURL?: string;
+        fileName?: string;
 }
 export interface FileStatus {
     files: { [key: string]: FileStatusItem };

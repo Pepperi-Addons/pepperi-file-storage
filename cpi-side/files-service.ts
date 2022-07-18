@@ -24,14 +24,18 @@ class FilesService {
 
 
     async downloadFiles(lastSyncDataTime: number) { 
-        debugger;
+        // download files that come after lastSyncDataTime
         console.log(`Downloading PFS files since ${new Date(lastSyncDataTime)}`);
         const files = await this.getFiles(lastSyncDataTime);
         console.log(`PFS - Found ${files.length} files to download`);
         if(lastSyncDataTime == 0) { // is resync
             this.fdm.rebuild(); // rebuild file download manager
         }
-        return this.fdm.downloadFiles(files);      
+
+        return Promise.all([
+            this.fdm.downloadFiles(files), // download new files
+            this.fdm.downloadFailedFiles() // try to download failed files
+        ]);
     }
 
     async getFile(key, addonUUID: string, schemaName: string): Promise<any> {
