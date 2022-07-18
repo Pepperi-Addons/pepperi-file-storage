@@ -6,7 +6,7 @@ export const router = Router();
 
 export async function load(configuration: any) {
     pepperi.events.intercept('SyncTerminated' as any, {}, async (data, next, main) => {
-        if(!await pepperi["configuration"].isWebApp()) {
+        if(!await global['app']['wApp']['isWebApp']()) {
             const lastSyncDataTime = DateUtils.getLastSyncDataTimeMills(data.JobInfoResponse?.ClientInfo?.LastSyncDateTime);
             const fileService = new FilesService();
             fileService.downloadFiles(lastSyncDataTime)
