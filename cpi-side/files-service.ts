@@ -12,7 +12,7 @@ class FilesService {
         if (file) {
             const filePath = await this.fdm.downloadFileIfNeeded(file)
             if(filePath){
-                const baseURL = await pepperi["files"].baseURL()
+                const baseURL = await pepperi.files.baseURL()
                 return `${baseURL}/PFS${filePath}`;
             } else {
                 return file.URL;

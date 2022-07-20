@@ -142,7 +142,7 @@ export class FileDownloadManager {
     }
 
     async getPFSFolder(): Promise<any> {
-        const filesRootDir = await pepperi["files"].rootDir();
+        const filesRootDir = await pepperi.files.rootDir();
         const pfsRootDir = `${filesRootDir}/PFS`;
         if (!fs.existsSync(pfsRootDir)) {
             fs.mkdirSync(pfsRootDir);
