@@ -138,7 +138,18 @@ export class PfsSchemeService
 	{
 		// Delete the PFS's 'data' schema
 		const papiClient = Helper.createPapiClient(this.client, config.AddonUUID, this.client.AddonSecretKey);
-		await papiClient.post(`/addons/data/schemes/${this.getPfsSchemaName()}/purge`);
+		try{
+			await papiClient.post(`/addons/data/schemes/${this.getPfsSchemaName()}/purge`);
+		}
+		catch(error)
+		{
+			if(error instanceof Error)
+			{
+				return { success: false, errorMessage: error.message };
+			}
+		}
+
+		return { success: true };
 
 		// Unsubscribe from the PFS's 'remove' notifications
 		// Since the Remove messages take a while to propegate, we can't unsubscribe immediately.
