@@ -109,6 +109,18 @@ export class PfsSchemeService
 	{
 		this.validateSchemaType();
 		this.validateSchemaName();
+		this.validateNoCustomFields();
+	}
+
+	/**
+	 * Validate the the passed schema does not have any custom fields.
+	 */
+	private validateNoCustomFields()
+	{
+		if(this.schema.Fields)
+		{
+			throw new Error("Schema of type 'pfs' cannot have custom fields.");
+		}
 	}
 
 	/**
