@@ -150,7 +150,8 @@ export class PfsSchemeService
 	{
 		// Delete the PFS's 'data' schema
 		const papiClient = Helper.createPapiClient(this.client, config.AddonUUID, this.client.AddonSecretKey);
-		try{
+		try
+		{
 			await papiClient.post(`/addons/data/schemes/${this.getPfsSchemaName()}/purge`);
 		}
 		catch(error)
