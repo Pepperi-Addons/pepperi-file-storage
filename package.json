@@ -4,7 +4,7 @@
 	"description": "",
 	"main": "index.js",
 	"scripts": {
-		"test": "echo \"Error: no test specified\" && exit 1",
+		"test": "npm run init && cd ./server-side && npm run test-noReport",
 		"build": " cd ./server-side && npm run build && cd .. && cd ./cpi-side && npm run build && cd ..",
 		"init": " cd ./server-side && npm install && cd .. && cd ./cpi-side && npm install && cd ..",
 		"client:addon": "cd client-side && ng serve --port 4400 --configuration SingleSpa && cd..",
