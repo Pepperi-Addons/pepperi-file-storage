@@ -109,6 +109,18 @@ export class PfsSchemeService
 	{
 		this.validateSchemaType();
 		this.validateSchemaName();
+		this.validateNoCustomFields();
+	}
+
+	/**
+	 * Validate the the passed schema does not have any custom fields.
+	 */
+	private validateNoCustomFields()
+	{
+		if(this.schema.Fields)
+		{
+			throw new Error("Schema of type 'pfs' cannot have custom fields.");
+		}
 	}
 
 	/**
@@ -138,7 +150,8 @@ export class PfsSchemeService
 	{
 		// Delete the PFS's 'data' schema
 		const papiClient = Helper.createPapiClient(this.client, config.AddonUUID, this.client.AddonSecretKey);
-		try{
+		try
+		{
 			await papiClient.post(`/addons/data/schemes/${this.getPfsSchemaName()}/purge`);
 		}
 		catch(error)
