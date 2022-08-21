@@ -8,6 +8,7 @@ import { downloadFileCommand } from './PfsCommands/AtomicCommands/downloadFileCo
 import { RecordRemovedCommand } from './PfsCommands/AtomicCommands/recordRemovedCommand';
 import { InvalidateCommand } from './PfsCommands/AtomicCommands/invalidateCommand';
 import { HideFolderTransactionalCommand } from './PfsCommands/TransactionalCommands/hideFolderTransactionalCommand';
+import { UnlockTransactionsCommand } from './PfsCommands/AtomicCommands/unlockTransactionsCommand';
 
 export async function file(client: Client, request: Request) 
 {
@@ -135,6 +136,31 @@ export async function hide_folder(client: Client, request: Request)
 		const pfsCommand = new HideFolderTransactionalCommand(client, request, dal, dal);
 
 		return await pfsCommand.execute();
+	}
+	default: {
+		throw new Error(`Unsupported method: ${request.method}`);
+	}
+	}
+}
+
+export async function unlock_transactions(client: Client, request: Request) 
+{
+	console.log(`Request received: ${JSON.stringify(request)}`);
+
+	if(!Helper.isSupportAdminUser(client))
+	{
+		throw new Error(`Only admin users are allowed to unlock transactions`);
+	}
+
+	let pfsCommand: AbstractCommand;
+
+	switch (request.method) 
+	{
+	case "POST": {
+		const dal = Helper.DalFactory(client, request);
+		pfsCommand = new UnlockTransactionsCommand(client, request, dal, dal);
+
+		return pfsCommand.execute();
 	}
 	default: {
 		throw new Error(`Unsupported method: ${request.method}`);

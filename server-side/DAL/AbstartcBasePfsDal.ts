@@ -1,5 +1,5 @@
 import { Client, Request } from '@pepperi-addons/debug-server';
-import { AddonData } from '@pepperi-addons/papi-sdk';
+import { AddonData, FindOptions } from '@pepperi-addons/papi-sdk';
 import jwtDecode from 'jwt-decode';
 import { TransactionType } from '../constants';
 import { IPfsGetter } from './IPfsGetter';
@@ -54,6 +54,8 @@ export abstract class AbstractBasePfsDal implements IPfsGetter, IPfsMutator
 	abstract getObjectS3FileVersion(Key: any);
 
 	abstract getObjects(whereClause?: string): Promise<AddonData[]>;
+
+	abstract getLockedObjects(findOptions: FindOptions): Promise<AddonData[]>;
 	//#endregion
 	
 

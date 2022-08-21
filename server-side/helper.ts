@@ -3,6 +3,8 @@ import { PapiClient } from "@pepperi-addons/papi-sdk";
 import { DEBUG_MAXIMAL_LOCK_TIME, DIMX_ADDON_UUID, MAXIMAL_LOCK_TIME, PFS_TABLE_PREFIX } from "./constants";
 import { IndexedDataS3PfsDal } from "./DAL/IndexedDataS3PfsDal";
 import { FailAfterLock, FailAfterMutatingAdal, FailAfterMutatingS3 } from "./DAL/TestLockMechanism";
+import jwtDecode from 'jwt-decode';
+
 
 export class Helper
 {
@@ -79,13 +81,14 @@ export class Helper
 		}
 	}
 
-	public static createPapiClient(client: Client, addonUUID: string, secretKey = '') 
+	public static createPapiClient(client: Client, addonUUID?: string, secretKey = '') 
 	{
 		return new PapiClient({
+			
 			baseURL: client.BaseURL,
 			token: client.OAuthAccessToken,
-			addonUUID: addonUUID,
 			actionUUID: client.ActionUUID,
+			...(addonUUID && { addonUUID: addonUUID }),
 			...(secretKey && {addonSecretKey: secretKey})
 		});
 	}
@@ -154,5 +157,12 @@ export class Helper
 	public static getPfsTableName(clientAddonUUID: string, schemaName: string)
 	{
 		return `${PFS_TABLE_PREFIX}_${clientAddonUUID}_${schemaName}`;
+	}
+
+	public static async isSupportAdminUser(client: Client) {
+		const userId = (jwtDecode(client.OAuthAccessToken))["pepperi.id"];
+		const papiClient: PapiClient = Helper.createPapiClient(client);
+		const isSupportAdminUser: boolean = (await papiClient.get(`/users/${userId}?fields=IsSupportAdminUser`)).IsSupportAdminUser;
+		return isSupportAdminUser;
 	}
 }
