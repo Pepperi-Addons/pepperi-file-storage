@@ -1,7 +1,7 @@
 import { AbstractCommand } from './PfsCommands/abstractCommand'
 import { Client, Request } from '@pepperi-addons/debug-server'
 import { Helper } from './helper';
-import { ListFolderContentsCommand } from './PfsCommands/AtomicCommands/listFolderContetntsCommand';
+import { ListFolderContentsCommand } from './PfsCommands/AtomicCommands/listFolderContentsCommand';
 import { ListObjectsCommand } from './PfsCommands/AtomicCommands/listObjectsCommand';
 import { downloadFileCommand } from './PfsCommands/AtomicCommands/downloadFileCommand';
 import { RecordRemovedCommand } from './PfsCommands/AtomicCommands/recordRemovedCommand';
@@ -60,7 +60,6 @@ export async function files(client: Client, request: Request)
 	}
 	case "POST": {
 		const dal = Helper.DalFactory(client, request);
-		// pfsCommand = new PostTransactionalCommand(client, request, dal, dal);
 		pfsCommand = new TransactionalCommandExecutor(client, request, dal, dal);
 
 		return pfsCommand.execute();
@@ -78,12 +77,12 @@ export async function record_removed(client: Client, request: Request)
 	switch (request.method) 
 	{
 	case "POST": {
-		// The addon uuid is embbeded in the resource name: pfs_{{addon_uuid}}_{{resource_name}}.
+		// The addon uuid is embedded in the resource name: pfs_{{addon_uuid}}_{{resource_name}}.
 		// Extract addon uuid from resource name:
 		const splitResourceName = request.body.FilterAttributes.Resource.split('_');
 		if(splitResourceName.length != 3)
 		{
-			// Something very strange happend...
+			// Something very strange happened...
 			const errorMessage = `Invalid resource name: ${request.body.FilterAttributes.Resource}`;
 			console.error(errorMessage);
 			throw new Error(errorMessage);

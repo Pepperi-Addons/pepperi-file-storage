@@ -10,14 +10,12 @@ export class HideFolderRollbackAlgorithm extends BaseRollbackAlgorithm
     {
         this.rollbackLogger();
 
-		// We should actually call the async endpoint
-		// await (new HideFolderTransactionalCommand(this.client, this.request, this.pfsMutator, this.pfsGetter)).execute();
 		const lowerCaseHeader = Helper.getLowerCaseHeaders(this.request.header);
 		const papiClient: PapiClient = Helper.createPapiClient(this.client, this.AddonUUID, lowerCaseHeader[SECRETKEY_HEADER]);
 
 		const numberOfRetries = 3;
 
-		const url = `/addons/api/async/${config.AddonUUID}/api/hide_folder?resource_name=${this.request.query.resource_name}&addon_uuid=${this.request.query.addon_uuid}&retry=${numberOfRetries}`;
+		const url = `/addons/api/async/${config.AddonUUID}/api/hide_folder?resource_name=${this.request.query.resource_name}&addon_uuid=${this.request.query.addon_uuid}&retry=${numberOfRetries}${this.request.query.forceRollback ? `&${this.request.query.forceRollback}`:''}`;
 		const body = {Key: this.request.body.Key};
 		const params = {method: 'POST', headers: this.request.header};
 		const res = await papiClient.post(url, body, params);

@@ -13,11 +13,14 @@ export class AsyncHideFolderTransactionalCommand extends ABaseHideFolderTransact
 
 	public async lock(): Promise<void>
 	{
-		// We have to ensure there's a single active ExecutionUUID trying to delete the fodler and it's subtree.
-		await this.validateSingleTransactionExecution();
+		if(!this.request.query.forceRollback)
+		{
+			// We have to ensure there's a single active ExecutionUUID trying to delete the folder and it's subtree.
+			await this.validateSingleTransactionExecution();
 
-		// Since calling AsycHideFolder is always done under a 'hide' lock (valdated in validateSingleTransactionExecution()),
-		// There's no need to rollback or lock the existing lock.
+			// Since calling AsycHideFolder is always done under a 'hide' lock (validated
+			// in validateSingleTransactionExecution()), there's no need to rollback or lock the existing lock.
+		}
     }
 
 	/**
@@ -62,8 +65,9 @@ export class AsyncHideFolderTransactionalCommand extends ABaseHideFolderTransact
 		lockedFile.ExecutionUUID = this.client.ActionUUID;
 		await this.pfsMutator.setRollbackData(lockedFile);
  
-		// call to the same method, which will either return (locking succeded) or throw an error (another action locked the item)
-		// This is to ensure a our lock is the single one.
+		// call to the same method, which will either return (locking succeeded) or throw an error (another action locked the item)
+		// This is to ensure a our lock is the single one, minimizing the risk of a race condition but not entirely eliminating it.
+		// We need a pessimistic lock for that, which is not currently implemented.
 		console.log(`AsyncHideFolder: Current ExecutionUUID was set on the lock. Validating it was not overwritten...`);
 
 		await this.validateSingleTransactionExecution();
@@ -88,7 +92,7 @@ export class AsyncHideFolderTransactionalCommand extends ABaseHideFolderTransact
 		// (Like when the transaction unlock job calls)
 		await this.hideRequestedFolder();
 		// Then, delete all files and folders inside the requested folder.
-		// It should be possible to hide the files and folder concurrently, but for simplicty and readability, we'll do it sequentially.
+		// It should be possible to hide the files and folder concurrently, but for simplicity and readability, we'll do it sequentially.
 		await this.hideSubtreeFiles();
 		await this.hideSubtreeFolders();
     }

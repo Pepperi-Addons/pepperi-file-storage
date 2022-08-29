@@ -84,7 +84,8 @@ export class UnlockTransactionsCommand extends AbstractCommand
             try
             {
                 console.log(`Transaction Unlock job: Trying to unlock key '${lockedObject.Key}', lock type: ${lockedObject.TransactionType}, schema name: ${imitationRequest.query.resource_name}, AddonUUID: ${imitationRequest.query.addon_uuid}`);
-                await RollbackAlgorithmFactory.getRollbackAlgorithm(this.client, imitationRequest, pfsMutator, pfsGetter, lockedObject).rollback();
+                const shouldForceRollback = this.request.query.forceRollback; // This should be used for testing
+                await RollbackAlgorithmFactory.getRollbackAlgorithm(this.client, imitationRequest, pfsMutator, pfsGetter, lockedObject).rollback(shouldForceRollback);
                 console.log(`Transaction Unlock job: Invoked a rollback request.`);
 
             }
