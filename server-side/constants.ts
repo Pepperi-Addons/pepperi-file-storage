@@ -136,3 +136,6 @@ export const EXTENSIONS_WHITELIST: Array<string> = [
 export const DIMX_ADDON_UUID = '44c97115-6d14-4626-91dc-83f176e9a0fc';
 
 export const PFS_TABLE_PREFIX = "pfs";
+
+export const TRANSACTION_UNLOCK_JOB_NAME = 'pfs-transactions-unlock-job';
+export const TRANSACTION_UNLOCK_JOB_ADDITIONAL_DATA_FIELD = "TransactionsUnlockJobUUID";
