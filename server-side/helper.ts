@@ -8,6 +8,17 @@ import jwtDecode from 'jwt-decode';
 
 export class Helper
 {
+	static getAuditLog(executionUUID: any, client: Client)
+	{
+		const papiClient: PapiClient = Helper.createPapiClient(client);
+		if (!executionUUID)
+		{
+			return null;
+		}
+
+		return papiClient.auditLogs.uuid(executionUUID).get();
+	}
+
 	public static DalFactory(client: Client, request: Request) 
 	{
 		if(!request.query)
@@ -89,7 +100,9 @@ export class Helper
 			token: client.OAuthAccessToken,
 			actionUUID: client.ActionUUID,
 			...(addonUUID && { addonUUID: addonUUID }),
-			...(secretKey && {addonSecretKey: secretKey})
+			...(secretKey && {addonSecretKey: secretKey}),
+			// ...(executionUUID && {executionUUID: executionUUID}),
+
 		});
 	}
 	
@@ -159,7 +172,8 @@ export class Helper
 		return `${PFS_TABLE_PREFIX}_${clientAddonUUID}_${schemaName}`;
 	}
 
-	public static async isSupportAdminUser(client: Client) {
+	public static async isSupportAdminUser(client: Client) 
+	{
 		const userId = (jwtDecode(client.OAuthAccessToken))["pepperi.id"];
 		const papiClient: PapiClient = Helper.createPapiClient(client);
 		const isSupportAdminUser: boolean = (await papiClient.get(`/users/${userId}?fields=IsSupportAdminUser`)).IsSupportAdminUser;

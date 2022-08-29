@@ -55,7 +55,7 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 				item.Key = item.Key.replace(new RegExp("~", 'g'), "/");
 			}
 		});
-		
+
 		return res;
 	}
 
@@ -125,13 +125,14 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 	//#endregion
 
 	//#region IPfsMutator
-	async lock(Key: any, transactionType: TransactionType){
+	async lock(Key: any, transactionType: TransactionType, executionUUID?: string){
 		console.log(`Attempting to lock key: ${Key}`);
 
 		const item: any = 
 						{
 							Key : this.getAbsolutePath(Key).replace(new RegExp("/", 'g'), "~"),
-							TransactionType : transactionType
+							TransactionType : transactionType,
+							...(executionUUID && {ExecutionUUID: executionUUID})
 						};
 
 		const lockRes =  await this.papiClient.addons.data.uuid(config.AddonUUID).table(LOCK_ADAL_TABLE_NAME).upsert(item);

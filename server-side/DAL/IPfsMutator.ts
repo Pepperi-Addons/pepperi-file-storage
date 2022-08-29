@@ -20,7 +20,7 @@ export interface IPfsMutator
      * @param relativeKey the key to be locked.
      * @param transactionType the type of transaction.
      */
-    lock(key: string, transactionType: TransactionType);
+    lock(key: string, transactionType: TransactionType, executionUUID?: string);
 
     /**
      * Save the given data on the lock. This data will be later used in case a rollback is executed.

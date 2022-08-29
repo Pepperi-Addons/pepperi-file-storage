@@ -10,6 +10,29 @@ export class UnlockTransactionsCommand extends AbstractCommand
 {
 	public async execute(): Promise<any>
     {
+        console.log("Transaction Unlock job: Starting unlock job...");
+        await this.unlockPostTransactions();
+        await this.unlockHideTransactions();
+        console.log("Transaction Unlock job: Transaction unlock job completed.");
+
+	}
+
+    private async unlockPostTransactions()
+    {
+        const transactionType = 'post';
+        await this.unlockTransactionsOfType(transactionType);
+    }
+
+    private async unlockHideTransactions()
+    {
+        const transactionType = 'hide';
+        await this.unlockTransactionsOfType(transactionType);
+    }
+
+    private async unlockTransactionsOfType(transactionType: string)
+    {
+        console.log(`Transaction Unlock job: Unlocking '${transactionType}' transactions...`);
+
         let page = 1;
         let lockedObjects: Array<AddonData> = [];
 
@@ -21,7 +44,9 @@ export class UnlockTransactionsCommand extends AbstractCommand
                 // Hidden items are simply items who's saved data is Hidden=true. We still need to deal with them. 
                 // Deleted transactions are hard-deleted, so this will not return "Hidden" transactions.
                 include_deleted: true,
+                where:`TransactionType=${transactionType}`
             }
+            
             lockedObjects = await this.pfsGetter.getLockedObjects(findOptions);
 
             for(const lockedObject of lockedObjects)
@@ -29,21 +54,24 @@ export class UnlockTransactionsCommand extends AbstractCommand
                 await this.invokeRollbackForLockedObject(lockedObject);
             }
 
-
             page++;
         }
         while (lockedObjects.length > 0);
-	}
+
+        console.log(`Transaction Unlock job: Done unlocking '${transactionType}' transactions.`)
+
+    }
 
 
     private async invokeRollbackForLockedObject(lockedObject: AddonData)
     {
         if (lockedObject?.Key)
         {
-            // Since the unlockTransactions command will be issued by PFS, there's not 
-            // enough data on the request to properly call the rollback algorithm.
-            // There's a need to imitate a call from the OwnerUUID with the schema name.
-            // This data can be extracted from the Key of th locked object.
+            // Since the unlockTransactions command will be issued by PFS, (and not
+            // by the actual Owner addon) there's not enough data on the request to
+            // properly call the rollback algorithm. There's a need to imitate a call
+            // from the OwnerUUID with the schema name. This data can be extracted
+            // from the Key of the locked object.
 
             const imitationRequest = this.getImitationRequest(lockedObject);
 
@@ -53,7 +81,20 @@ export class UnlockTransactionsCommand extends AbstractCommand
 
             lockedObject.Key = this.getRelativePath(lockedObject.Key);
 
-            await RollbackAlgorithmFactory.getRollbackAlgorithm(this.client, imitationRequest, pfsMutator, pfsGetter, lockedObject).rollback();
+            try
+            {
+                console.log(`Transaction Unlock job: Trying to unlock key '${lockedObject.Key}', lock type: ${lockedObject.TransactionType}, schema name: ${imitationRequest.query.resource_name}, AddonUUID: ${imitationRequest.query.addon_uuid}`);
+                await RollbackAlgorithmFactory.getRollbackAlgorithm(this.client, imitationRequest, pfsMutator, pfsGetter, lockedObject).rollback();
+                console.log(`Transaction Unlock job: Invoked a rollback request.`);
+
+            }
+            catch(error)
+            {
+                if(error instanceof Error)
+                {
+                    console.log(`Transaction Unlock job: ${JSON.stringify(error.message)}`);
+                }
+            }
         }
     }
 
