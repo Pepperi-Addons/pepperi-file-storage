@@ -221,7 +221,8 @@ async function createTransactionUnlockCodeJob(papiClient: PapiClient, client: Cl
 		AddonUUID: client.AddonUUID,
 		NumberOfTries: 3,
 		FunctionName: "unlock_transactions",
-		CronExpression: await getCronExpression(papiClient)
+		CronExpression: await getCronExpression(papiClient),
+		Type: "addonjob"
 	}
 
 	console.log('create the code Job');
