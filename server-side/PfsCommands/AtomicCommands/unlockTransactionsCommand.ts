@@ -1,4 +1,5 @@
 import { AddonData, FindOptions } from '@pepperi-addons/papi-sdk';
+import { request } from 'http';
 import { MAXIMAL_LOCK_TIME } from '../../constants';
 import { IndexedDataS3PfsDal } from '../../DAL/IndexedDataS3PfsDal';
 import { IPfsGetter } from '../../DAL/IPfsGetter';
@@ -120,6 +121,8 @@ export class UnlockTransactionsCommand extends AbstractCommand
             requestCopy.query.addon_uuid = lockedObjectAddonUUID;
             requestCopy.query.resource_name = lockedObjectResourceName;
             requestCopy.body.Key = this.getRelativePath(lockedObject.Key);
+
+            requestCopy.header['x-pepperi-secretkey'] = this.client.AddonSecretKey;
 
             return requestCopy;
         }

@@ -36,31 +36,6 @@ export abstract class ABaseHideFolderTransactionalCommand extends ABaseTransacti
 		}
 	}
 
-	protected async hideSubtreeFiles()
-	{
-		console.log(`Hide Folder: Hiding files in the subtree...`);
-		let filesKeys: any[] = [];
-
-		do {
-			// Get the subtree's files' keys
-			// Since each page's files are deleted, there's no use in requesting different pages.
-			filesKeys = await this.getSubtreeFilesKeys();
-
-			// Hide the files using pfs batch operation.
-			// We use this since it updates the UploadedBy field and actually deletes the file from S3, including thumbnails.
-			await this.hideObjectsUsingPfsBatchDisregardingExistingLocks(filesKeys);
-		}
-		while (filesKeys.length > 0);
-
-		console.log(`Hide Folder: Done hiding the subtree's files.`);
-	}
-
-	private async getSubtreeFilesKeys()
-	{
-		const whereClause = 'MIME != "pepperi/folder"';
-		return await this.getObjectsKeysFromSubtree(whereClause);
-	}
-
 	protected async hideSubtreeFolders()
 	{
 		console.log(`Hide Folder: Hiding folders in the subtree...`);
@@ -100,7 +75,7 @@ export abstract class ABaseHideFolderTransactionalCommand extends ABaseTransacti
 		return await this.getObjectsKeysFromSubtree(whereClause);
 	}
 
-	private async getObjectsKeysFromSubtree(whereClause: string)
+	protected async getObjectsKeysFromSubtree(whereClause: string)
 	{
 		const requestCopy = { ...this.request };
 		// Get the objects whose Folder starts with the requested folder
@@ -111,28 +86,7 @@ export abstract class ABaseHideFolderTransactionalCommand extends ABaseTransacti
 		return (await (new ListObjectsCommand(this.client, requestCopy, this.pfsMutator, this.pfsGetter)).execute()).map(resObj => resObj.Key);
 	}
 
-	private async hideObjectsUsingPfsBatchDisregardingExistingLocks(filesKeys: any) {
-		const lowerCaseHeaders = Helper.getLowerCaseHeaders(this.request.header);
-		const papiClient: PapiClient = Helper.createPapiClient(this.client, this.AddonUUID, lowerCaseHeaders["x-pepperi-secretkey"]);
-
-		filesKeys = filesKeys.map(fileKey => {
-			return {
-				Key: fileKey,
-				DeletedBy: this.request.body.Key,
-				Hidden: true,
-			};
-		});
-
-		// Unlock any locked objects before hiding them
-		await Promise.allSettled(filesKeys.map(fileKey => (async () => 
-		{
-			await this.pfsMutator.unlock(fileKey);
-		})()));
-		// Hide the objects using pfs batch operation.
-		return await papiClient.addons.data.import.uuid(this.AddonUUID).table(this.request.query.resource_name).upsert({Objects: filesKeys});
-	}
-
-    async unlock(key: string): Promise<void>{
-        await this.pfsMutator.unlock(key);
-    }
+    // async unlock(key: string): Promise<void>{
+    //     await this.pfsMutator.unlock(key);
+    // }
 }

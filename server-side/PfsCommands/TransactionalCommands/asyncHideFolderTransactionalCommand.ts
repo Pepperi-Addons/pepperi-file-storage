@@ -1,3 +1,7 @@
+import { DIMXObject, PapiClient } from '@pepperi-addons/papi-sdk';
+import fetch from 'node-fetch';
+import { TeamsWebhooks } from '../../constants';
+import { batch } from '../../data-source-api';
 import { Helper } from "../../helper";
 import { ABaseHideFolderTransactionalCommand } from "./aBaseHideFolderTransactionalCommand";
 
@@ -95,5 +99,121 @@ export class AsyncHideFolderTransactionalCommand extends ABaseHideFolderTransact
 		// It should be possible to hide the files and folder concurrently, but for simplicity and readability, we'll do it sequentially.
 		await this.hideSubtreeFiles();
 		await this.hideSubtreeFolders();
+    }
+
+	private async hideSubtreeFiles()
+	{
+		console.log(`Hide Folder: Hiding files in the subtree...`);
+		let filesKeys: any[] = [];
+
+		do {
+			// Get the subtree's files' keys
+			// Since each page's files are deleted, there's no use in requesting different pages.
+			filesKeys = await this.getSubtreeFilesKeys();
+
+			// Hide the files using pfs batch operation.
+			// We use this since it updates the UploadedBy field and actually deletes the file from S3, including thumbnails.
+			await this.hideObjectsUsingPfsBatchDisregardingExistingLocks(filesKeys);
+		}
+		while (filesKeys.length > 0);
+
+		console.log(`Hide Folder: Done hiding the subtree's files.`);
+	}
+
+	private async hideObjectsUsingPfsBatchDisregardingExistingLocks(filesKeys: any) {
+		const lowerCaseHeaders = Helper.getLowerCaseHeaders(this.request.header);
+		const papiClient: PapiClient = Helper.createPapiClient(this.client, this.AddonUUID, lowerCaseHeaders["x-pepperi-secretkey"]);
+
+		filesKeys = filesKeys.map(fileKey => {
+			return {
+				Key: fileKey,
+				DeletedBy: this.request.body.Key,
+				Hidden: true,
+			};
+		});
+
+		// Unlock any locked objects before hiding them
+		await Promise.allSettled(filesKeys.map(fileKey => (async () => 
+		{
+			await this.pfsMutator.unlock(fileKey);
+		})()));
+
+		// Hiding files involves S3 operations for deleting the files and their thumbnails.
+		// Since AsyncHideFolder is designed to be called in async, it will run in an async lambda,
+		// which does not have permissions to access S3. We have to call a Sync endpoint to
+		// hide the files, which will run on PFS lambda.
+		// The obvious way to handle this is calling a DIMX import, but since DIMX is dependent on PFS,
+		// we cannot depend on DIMX.
+
+		// Thus, we have to mimic the DIMX import call to the Batch endpoint.
+
+		const body = {
+			Objects: filesKeys,
+			AddonUUID: this.AddonUUID,
+			Resource: this.request.query.resource_name
+		}
+
+		const res: {"DIMXObjects": DIMXObject[]} = await papiClient.post(`/addons/api/${this.client.AddonUUID}/data-source-api/batch`, body);
+
+		// // Locally call Batch for debug:
+		// const requestCopy = {... this.request};
+		// requestCopy.body = body;
+		// const res: {"DIMXObjects": DIMXObject[]} = await (batch(this.client, requestCopy));
+
+		res.DIMXObjects.filter(obj => obj.Status === "Error").map(obj => console.error(`Failed to Hide Key '${obj.Key}': ${obj.Details}`));
+
+	}
+
+	private async getSubtreeFilesKeys()
+	{
+		const whereClause = 'MIME != "pepperi/folder"';
+		return await this.getObjectsKeysFromSubtree(whereClause);
+	}
+
+
+	public async rollback(force?: boolean | undefined): Promise<void>
+	{
+		// Rolling back the AsyncHideFolder results in calling the same AsyncHideFolder.
+		// To avoid an infinite loop, keep this function implementation empty.
+		// In any case, whether AsyncHideFolder was called from SyncHideFolder, from Rollback or from the
+		// Transactions Unlock Job, the AsyncHideFolder is called with 3 retries, so 
+		// there will be further chances to complete the transaction.
+
+		// If it still fails after 3 retries, something is probably wrong.
+
+		// Report issue on Teams
+		await this.reportHideFoldersFailureOnTeams()
+	}
+
+	private async reportHideFoldersFailureOnTeams()
+	{
+		
+		const message = `ActionUUID: ${this.client.ActionUUID}, DistributorUUID: ${this.DistributorUUID}, AddonUUID: ${this.AddonUUID}, Schema name: ${this.request.query.resource_name}. Failed to hide folder '${this.request.body.Key}'.`
+
+		const body = {
+			themeColor: 'FF0000', // Red color, for failure.
+			Summary: `PFS - DistributorUUID: ${this.DistributorUUID}, failure to hide folder`,
+			sections: [{
+				'facts': [{
+					name: 'DistributorUUID',
+					value: this.DistributorUUID,
+				}, {
+					name: 'Message',
+					value: message,
+				}],
+				'markdown': true,
+			}],
+		};
+
+		const url = TeamsWebhooks[this.environment];
+
+		await fetch(url, {
+			method: 'POST',
+			body: JSON.stringify(body),
+		});
+	}
+
+	async unlock(key: string): Promise<void>{
+        await this.pfsMutator.unlock(key);
     }
 }
