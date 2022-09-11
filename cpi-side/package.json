@@ -16,6 +16,7 @@
     "dependencies": {
         "@pepperi-addons/cpi-node": "^0.4.17",
         "@pepperi-addons/papi-sdk": "^1.39.6",
+        "@pepperi-addons/debug-server": "0.0.37",
         "@types/node-fetch": "^2.6.0",
         "encoding": "^0.1.13",
         "node-fetch": "^2.6.0",

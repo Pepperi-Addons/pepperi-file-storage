@@ -46,6 +46,19 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 		return res;
 	}
 
+	async getLockedObjects(findOptions: FindOptions): Promise<AddonData[]> {
+		const tableName = LOCK_ADAL_TABLE_NAME;
+		let res = await this.papiClient.addons.data.uuid(config.AddonUUID).table(tableName).find(findOptions);
+		res.map(item => {
+			if(item?.Key)
+			{
+				item.Key = item.Key.replace(new RegExp("~", 'g'), "/");
+			}
+		});
+
+		return res;
+	}
+
 	private async getObjectFromTable(key, tableName, getHidden: boolean = false){
 		console.log(`Attempting to download the following key from ADAL: ${key}, Table name: ${tableName}`);
 		try 
@@ -112,13 +125,14 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 	//#endregion
 
 	//#region IPfsMutator
-	async lock(Key: any, transactionType: TransactionType){
+	async lock(Key: any, transactionType: TransactionType, executionUUID?: string){
 		console.log(`Attempting to lock key: ${Key}`);
 
 		const item: any = 
 						{
 							Key : this.getAbsolutePath(Key).replace(new RegExp("/", 'g'), "~"),
-							TransactionType : transactionType
+							TransactionType : transactionType,
+							...(executionUUID && {ExecutionUUID: executionUUID})
 						};
 
 		const lockRes =  await this.papiClient.addons.data.uuid(config.AddonUUID).table(LOCK_ADAL_TABLE_NAME).upsert(item);

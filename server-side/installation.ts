@@ -8,8 +8,8 @@ The error Message is importent! it will be written in the audit log and help the
 */
 
 import { Client, Request } from '@pepperi-addons/debug-server'
-import { AddonDataScheme, FindOptions, PapiClient, Relation } from '@pepperi-addons/papi-sdk';
-import { LOCK_ADAL_TABLE_NAME, pfsSchemaData, PFS_TABLE_PREFIX } from './constants';
+import { AddonDataScheme, CodeJob, FindOptions, PapiClient, Relation } from '@pepperi-addons/papi-sdk';
+import { LOCK_ADAL_TABLE_NAME, pfsSchemaData, PFS_TABLE_PREFIX, TRANSACTION_UNLOCK_JOB_ADDITIONAL_DATA_FIELD, TRANSACTION_UNLOCK_JOB_NAME } from './constants';
 import semver from 'semver';
 
 export async function install(client: Client, request: Request): Promise<any> 
@@ -18,6 +18,8 @@ export async function install(client: Client, request: Request): Promise<any>
 	const papiClient = createPapiClient(client);
 	await createLockADALTable(papiClient);
 	await createDimxRelations(papiClient, client);
+	const codeJob: CodeJob = await createTransactionUnlockCodeJob(papiClient, client);
+	await setCodeJobUuidOnInstalledAddonAdditionalData(papiClient, client, codeJob);
 
 	return { success: true, resultObject: {} }
 }
@@ -26,6 +28,8 @@ export async function uninstall(client: Client, request: Request): Promise<any>
 {
 	const papiClient = createPapiClient(client);
 	await papiClient.post(`/addons/data/schemes/${LOCK_ADAL_TABLE_NAME}/purge`);
+	const additionalData = await getAddonAdditionalData(papiClient, client);
+	await deleteTransactionUnlockCodeJob(additionalData, papiClient);
 
 	return { success: true, resultObject: {} }
 }
@@ -36,7 +40,7 @@ export async function upgrade(client: Client, request: Request): Promise<any>
 
 	if (request.body.FromVersion && semver.compare(request.body.FromVersion, '1.0.1') < 0) 
 	{
-		throw new Error('Upgarding from versions earlier than 1.0.1 is not supported. Please uninstall the addon and install it again.');
+		throw new Error('Upgrading from versions earlier than 1.0.1 is not supported. Please uninstall the addon and install it again.');
 	}
 
 	if (request.body.FromVersion && semver.compare(request.body.FromVersion, '1.0.4') < 0) 
@@ -54,11 +58,24 @@ export async function upgrade(client: Client, request: Request): Promise<any>
 		await addTrailingSlashToFolderProperty(papiClient, client);
 	}
 
+	if (request.body.FromVersion && semver.compare(request.body.FromVersion, '1.0.18') < 0) 
+	{
+		const codeJob: CodeJob = await createTransactionUnlockCodeJob(papiClient, client);
+		await setCodeJobUuidOnInstalledAddonAdditionalData(papiClient, client, codeJob);
+	}
+
 	return { success: true, resultObject: {} }
 }
 
 export async function downgrade(client: Client, request: Request): Promise<any> 
 {
+	if (request.body.FromVersion && semver.compare(request.body.ToVersion, '1.0.18') < 0) 
+	{
+		const papiClient = createPapiClient(client);
+		const additionalData = await getAddonAdditionalData(papiClient, client);
+		await deleteTransactionUnlockCodeJob(additionalData, papiClient);
+	}
+	
 	return { success: true, resultObject: {} }
 }
 
@@ -195,3 +212,73 @@ export async function addTrailingSlashToFolderProperty(papiClient: PapiClient, c
 	}
 }
 
+async function createTransactionUnlockCodeJob(papiClient: PapiClient, client: Client) {
+	const codeJobBody: CodeJob = {
+		CodeJobName: TRANSACTION_UNLOCK_JOB_NAME,
+		Description: 'Unlock any stale locks found in the PfsLockTable',
+		IsScheduled: true,
+		AddonPath: "api",
+		AddonUUID: client.AddonUUID,
+		NumberOfTries: 3,
+		FunctionName: "unlock_transactions",
+		CronExpression: await getCronExpression(papiClient),
+		Type: "addonjob"
+	}
+
+	console.log('create the code Job');
+
+	const codeJob = await papiClient.codeJobs.upsert(codeJobBody);
+
+	console.log('Done creating the transaction unlock job, codeJobUUID: ' + codeJob.UUID);
+
+	return codeJob;
+}
+
+async function setCodeJobUuidOnInstalledAddonAdditionalData(papiClient: PapiClient, client: Client, codeJob: CodeJob)
+{
+	console.log('Update the installed addon with the transaction unlock code job UUID');
+
+	const installedAddon = await papiClient.addons.installedAddons.upsert(
+		{
+			Addon: {UUID: client.AddonUUID},
+			AdditionalData: `{"${TRANSACTION_UNLOCK_JOB_ADDITIONAL_DATA_FIELD}": "${codeJob.UUID}"}`,
+			PublicBaseURL: papiClient['baseURL'],
+		});
+	console.log('Done updating the installed addon: ' + installedAddon);
+}
+
+async function getCronExpression(papiClient: PapiClient): Promise<string> {
+	const maintenanceData = await papiClient.metaData.flags.name('Maintenance').get();
+	const MaintenanceWindow = maintenanceData.MaintenanceWindow;
+	const parts = MaintenanceWindow.split(':');
+	const hour = parts[0];
+	const minutes = parts[1] == '00' ? '0' : parts[1];
+	const cronExpression = minutes + ' ' + hour + ' * * *';
+
+	return cronExpression;
+}
+
+async function deleteTransactionUnlockCodeJob(data, papiClient:PapiClient)
+{
+	const codeJob = data[TRANSACTION_UNLOCK_JOB_ADDITIONAL_DATA_FIELD];
+
+	if (codeJob)
+	{
+		await papiClient.codeJobs.upsert({
+			UUID: codeJob,
+			CodeJobName: TRANSACTION_UNLOCK_JOB_NAME,
+			CodeJobIsHidden: true,
+		});
+	}
+}
+
+async function getAddonAdditionalData(papiClient: PapiClient, client: Client)
+{
+	let data = {};
+	const addon = await papiClient.addons.installedAddons.addonUUID(client.AddonUUID).get();
+	if (addon?.AdditionalData)
+	{
+		data = JSON.parse(addon.AdditionalData);
+	}
+	return data;
+}

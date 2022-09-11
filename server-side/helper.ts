@@ -3,9 +3,22 @@ import { PapiClient } from "@pepperi-addons/papi-sdk";
 import { DEBUG_MAXIMAL_LOCK_TIME, DIMX_ADDON_UUID, MAXIMAL_LOCK_TIME, PFS_TABLE_PREFIX } from "./constants";
 import { IndexedDataS3PfsDal } from "./DAL/IndexedDataS3PfsDal";
 import { FailAfterLock, FailAfterMutatingAdal, FailAfterMutatingS3 } from "./DAL/TestLockMechanism";
+import jwtDecode from 'jwt-decode';
+
 
 export class Helper
 {
+	static getAuditLog(executionUUID: any, client: Client)
+	{
+		const papiClient: PapiClient = Helper.createPapiClient(client);
+		if (!executionUUID)
+		{
+			return null;
+		}
+
+		return papiClient.auditLogs.uuid(executionUUID).get();
+	}
+
 	public static DalFactory(client: Client, request: Request) 
 	{
 		if(!request.query)
@@ -41,8 +54,9 @@ export class Helper
 
 		if (!lowerCaseHeaders["x-pepperi-secretkey"] || !(
 			await this.isValidRequestedAddon(client, lowerCaseHeaders["x-pepperi-secretkey"], addonUUID) || // Given secret key doesn't match the client addon's.
-			await this.isValidRequestedAddon(client, lowerCaseHeaders["x-pepperi-secretkey"], DIMX_ADDON_UUID) // Given secret key doesn't match the DIMX's.
-		)) 
+			await this.isValidRequestedAddon(client, lowerCaseHeaders["x-pepperi-secretkey"], DIMX_ADDON_UUID) || // Given secret key doesn't match the DIMX's. Used in Dimx import.
+			await this.isValidRequestedAddon(client, lowerCaseHeaders["x-pepperi-secretkey"], client.AddonSecretKey) // Given secret key doesn't match the PFS's. Used in transactions unlock job.
+		))
 		{
 			const err: any = new Error(`Authorization request denied. ${lowerCaseHeaders["x-pepperi-secretkey"]? "check secret key" : "Missing secret key header"} `);
 			err.code = 401;
@@ -79,14 +93,17 @@ export class Helper
 		}
 	}
 
-	public static createPapiClient(client: Client, addonUUID: string, secretKey = '') 
+	public static createPapiClient(client: Client, addonUUID?: string, secretKey = '') 
 	{
 		return new PapiClient({
+			
 			baseURL: client.BaseURL,
 			token: client.OAuthAccessToken,
-			addonUUID: addonUUID,
 			actionUUID: client.ActionUUID,
-			...(secretKey && {addonSecretKey: secretKey})
+			...(addonUUID && { addonUUID: addonUUID }),
+			...(secretKey && {addonSecretKey: secretKey}),
+			// ...(executionUUID && {executionUUID: executionUUID}),
+
 		});
 	}
 	
@@ -154,5 +171,13 @@ export class Helper
 	public static getPfsTableName(clientAddonUUID: string, schemaName: string)
 	{
 		return `${PFS_TABLE_PREFIX}_${clientAddonUUID}_${schemaName}`;
+	}
+
+	public static async isSupportAdminUser(client: Client) 
+	{
+		const userId = (jwtDecode(client.OAuthAccessToken))["pepperi.id"];
+		const papiClient: PapiClient = Helper.createPapiClient(client);
+		const isSupportAdminUser: boolean = (await papiClient.get(`/users/${userId}?fields=IsSupportAdminUser`)).IsSupportAdminUser;
+		return isSupportAdminUser;
 	}
 }
