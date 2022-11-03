@@ -73,7 +73,7 @@ export const pfsSchemaData: any = {
 		},
 		Name: {
 			Type: 'String',
-			index: true,
+			Indexed: true,
 		},
 		URL: {
 			Type: 'String'

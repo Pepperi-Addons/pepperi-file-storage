@@ -51,44 +51,10 @@ export async function upgrade(client: Client, request: Request): Promise<any> {
 
 	if (request.body.FromVersion && semver.compare(request.body.FromVersion, '1.0.27') < 0) {
 		console.log("Updating \"Name\" field on all schemas");
-		await updateNameField(client, request);
+		await updateNameField(papiClient);
 	}
 
 	return { success: true, resultObject: {} }
-}
-
-export async function updateNameField(client: Client, request: Request) {
-	// Duplicate the client without AddonUUID to get all schemas
-	let clientWithoutAddonUUID: Client = { ...client };
-	clientWithoutAddonUUID.AddonUUID = "";
-	let papiClient: PapiClient = createPapiClient(clientWithoutAddonUUID);
-	// Get all PFS schemas
-	let schemas = await papiClient.addons.data.schemes.get({
-		where: "Type=\"pfs\""
-	});
-	// Recreate each schema to fix the issue with "Name" field (index:true instead of Indexed:true)
-	for (const schema of schemas) {
-		console.log(`Recreating schema: ${schema.Name}`);
-		let tempRequest: Request = {
-			method: "POST",
-			body: schema,
-			query: {
-				addon_uuid: client.AddonUUID
-			},
-			header: { ...request.header }
-		};
-		const pfsSchemeService = new PfsSchemeService(client, tempRequest);
-		let createResponse = await pfsSchemeService.create();
-		console.log(`Create response: ${JSON.stringify(createResponse)}`);
-	}
-	// Create new papiClient with the AddonUUID
-	papiClient = createPapiClient(client);
-	// Rebuild each schema
-	for (const schema of schemas) {
-		console.log(`Rebuilding (clean) schema: ${schema.Name}`);
-		let rebuildResponse = await papiClient.post(`/addons/api/async/00000000-0000-0000-0000-00000000ada1/indexed_adal_api/clean_rebuild?table_name=${schema.Name}`);
-		console.log(`Rebuild response: ${JSON.stringify(rebuildResponse)}`);
-	}
 }
 
 export async function downgrade(client: Client, request: Request): Promise<any> {
@@ -151,21 +117,58 @@ async function upsertRelation(papiClient: PapiClient, relation: Relation) {
  * Add the new DeletedBy field to every pfs data schema
  */
 async function addDeletedByFieldToPfsSchemas(papiClient: PapiClient) {
-	// Get all schemas whos name starts with 'pfs_%'
-	const pfsSchemas: Array<AddonDataScheme> = await papiClient.addons.data.schemes.get({ where: `Name like '${PFS_TABLE_PREFIX}_%'` });
-
-	// Add the new DeletedBy field to every pfs schema
-	for (const pfsSchema of pfsSchemas) {
-		//Add DeletedBy field to schema
-		if (pfsSchema.Fields) {
-			pfsSchema.Fields.DeletedBy = {
+	const manipulatorFunction = async (schema: AddonDataScheme) : Promise<void> => {
+		if (schema.Fields) {
+			schema.Fields.DeletedBy = {
 				Type: 'String',
 				Indexed: true,
 				Keyword: true,
 			};
-		}
 
-		await papiClient.addons.data.schemes.post(pfsSchema);
+			await papiClient.addons.data.schemes.post(schema);
+		}
+	}
+
+	await manipulateAllPfsSchemas(papiClient, manipulatorFunction);
+}
+
+export async function updateNameField(papiClient: PapiClient) {
+	const manipulatorFunction = async (schema: AddonDataScheme) : Promise<void> => {
+		if (schema.Fields  && !schema.Fields.Name?.Indexed) {
+
+			console.log('Setting Name field Indexed=true...');
+			schema.Fields.Name =
+			{
+				Type: 'String',
+				Indexed: true,
+			};
+
+			await papiClient.addons.data.schemes.post(schema);
+			console.log('Done setting Name field Indexed=true.');
+
+			console.log(`Rebuilding (clean) schema: '${schema.Name}'...`);
+			const rebuildResponse = await papiClient.post(`/addons/api/async/00000000-0000-0000-0000-00000000ada1/indexed_adal_api/clean_rebuild?table_name=${schema.Name}`);
+			console.log(`Rebuild response: ${JSON.stringify(rebuildResponse)}`);
+		}
+	}
+
+	await manipulateAllPfsSchemas(papiClient, manipulatorFunction);
+}
+
+async function manipulateAllPfsSchemas(papiClient: PapiClient, manipulatorFunction: (schema: AddonDataScheme) => Promise<void>)
+{
+	// Get all schemas whos name starts with 'pfs_%'
+	console.log('Getting all pfs_ schemas...');
+	const pfsSchemas: Array<AddonDataScheme> = await papiClient.addons.data.schemes.get({ where: `Name like '${PFS_TABLE_PREFIX}_%'` });
+
+	console.log('Done getting all pfs_ schemas.');
+
+	for (const pfsSchema of pfsSchemas)
+	{
+		console.log(`Executing manipulation on schema '${pfsSchema.Name}'...`);
+		await manipulatorFunction(pfsSchema);
+
+		console.log(`Done manipulating schema '${pfsSchema.Name}'.`);
 	}
 }
 
