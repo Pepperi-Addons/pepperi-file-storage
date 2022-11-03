@@ -33,7 +33,7 @@ export async function upgrade(client: Client, request: Request): Promise<any> {
 	const papiClient = createPapiClient(client);
 
 	if (request.body.FromVersion && semver.compare(request.body.FromVersion, '1.0.1') < 0) {
-		throw new Error('Upgarding from versions earlier than 1.0.1 is not supported. Please uninstall the addon and install it again.');
+		throw new Error('Upgrading from versions earlier than 1.0.1 is not supported. Please uninstall the addon and install it again.');
 	}
 
 	if (request.body.FromVersion && semver.compare(request.body.FromVersion, '1.0.4') < 0) {
@@ -49,7 +49,7 @@ export async function upgrade(client: Client, request: Request): Promise<any> {
 		await addTrailingSlashToFolderProperty(papiClient, client);
 	}
 
-	if (request.body.FromVersion && semver.compare(request.body.FromVersion, '1.0.27') < 0) {
+	if (request.body.FromVersion && semver.compare(request.body.FromVersion, '1.0.29') < 0) {
 		console.log("Updating \"Name\" field on all schemas");
 		await updateNameField(papiClient);
 	}
@@ -157,7 +157,7 @@ export async function updateNameField(papiClient: PapiClient) {
 
 async function manipulateAllPfsSchemas(papiClient: PapiClient, manipulatorFunction: (schema: AddonDataScheme) => Promise<void>)
 {
-	// Get all schemas whos name starts with 'pfs_%'
+	// Get all schemas whose name starts with 'pfs_%'
 	console.log('Getting all pfs_ schemas...');
 	const pfsSchemas: Array<AddonDataScheme> = await papiClient.addons.data.schemes.get({ where: `Name like '${PFS_TABLE_PREFIX}_%'` });
 
@@ -192,7 +192,7 @@ export async function addTrailingSlashToFolderProperty(papiClient: PapiClient, c
 				// Get a page of objects from the schema
 				objects = await papiClient.addons.data.uuid(client.AddonUUID).table(pfsSchema.Name).find(findParams);
 
-				// Keep only objects whos obj.Folder is missing a trailing '/'
+				// Keep only objects whose obj.Folder is missing a trailing '/'
 				objects = objects.filter(obj => obj.Folder && !obj.Folder.endsWith('/'));
 
 				// Create the updated Folder value
