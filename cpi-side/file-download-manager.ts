@@ -2,6 +2,7 @@ import fetch from "node-fetch";
 import fs from "fs";
 import { URL } from "url";
 import PQueue from 'p-queue';
+import { Status } from "@pepperi-addons/cpi-node/build/cpi-side/wrappers";
 
 declare global {
     //  for singleton
@@ -92,42 +93,32 @@ export class FileDownloadManager {
         }
         // 2. file is not downloaded or version changed
         const pfsRootDir = await this.pfsFolder;
-        try {
-            await this.downloadFile(file, fixedPathname, pfsRootDir);     
+        const status = await this.downloadFile(file, fixedPathname, pfsRootDir); 
+        if(status.successfull)  {
             // 3. download was successful
             await this.updateFileStatusItem(fixedPathname, 'downloaded', file)
             console.log(`File ${file.Name} downloaded from PFS`);
-               
-        } catch (error) {
+        } else {
             // 4. download failed
-            await this.updateFileStatusItem(fixedPathname, 'error', file, error)
+            await this.updateFileStatusItem(fixedPathname, 'error', file, status.errorMessage)
             console.log(`Error downloading PFS file ${file.Name}`);
             retFilePath = '';
         }
         return retFilePath;
     }
 
-    downloadFile(file: any, destPath: string,  pfsRootDir: string): Promise<void> {
+    async downloadFile(file: any, destPath: string,  pfsRootDir: string): Promise<Status> {
         const filePath = `${pfsRootDir}/${destPath}`
         console.log(`Downloading file ${file.Name} from ${file.URL} to ${filePath}`);
         
-        return new Promise((resolve, reject) => {
-            fetch(file.URL).then(res => res.buffer()).then(buffer => {
-                // write file to disk
-                const dir = filePath.substring(0, filePath.lastIndexOf('/'));
-                // create dir if needed
-                if (!fs.existsSync(dir)) {
-                    fs.mkdirSync(dir, { recursive: true });
-                }
-                return fs.promises.writeFile(filePath, buffer);
-            }).then(() => {
-                console.log(`Downloaded file ${filePath}`);
-                resolve();
-            }).catch(err => {
-                console.log(err);
-                reject(err);
-            });
-        });        
+        const dir = filePath.substring(0, filePath.lastIndexOf('/'));
+        // create dir if needed
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+        }
+        const status = await pepperi.files["download"](file.URL, destPath) as Status
+        console.log(`Finish Downloading file ${destPath} from ${file.URL} with status: ${JSON.stringify(status)}`);
+        return status        
     }    
 
     private async getFileStatus(): Promise<FileStatus>  {
