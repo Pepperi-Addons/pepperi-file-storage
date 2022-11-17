@@ -1,3 +1,4 @@
 /publish
 /node_modules
 var_sk
+/mochawesome-report/**
