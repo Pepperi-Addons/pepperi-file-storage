@@ -3,6 +3,7 @@ import { PapiClient } from "@pepperi-addons/papi-sdk";
 import { DEBUG_MAXIMAL_LOCK_TIME, DIMX_ADDON_UUID, MAXIMAL_LOCK_TIME, PFS_TABLE_PREFIX } from "./constants";
 import { IndexedDataS3PfsDal } from "./DAL/IndexedDataS3PfsDal";
 import { FailAfterLock, FailAfterMutatingAdal, FailAfterMutatingS3 } from "./DAL/TestLockMechanism";
+import { v4 as uuidV4} from 'uuid'
 
 export class Helper
 {
@@ -153,6 +154,22 @@ export class Helper
 
 	public static getPfsTableName(clientAddonUUID: string, schemaName: string)
 	{
-		return `${PFS_TABLE_PREFIX}_${clientAddonUUID}_${schemaName}`;
+		// DI-21812: Migrate internal 'data' schema to names without '-' char
+		// https://pepperi.atlassian.net/browse/DI-21812
+		return `${PFS_TABLE_PREFIX}_${clientAddonUUID.replace(/-/g, '')}_${schemaName}`;
+	}
+
+	public static addMinusesToUUID(uuid: string): string 
+	{
+		const validUUID = uuid.substring(0,8)+"-"+uuid.substring(8,4)+"-"+uuid.substring(12,4)+"-"+uuid.substring(16,4)+"-"+uuid.substring(20);
+
+		if(!uuidV4.validate(validUUID))
+		{
+			const errorMessage = `Passed UUID '${uuid}' is invalid.`;
+			console.error(errorMessage);
+			throw new Error(errorMessage);
+		}
+
+		return validUUID;
 	}
 }

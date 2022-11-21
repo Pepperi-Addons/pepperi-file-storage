@@ -76,18 +76,18 @@ export async function record_removed(client: Client, request: Request)
 	switch (request.method) 
 	{
 	case "POST": {
-		// The addon uuid is embbeded in the resource name: pfs_{{addon_uuid}}_{{resource_name}}.
+		// The addon uuid is embedded in the resource name: pfs_{{addon_uuid}}_{{resource_name}}. (addon_uuid is without dashes)
 		// Extract addon uuid from resource name:
 		const splitResourceName = request.body.FilterAttributes.Resource.split('_');
 		if(splitResourceName.length != 3)
 		{
-			// Something very strange happend...
+			// Something very strange happened...
 			const errorMessage = `Invalid resource name: ${request.body.FilterAttributes.Resource}`;
 			console.error(errorMessage);
 			throw new Error(errorMessage);
 		}
 
-		request.query.addon_uuid = splitResourceName[1];
+		request.query.addon_uuid = Helper.addMinusesToUUID(splitResourceName[1]);
 		request.query.resource_name = splitResourceName[2];
 
 		const dal = Helper.DalFactory(client, request);

@@ -16,8 +16,7 @@ describe('Schema operations', async () => {
         method: 'GET',
         body: {},
         header: {},
-        query:
-        {}
+        query: { addon_uuid: '48c41cce-698c-11ed-a1eb-0242ac120002' } // Don't care, meaningless UUID.
     }
 
     let papiPostCounter = 0;
