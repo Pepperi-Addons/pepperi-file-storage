@@ -8,10 +8,11 @@ The error Message is importent! it will be written in the audit log and help the
 */
 
 import { Client, Request } from '@pepperi-addons/debug-server'
-import { AddonDataScheme, FindOptions, PapiClient, Relation } from '@pepperi-addons/papi-sdk';
+import { AddonData, AddonDataScheme, FindOptions, PapiClient, Relation } from '@pepperi-addons/papi-sdk';
 import { LOCK_ADAL_TABLE_NAME, pfsSchemaData, PFS_TABLE_PREFIX } from './constants';
 import semver from 'semver';
-import { PfsSchemeService } from './pfs-scheme.service';
+import clonedeep from 'lodash.clonedeep';
+import { pathToFileURL } from 'url';
 
 export async function install(client: Client, request: Request): Promise<any> {
 
@@ -31,6 +32,12 @@ export async function uninstall(client: Client, request: Request): Promise<any> 
 
 export async function upgrade(client: Client, request: Request): Promise<any> {
 	const papiClient = createPapiClient(client);
+
+	if (request.body.FromVersion && semver.compare(request.body.FromVersion, '1.1.6') < 0) {
+		console.log("Migrating internal schemas to schemas that don't use '-' char...");
+		// For more details see DI-21812: https://pepperi.atlassian.net/browse/DI-21812
+		await migrateSchemasToNotUseMinusChar(papiClient, client);
+	}
 
 	if (request.body.FromVersion && semver.compare(request.body.FromVersion, '1.0.1') < 0) {
 		throw new Error('Upgrading from versions earlier than 1.0.1 is not supported. Please uninstall the addon and install it again.');
@@ -217,4 +224,90 @@ export async function addTrailingSlashToFolderProperty(papiClient: PapiClient, c
 		}
 	}
 }
+
+async function migrateSchemasToNotUseMinusChar(papiClient: PapiClient, client: Client) {
+	const manipulatorFunction = async (originalSchema: AddonDataScheme) : Promise<void> =>
+	{
+		if (originalSchema.Name.includes('-'))
+		{
+			// Create a new schema, whose name does not include '-'.
+			const validSchema = await createSchemaWithoutMinus(originalSchema);
+
+			// Copy all documents from existing schema to the new one.
+			await migrateDocuments(originalSchema, validSchema);
+
+			// Unsubscribe from original schema's PNS
+			await unsubscribeFromSchema(originalSchema);
+
+			// Purge original schema
+			await papiClient.post(`/addons/data/schemes/${originalSchema.Name}/purge`);
+
+			// Subscribe to new schema's PNS
+			await subscribeToSchema(validSchema);
+		}
+	}
+
+	await manipulateAllPfsSchemas(papiClient, manipulatorFunction);
+
+	async function createSchemaWithoutMinus(originalSchema: AddonDataScheme)
+	{
+		const validSchema = clonedeep(originalSchema);
+		validSchema.Name = validSchema.Name.replace(/-/g, '');
+		return await papiClient.addons.data.schemes.post(validSchema);
+	}
+	
+	async function migrateDocuments(sourceSchema: AddonDataScheme, destinationSchema: AddonDataScheme) {
+		let objects: AddonData[] = [];
+		let page = 1;
+		do {
+			const findParams: FindOptions = {
+				page: page,
+				include_deleted: true,
+			};
+			// Get a page of objects from the schema
+			objects = await papiClient.addons.data.uuid(client.AddonUUID).table(sourceSchema.Name).find(findParams);
+
+			// Check if there are objects, to avoid a redundant api call
+			if (objects.length > 0) {
+				await papiClient.post(`/addons/data/batch/${client.AddonUUID}/${destinationSchema.Name}`, { Objects: objects });
+			}
+
+			page++;
+		}
+		while (objects.length > 0);
+	}
+
+	async function unsubscribeFromSchema(schema: AddonDataScheme)
+	{
+		const subscription = await papiClient.notification.subscriptions.find({where: `Name='pfs-expired-records-${schema.Name}'`});
+		if(subscription?.length > 0)
+		{
+			const shouldHide = true;
+			await upsertSubscription(schema, shouldHide);
+		}
+	}
+
+	async function subscribeToSchema(schema: AddonDataScheme)
+	{
+		const shouldHide = false;
+		await upsertSubscription(schema, shouldHide);
+	}
+
+	async function upsertSubscription(schema: AddonDataScheme, hidden: boolean)
+	{
+		papiClient.notification.subscriptions.upsert({
+			AddonUUID: client.AddonUUID,
+			Name: `pfs-expired-records-${schema.Name}`, // Names of subscriptions should be unique
+			Type: "data",
+			FilterPolicy: {
+				Resource: [schema.Name],
+				Action: ["remove"],
+				AddonUUID: [client.AddonUUID]
+			},
+			AddonRelativeURL: '/api/record_removed',
+			Hidden: hidden,
+		});
+	}
+}
+
 
