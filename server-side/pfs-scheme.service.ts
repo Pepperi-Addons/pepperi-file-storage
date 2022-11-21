@@ -31,7 +31,14 @@ export class PfsSchemeService
 		await this.subscribeToExpiredRecords();
 
 		// Return the client addon's scheme (of type 'pfs') with PFS's default fields.
-		return this.getMergedSchema();
+		// return this.getMergedSchema();
+		const res = this.getMergedSchema();
+
+		// This is just a workaround for Nebula indexing 'pfs' typed schemas.
+		// This shouldn't be published!
+		delete res.SyncData;
+
+		return res;
 	}
 
 	/**
