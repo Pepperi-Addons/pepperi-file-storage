@@ -2,6 +2,7 @@ import fetch from "node-fetch";
 import fs from "fs";
 import { URL } from "url";
 import PQueue from 'p-queue';
+import { AddonFile } from "@pepperi-addons/papi-sdk";
 
 declare global {
     //  for singleton
@@ -22,7 +23,7 @@ export class FileDownloadManager {
         this.filesQueue = new PQueue({ concurrency: this.downloadConcurrency });
     }
     private _fileStatus: FileStatus | undefined;
-    get fileStatus () {
+    get filesStatuses () {
         return (async () => {
             if (!this._fileStatus) {
                 this._fileStatus = await this.getFileStatus();
@@ -43,8 +44,6 @@ export class FileDownloadManager {
 
     // amount of files to download at once
     private readonly downloadConcurrency: number = 10;
-    // flag to indicate if download is available
-    private isDownloadAvailable: boolean = true;
 
     rebuild() {
         // rebuild pfs folder - setting to undefined will create the folder if it doesn't exist
@@ -53,21 +52,21 @@ export class FileDownloadManager {
         this._fileStatus = undefined;
     }       
 
-    downloadFiles(files: any[]) {
+    downloadFiles(files: AddonFile[]) {
         // add download function to queue for each file
         this.filesQueue.addAll(files.map(file => {
-            return () => this.downloadFileIfNeeded(file);
+            return () => this.downloadFileToDeviceIfNeeded(file);
         }));       
     }
     
     // download files that failed to download (e.g. due to network error)
     async downloadFailedFiles() {
-        const fileStatus = await this.fileStatus;
-        const files = Object.keys(fileStatus.files).filter(fileStatusKey => fileStatus.files[fileStatusKey].status === 'error');
-        if (files.length > 0) {
-            console.log(`Downloading ${files.length} files that failed to download`);
-            return this.downloadFiles(files.map(fileStatusKey => {
-                const file = fileStatus.files[fileStatusKey] as FileStatusItem;
+        const filesStatuses = await this.filesStatuses;
+        const failedFiles = Object.keys(filesStatuses.files).filter(fileStatusKey => filesStatuses.files[fileStatusKey].status === 'error');
+        if (failedFiles.length > 0) {
+            console.log(`Downloading ${failedFiles.length} files that failed to download`);
+            return this.downloadFiles(failedFiles.map(fileStatusKey => {
+                const file = filesStatuses.files[fileStatusKey] as FileStatusItem;
                 return {
                     Name: file.fileName,
                     URL: file.fileURL,
@@ -76,43 +75,59 @@ export class FileDownloadManager {
         }
     }
 
+    /**
+     * Given a file, download it if it wasn't already downloaded or is outdated
+     * @param file the file to download
+     * @returns the path to the locally saved file data.
+     */
+    async downloadFileToDeviceIfNeeded(file: AddonFile): Promise<string> {
+        let fileLocalPath = '';
+        if(file.MIME === 'pepperi/folder')
+        {
+            return fileLocalPath;
+        }
         
-    async downloadFileIfNeeded(file: any): Promise<string> {
-        const { hostname, pathname } = new URL(file.URL);
-        const fileStatus = await this.fileStatus;
-        const fixedPathname = pathname.substring(pathname.slice(1).indexOf('/') + 1); // remove account uuid from path
-        let retFilePath = fixedPathname;
-        const fileStatusItem = fileStatus.files[fixedPathname];
-        const isFileDownloaded = fileStatusItem && fileStatusItem.status === 'downloaded';
-        const isFileVersionMatched = fileStatusItem && fileStatusItem.fileVersion === file.FileVersion;
+        const filesStatuses = await this.filesStatuses;
+
+        // Get this file's status from filesStatuses
+        const { hostname, pathname } = new URL(file.URL!);
+        const fixedPathName = pathname.substring(pathname.slice(1).indexOf('/') + 1); // remove distributor uuid from path
+
+        const fileStatus = filesStatuses.files[fixedPathName];
+
+        const isFileDownloaded = fileStatus?.status === 'downloaded';
+        const isFileVersionMatched = fileStatus?.fileVersion === file.FileVersion;
+
+        fileLocalPath = fixedPathName;
         // 1. file is already downloaded and version is ok
         if (isFileDownloaded && isFileVersionMatched) { 
             console.log(`File ${file.Name} is up to date`);
-            return retFilePath;
+            return fileLocalPath;
         }
         // 2. file is not downloaded or version changed
         const pfsRootDir = await this.pfsFolder;
         try {
-            await this.downloadFile(file, fixedPathname, pfsRootDir);     
+            await this.downloadFile(file, fixedPathName, pfsRootDir);     
             // 3. download was successful
-            await this.updateFileStatusItem(fixedPathname, 'downloaded', file)
+            await this.updateFileStatusItem(fixedPathName, 'downloaded', file)
             console.log(`File ${file.Name} downloaded from PFS`);
                
         } catch (error) {
             // 4. download failed
-            await this.updateFileStatusItem(fixedPathname, 'error', file, error)
+            await this.updateFileStatusItem(fixedPathName, 'error', file, error)
             console.log(`Error downloading PFS file ${file.Name}`);
-            retFilePath = '';
+            fileLocalPath = '';
         }
-        return retFilePath;
+
+        return fileLocalPath;
     }
 
-    downloadFile(file: any, destPath: string,  pfsRootDir: string): Promise<void> {
+    downloadFile(file: AddonFile, destPath: string,  pfsRootDir: string): Promise<void> {
         const filePath = `${pfsRootDir}/${destPath}`
         console.log(`Downloading file ${file.Name} from ${file.URL} to ${filePath}`);
-        
+
         return new Promise((resolve, reject) => {
-            fetch(file.URL).then(res => res.buffer()).then(buffer => {
+            fetch(file.URL!).then(res => res.buffer()).then(buffer => {
                 // write file to disk
                 const dir = filePath.substring(0, filePath.lastIndexOf('/'));
                 // create dir if needed
@@ -150,14 +165,14 @@ export class FileDownloadManager {
         return pfsRootDir;
     }
 
-    private async updateFileStatusItem(filePath: string, status: DownloadStatus, file: any, error: any = '') {
+    private async updateFileStatusItem(filePath: string, status: DownloadStatus, file: AddonFile, error: any = '') {
         let statusItem = {} as FileStatusItem;
         switch (status) {
             case 'downloaded':
                 statusItem = {
                     status: status,
                     downloadedDateTime: Date.now(),
-                    modificationDateTime: file.ModificationDateTime,
+                    modificationDateTime: parseInt(file.ModificationDateTime!),
                     fileVersion: file.FileVersion,
                     fileURL: file.URL,
                     fileName: file.Name,
@@ -178,12 +193,12 @@ export class FileDownloadManager {
     }
 
     private async updateFileStatus(fileStatusKey: string, status: FileStatusItem) {
-        // update global file status
-        const fileStatus = await this.fileStatus;
-        fileStatus.files[fileStatusKey] = status;  
+        // update global files statuses
+        const filesStatuses = await this.filesStatuses;
+        filesStatuses.files[fileStatusKey] = status;  
         // save on disk asynchronously
         const fileStatusPath = `${await this.pfsFolder}/file-status.json`;
-        fs.writeFile(fileStatusPath, JSON.stringify(fileStatus), 'utf8', (err) => {
+        fs.writeFile(fileStatusPath, JSON.stringify(filesStatuses), 'utf8', (err) => {
             if (err) {
                 console.log(`Error saving file status to ${fileStatusPath}`);
             } else {
