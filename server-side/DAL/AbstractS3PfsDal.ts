@@ -245,7 +245,6 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		params.Key = key;
 		params.Body = buffer;
 		params.ContentType = this.getMimeType();
-		params.ContentEncoding = 'base64';
 		if(!isCache){
 			params.CacheControl = 'no-cache';
 		}
