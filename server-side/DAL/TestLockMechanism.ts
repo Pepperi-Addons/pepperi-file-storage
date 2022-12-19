@@ -1,4 +1,4 @@
-import { TestError } from "../constants";
+import { TestError } from "pfs-shared";
 import { IndexedDataS3PfsDal } from "./IndexedDataS3PfsDal";
 
 export class FailAfterLock extends IndexedDataS3PfsDal{

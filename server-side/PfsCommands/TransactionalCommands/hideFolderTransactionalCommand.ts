@@ -1,8 +1,8 @@
-import { Helper } from "../../helper";
 import { ListObjectsCommand } from "../AtomicCommands/listObjectsCommand";
 import { ABaseTransactionalCommand } from "./aBaseTransactionalCommand";
 import { PapiClient } from "@pepperi-addons/papi-sdk";
-import { TransactionType } from "../../constants";
+import { TransactionType } from "pfs-shared";
+import { ServerHelper } from "../../serverHelper";
 
 export class HideFolderTransactionalCommand extends ABaseTransactionalCommand{
 
@@ -18,7 +18,7 @@ export class HideFolderTransactionalCommand extends ABaseTransactionalCommand{
 	private async preLockValidations()
 	{
 		// Validate secret key
-		await Helper.validateAddonSecretKey(this.request.header, this.client, this.AddonUUID);
+		await ServerHelper.validateAddonSecretKey(this.request.header, this.client, this.AddonUUID);
 
 		// Validate that the folder exists or that there's a 'hide' lock on it.
 		await this.validateFolder();
@@ -172,8 +172,8 @@ export class HideFolderTransactionalCommand extends ABaseTransactionalCommand{
 	}
 
 	private async hideObjectsUsingPfsBatchDisregardingExistingLocks(filesKeys: any) {
-		const lowerCaseHeaders = Helper.getLowerCaseHeaders(this.request.header);
-		const papiClient: PapiClient = Helper.createPapiClient(this.client, this.AddonUUID, lowerCaseHeaders["x-pepperi-secretkey"]);
+		const lowerCaseHeaders = ServerHelper.getLowerCaseHeaders(this.request.header);
+		const papiClient: PapiClient = ServerHelper.createPapiClient(this.client, this.AddonUUID, lowerCaseHeaders["x-pepperi-secretkey"]);
 
 		filesKeys = filesKeys.map(fileKey => {
 			return {

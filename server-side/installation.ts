@@ -9,12 +9,12 @@ The error Message is importent! it will be written in the audit log and help the
 
 import { Client, Request } from '@pepperi-addons/debug-server'
 import { AddonData, AddonDataScheme, FindOptions, PapiClient, Relation } from '@pepperi-addons/papi-sdk';
-import { LOCK_ADAL_TABLE_NAME, pfsSchemaData, PFS_TABLE_PREFIX } from './constants';
 import semver from 'semver';
 import clonedeep from 'lodash.clonedeep';
-import { pathToFileURL } from 'url';
+import { LOCK_ADAL_TABLE_NAME, pfsSchemaData, PFS_TABLE_PREFIX } from 'pfs-shared';
 
-export async function install(client: Client, request: Request): Promise<any> {
+export async function install(client: Client, request: Request): Promise<any> 
+{
 
 	const papiClient = createPapiClient(client);
 	await createLockADALTable(papiClient);
@@ -23,27 +23,32 @@ export async function install(client: Client, request: Request): Promise<any> {
 	return { success: true, resultObject: {} }
 }
 
-export async function uninstall(client: Client, request: Request): Promise<any> {
+export async function uninstall(client: Client, request: Request): Promise<any> 
+{
 	const papiClient = createPapiClient(client);
 	await papiClient.post(`/addons/data/schemes/${LOCK_ADAL_TABLE_NAME}/purge`);
 
 	return { success: true, resultObject: {} }
 }
 
-export async function upgrade(client: Client, request: Request): Promise<any> {
+export async function upgrade(client: Client, request: Request): Promise<any> 
+{
 	const papiClient = createPapiClient(client);
 
-	if (request.body.FromVersion && semver.compare(request.body.FromVersion, '1.1.6') < 0) {
+	if (request.body.FromVersion && semver.compare(request.body.FromVersion, '1.1.6') < 0) 
+	{
 		console.log("Migrating internal schemas to schemas that don't use '-' char...");
 		// For more details see DI-21812: https://pepperi.atlassian.net/browse/DI-21812
 		await migrateSchemasToNotUseMinusChar(papiClient, client);
 	}
 
-	if (request.body.FromVersion && semver.compare(request.body.FromVersion, '1.0.1') < 0) {
+	if (request.body.FromVersion && semver.compare(request.body.FromVersion, '1.0.1') < 0) 
+	{
 		throw new Error('Upgrading from versions earlier than 1.0.1 is not supported. Please uninstall the addon and install it again.');
 	}
 
-	if (request.body.FromVersion && semver.compare(request.body.FromVersion, '1.0.4') < 0) {
+	if (request.body.FromVersion && semver.compare(request.body.FromVersion, '1.0.4') < 0) 
+	{
 		// Add the new TransactionType field to the lock table schema
 		await createLockADALTable(papiClient);
 
@@ -52,11 +57,13 @@ export async function upgrade(client: Client, request: Request): Promise<any> {
 
 	}
 
-	if (request.body.FromVersion && semver.compare(request.body.FromVersion, '1.0.8') < 0) {
+	if (request.body.FromVersion && semver.compare(request.body.FromVersion, '1.0.8') < 0) 
+	{
 		await addTrailingSlashToFolderProperty(papiClient, client);
 	}
 
-	if (request.body.FromVersion && semver.compare(request.body.FromVersion, '1.0.29') < 0) {
+	if (request.body.FromVersion && semver.compare(request.body.FromVersion, '1.0.29') < 0) 
+	{
 		console.log("Updating \"Name\" field on all schemas");
 		await updateNameField(papiClient);
 	}
@@ -64,11 +71,13 @@ export async function upgrade(client: Client, request: Request): Promise<any> {
 	return { success: true, resultObject: {} }
 }
 
-export async function downgrade(client: Client, request: Request): Promise<any> {
+export async function downgrade(client: Client, request: Request): Promise<any> 
+{
 	return { success: true, resultObject: {} }
 }
 
-function createPapiClient(Client: Client) {
+function createPapiClient(Client: Client) 
+{
 	return new PapiClient({
 		token: Client.OAuthAccessToken,
 		baseURL: Client.BaseURL,
@@ -78,7 +87,8 @@ function createPapiClient(Client: Client) {
 	});
 }
 
-async function createLockADALTable(papiClient: PapiClient) {
+async function createLockADALTable(papiClient: PapiClient) 
+{
 	const pfsMetadataTable = {
 		...pfsSchemaData,
 		Name: LOCK_ADAL_TABLE_NAME
@@ -94,7 +104,8 @@ async function createLockADALTable(papiClient: PapiClient) {
 	await papiClient.addons.data.schemes.post(pfsMetadataTable);
 }
 
-async function createDimxRelations(papiClient: PapiClient, client: Client) {
+async function createDimxRelations(papiClient: PapiClient, client: Client) 
+{
 	const importRelation: Relation = {
 		RelationName: "DataImportSource",
 		AddonUUID: client.AddonUUID,
@@ -116,16 +127,20 @@ async function createDimxRelations(papiClient: PapiClient, client: Client) {
 	await upsertRelation(papiClient, exportRelation);
 }
 
-async function upsertRelation(papiClient: PapiClient, relation: Relation) {
+async function upsertRelation(papiClient: PapiClient, relation: Relation) 
+{
 	return papiClient.post('/addons/data/relations', relation);
 }
 
 /**
  * Add the new DeletedBy field to every pfs data schema
  */
-async function addDeletedByFieldToPfsSchemas(papiClient: PapiClient) {
-	const manipulatorFunction = async (schema: AddonDataScheme) : Promise<void> => {
-		if (schema.Fields) {
+async function addDeletedByFieldToPfsSchemas(papiClient: PapiClient) 
+{
+	const manipulatorFunction = async (schema: AddonDataScheme) : Promise<void> => 
+	{
+		if (schema.Fields) 
+		{
 			schema.Fields.DeletedBy = {
 				Type: 'String',
 				Indexed: true,
@@ -139,9 +154,12 @@ async function addDeletedByFieldToPfsSchemas(papiClient: PapiClient) {
 	await manipulateAllPfsSchemas(papiClient, manipulatorFunction);
 }
 
-export async function updateNameField(papiClient: PapiClient) {
-	const manipulatorFunction = async (schema: AddonDataScheme) : Promise<void> => {
-		if (schema.Fields  && !schema.Fields.Name?.Indexed) {
+export async function updateNameField(papiClient: PapiClient) 
+{
+	const manipulatorFunction = async (schema: AddonDataScheme) : Promise<void> => 
+	{
+		if (schema.Fields  && !schema.Fields.Name?.Indexed) 
+		{
 
 			console.log('Setting Name field Indexed=true...');
 			schema.Fields.Name =
@@ -179,16 +197,20 @@ async function manipulateAllPfsSchemas(papiClient: PapiClient, manipulatorFuncti
 	}
 }
 
-export async function addTrailingSlashToFolderProperty(papiClient: PapiClient, client: Client) {
+export async function addTrailingSlashToFolderProperty(papiClient: PapiClient, client: Client) 
+{
 	// Get all pfs schemas
 	const pfsSchemas: Array<AddonDataScheme> = await papiClient.addons.data.schemes.get({ fields: ["Name"] });
 
 	// Add the new DeletedBy field to every pfs schema
-	for (const pfsSchema of pfsSchemas) {
-		if (pfsSchema.Name) {
+	for (const pfsSchema of pfsSchemas) 
+	{
+		if (pfsSchema.Name) 
+		{
 			let objects: any[] = [];
 			let page = 1;
-			do {
+			do 
+			{
 				const findParams: FindOptions = {
 					fields: ["Key", "Folder", "Hidden"],
 					page: page,
@@ -203,7 +225,8 @@ export async function addTrailingSlashToFolderProperty(papiClient: PapiClient, c
 				objects = objects.filter(obj => obj.Folder && !obj.Folder.endsWith('/'));
 
 				// Create the updated Folder value
-				objects = objects.map(obj => {
+				objects = objects.map(obj => 
+				{
 					return {
 						Key: obj.Key,
 						Folder: `${obj.Folder}/`,
@@ -214,7 +237,8 @@ export async function addTrailingSlashToFolderProperty(papiClient: PapiClient, c
 				})
 
 				// Check if there are objects, to avoid a redundant api call
-				if (objects.length > 0) {
+				if (objects.length > 0) 
+				{
 					await papiClient.post(`/addons/data/batch/${client.AddonUUID}/${pfsSchema.Name}`, { Objects: objects });
 				}
 
@@ -225,7 +249,8 @@ export async function addTrailingSlashToFolderProperty(papiClient: PapiClient, c
 	}
 }
 
-async function migrateSchemasToNotUseMinusChar(papiClient: PapiClient, client: Client) {
+async function migrateSchemasToNotUseMinusChar(papiClient: PapiClient, client: Client) 
+{
 	const manipulatorFunction = async (originalSchema: AddonDataScheme) : Promise<void> =>
 	{
 		if (originalSchema.Name.includes('-'))
@@ -256,10 +281,12 @@ async function migrateSchemasToNotUseMinusChar(papiClient: PapiClient, client: C
 		return await papiClient.addons.data.schemes.post(validSchema);
 	}
 	
-	async function migrateDocuments(sourceSchema: AddonDataScheme, destinationSchema: AddonDataScheme) {
+	async function migrateDocuments(sourceSchema: AddonDataScheme, destinationSchema: AddonDataScheme) 
+	{
 		let objects: AddonData[] = [];
 		let page = 1;
-		do {
+		do 
+		{
 			const findParams: FindOptions = {
 				page: page,
 				include_deleted: true,
@@ -268,7 +295,8 @@ async function migrateSchemasToNotUseMinusChar(papiClient: PapiClient, client: C
 			objects = await papiClient.addons.data.uuid(client.AddonUUID).table(sourceSchema.Name).find(findParams);
 
 			// Check if there are objects, to avoid a redundant api call
-			if (objects.length > 0) {
+			if (objects.length > 0) 
+			{
 				await papiClient.post(`/addons/data/batch/${client.AddonUUID}/${destinationSchema.Name}`, { Objects: objects });
 			}
 

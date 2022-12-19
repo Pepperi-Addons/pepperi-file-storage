@@ -1,9 +1,7 @@
 import { Client, Request } from '@pepperi-addons/debug-server';
 import { AddonData } from '@pepperi-addons/papi-sdk';
 import jwtDecode from 'jwt-decode';
-import { TransactionType } from '../constants';
-import { IPfsGetter } from './IPfsGetter';
-import { IPfsMutator } from './IPfsMutator';
+import { IPfsGetter, IPfsMutator, TransactionType } from 'pfs-shared';
 
 export abstract class AbstractBasePfsDal implements IPfsGetter, IPfsMutator
 {

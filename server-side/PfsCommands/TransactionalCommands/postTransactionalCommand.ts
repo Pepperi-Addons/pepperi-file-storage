@@ -1,11 +1,11 @@
 import * as path from 'path';
 import fetch from 'node-fetch';
 import jwtDecode from 'jwt-decode';
-import { CACHE_DEFAULT_VALUE, dataURLRegex, DESCRIPTION_DEFAULT_VALUE, EXTENSIONS_WHITELIST, HIDDEN_DEFAULT_VALUE, MAXIMAL_TREE_DEPTH, SECRETKEY_HEADER, SYNC_DEFAULT_VALUE, TestError, TransactionType } from "../../constants";
 import { ImageResizer } from "../../imageResizer";
 import { PapiClient } from "@pepperi-addons/papi-sdk";
-import { Helper } from "../../helper";
 import { ABaseTransactionalCommand } from "./aBaseTransactionalCommand";
+import { ServerHelper } from '../../serverHelper';
+import { CACHE_DEFAULT_VALUE, dataURLRegex, DESCRIPTION_DEFAULT_VALUE, EXTENSIONS_WHITELIST, HIDDEN_DEFAULT_VALUE, MAXIMAL_TREE_DEPTH, SECRETKEY_HEADER, SYNC_DEFAULT_VALUE, TransactionType } from 'pfs-shared';
 
 export class PostTransactionalCommand extends ABaseTransactionalCommand{
 	readonly MIME_FIELD_IS_MISSING = "Missing mandatory field 'MIME'";
@@ -14,7 +14,7 @@ export class PostTransactionalCommand extends ABaseTransactionalCommand{
 
 	async preLockLogic() 
 	{
-		await Helper.validateAddonSecretKey(this.request.header, this.client, this.AddonUUID);
+		await ServerHelper.validateAddonSecretKey(this.request.header, this.client, this.AddonUUID);
 
 		if (!this.request.body.Key) 
 		{
@@ -346,7 +346,7 @@ export class PostTransactionalCommand extends ABaseTransactionalCommand{
 	private async getUploadedByUUID(): Promise<any> 
 	{
 		const userId = (jwtDecode(this.client.OAuthAccessToken))["pepperi.id"];
-		const papiClient: PapiClient = Helper.createPapiClient(this.client, this.AddonUUID, this.request.header[SECRETKEY_HEADER]);
+		const papiClient: PapiClient = ServerHelper.createPapiClient(this.client, this.AddonUUID, this.request.header[SECRETKEY_HEADER]);
 		const isSupportAdminUser: boolean = (await papiClient.get(`/users/${userId}?fields=IsSupportAdminUser`)).IsSupportAdminUser;
 
 		//Leave files uploaded by support admin user (i.e. uploading using integration) with a blank 

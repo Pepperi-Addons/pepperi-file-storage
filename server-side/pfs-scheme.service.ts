@@ -1,9 +1,9 @@
 import { Client, Request } from "@pepperi-addons/debug-server/dist";
 import { AddonDataScheme, PapiClient, Subscription } from "@pepperi-addons/papi-sdk";
-import { pfsSchemaData } from "./constants";
-import { Helper } from "./helper";
 import config from './../addon.config.json';
 import isEqual from 'lodash.isequal';
+import { ServerHelper } from "./serverHelper";
+import { pfsSchemaData, SharedHelper } from "pfs-shared";
 
 export class PfsSchemeService
 {
@@ -12,7 +12,7 @@ export class PfsSchemeService
 	constructor(private client: Client, private request: Request)
 	{
 		this.schema = request.body;
-		this.request.header = Helper.getLowerCaseHeaders(this.request.header);	
+		this.request.header = ServerHelper.getLowerCaseHeaders(this.request.header);	
 	}
 
 	/**
@@ -52,13 +52,13 @@ export class PfsSchemeService
 		pfsMetadataTable.Name = this.getPfsSchemaName();
 		pfsMetadataTable.Type = 'data';
 
-		const papiClient: PapiClient = Helper.createPapiClient(this.client, config.AddonUUID, this.client.AddonSecretKey);
+		const papiClient: PapiClient = ServerHelper.createPapiClient(this.client, config.AddonUUID, this.client.AddonSecretKey);
 		return await papiClient.post('/addons/data/schemes', pfsMetadataTable);
 	}
 
 	private getPfsSchemaName(): string 
 	{
-		return Helper.getPfsTableName(this.request.query.addon_uuid, this.schema.Name);
+		return SharedHelper.getPfsTableName(this.request.query.addon_uuid, this.schema.Name);
 	}
 
 	/**
@@ -86,7 +86,7 @@ export class PfsSchemeService
 
 	private async expiredRecordsSubscription(hidden: boolean): Promise<Subscription> 
 	{
-		const papiClient: PapiClient = Helper.createPapiClient(this.client, config.AddonUUID, this.client.AddonSecretKey);
+		const papiClient: PapiClient = ServerHelper.createPapiClient(this.client, config.AddonUUID, this.client.AddonSecretKey);
 		return await papiClient.notification.subscriptions.upsert({
 			AddonUUID: config.AddonUUID,
 			Name: `pfs-expired-records-${this.getPfsSchemaName()}`, // Names of subscriptions should be unique
@@ -107,7 +107,7 @@ export class PfsSchemeService
 	private async validateSchemaCreationRequest() 
 	{
 		// Validate that the provided secret key matches the addon's secre key, and that the addon is indeed installed.
-		await Helper.validateAddonSecretKey(this.request.header, this.client, this.request.query.addon_uuid);
+		await ServerHelper.validateAddonSecretKey(this.request.header, this.client, this.request.query.addon_uuid);
 
 		// Validate that the requested schema is valid
 		await this.validateSchema();
@@ -132,7 +132,7 @@ export class PfsSchemeService
 
 		try
 		{
-			const papiClient = Helper.createPapiClient(this.client, this.request.query.addon_uuid);
+			const papiClient = ServerHelper.createPapiClient(this.client, this.request.query.addon_uuid);
 			existingSchema = await papiClient.addons.data.schemes.name(this.schema.Name).get();
 			console.log(`Successfully downloaded a schema called '${this.schema.Name}'.`);
 		}
@@ -195,7 +195,7 @@ export class PfsSchemeService
 	public async purge() 
 	{
 		// Delete the PFS's 'data' schema
-		const papiClient = Helper.createPapiClient(this.client, config.AddonUUID, this.client.AddonSecretKey);
+		const papiClient = ServerHelper.createPapiClient(this.client, config.AddonUUID, this.client.AddonSecretKey);
 		try
 		{
 			await papiClient.post(`/addons/data/schemes/${this.getPfsSchemaName()}/purge`);

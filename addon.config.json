@@ -5,7 +5,7 @@
   "WebappBaseUrl": "https://app.sandbox.pepperi.com",
   "DefaultEditor": "main",
   "Endpoints": [
-``    "installation.ts",
+   "installation.ts",
     "api.ts",
     "data-source-api.ts"
   ],
