@@ -1,4 +1,4 @@
-import { TestError } from "../../../constants";
+import { TestError } from "pfs-shared";
 import { BaseRollbackAlgorithm } from "./baseRollback";
 
 export class PostRollbackAlgorithm extends BaseRollbackAlgorithm 

@@ -1,5 +1,6 @@
-import { AddonDataScheme } from "@pepperi-addons/papi-sdk";
+import { AddonDataScheme, AddonFile } from "@pepperi-addons/papi-sdk";
 import { FileDownloadManager } from "./file-download-manager";
+import config from '../addon.config.json'
 
 class FilesService {  
     
@@ -7,16 +8,17 @@ class FilesService {
         return FileDownloadManager.instance;
     }  
 
-    async getFileUrl(addonUUID: string, schemaName: string, fileKey: string): Promise<string> {
-        const file = await this.getFile(fileKey, addonUUID, schemaName);
+    async getFileWithLocalizedUrl(addonUUID: string, schemaName: string, fileKey: string): Promise<AddonFile> {
+        const file = await this.getFileFromTable(fileKey, addonUUID, schemaName);
         if (file) {
-            const filePath = await this.fdm.downloadFileIfNeeded(file)
+            const filePath = await this.fdm.downloadFileToDeviceIfNeeded(file)
             if(filePath){
                 const baseURL = await pepperi.files.baseURL()
-                return `${baseURL}/PFS${filePath}`;
-            } else {
-                return file.URL;
+                file.URL = `${baseURL}/PFS${filePath}`;
             }
+
+            return file;
+
         } else {
             throw new Error(`File ${fileKey} not found`);
         }
@@ -38,7 +40,14 @@ class FilesService {
         ]);
     }
 
-    async getFile(key, addonUUID: string, schemaName: string): Promise<any> {
+    /**
+     * Get's a file from the synced table
+     * @param key the key of the file to get
+     * @param addonUUID 
+     * @param schemaName 
+     * @returns AddonFile | undefined
+     */
+    async getFileFromTable(key, addonUUID: string, schemaName: string): Promise<AddonFile | undefined> {
         // get file directly from table
         const addonSchema = await this.getAddonSchema(addonUUID, schemaName);
         if (addonSchema) {
@@ -83,9 +92,10 @@ class FilesService {
     async getSchemesToDownload(): Promise<AddonDataScheme[]> {
         // get schemas that its type is 'pfs'
         const schemas = await this.getSchemas();
-        const schemesToDownload = schemas.filter(schema => schema.Type === 'pfs');
+        const schemesToDownload = schemas.filter(schema => schema.AddonUUID === config.AddonUUID);
         // TODO for now download only Assets schema
-        const res = schemesToDownload.filter(schema => schema.Name === 'Assets');     
+        // const res = schemesToDownload.filter(schema => schema.Name === 'Assets');     
+        const res = schemesToDownload;     
         return res;
         
     }

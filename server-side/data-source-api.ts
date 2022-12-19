@@ -1,8 +1,8 @@
 import { Client, Request } from '@pepperi-addons/debug-server';
-import { Helper } from './helper';
 import { PfsSchemeService } from './pfs-scheme.service';
 export { files, file } from './api';
 import { files } from './api';
+import { SharedHelper } from 'pfs-shared';
 
 export async function create(client: Client, request: Request) 
 {
@@ -24,7 +24,7 @@ export async function batch(client: Client, request: Request)
 {
 	console.log(`Request received: ${JSON.stringify(request)}`);
 	
-	Helper.validateFilesQueryParams(request);
+	SharedHelper.validateFilesQueryParams(request);
 	switch (request.method) 
 	{
 	case "POST": {

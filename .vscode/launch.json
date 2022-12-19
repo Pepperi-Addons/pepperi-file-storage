@@ -16,16 +16,7 @@
             "outFiles": [
                 "${workspaceFolder}/server-side/build/*/*.js"
             ],
-            "preLaunchTask": {
-                "label": "Build API",
-                "type": "typescript",
-                "tsconfig": "server-side/tsconfig.json",
-                "option": "watch",
-                "problemMatcher": [
-                    "$tsc-watch"
-                ],
-                "group": "build"
-            },
+            "preLaunchTask": "Build All",
             "runtimeExecutable": "${workspaceFolder}/server-side/node_modules/.bin/nodemon",
             "restart": true,
         },
@@ -44,8 +35,14 @@
             "protocol": "inspector",
             "port": 9222,
             "address": "localhost",
+            "sourceMaps": true,
+            "localRoot": "${workspaceFolder}/cpi-side/build",
             // "websocketAddress": "ws://0.0.0.0:9222/f56157ef-6f9b-49d8-ae3a-db4ccd53ffff",
             "name": "Launch CPINode debugger Server",
+            "preLaunchTask": {
+                "script": "cpi-publish-addon",
+                "type": "npm"
+            }
         },
         {
             "type": "node",
@@ -60,7 +57,11 @@
             ],
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
-            "protocol": "inspector"
+            "protocol": "inspector",
+            "preLaunchTask": {
+                "script": "build",
+                "type": "npm"
+            }
         }
     ]
 }

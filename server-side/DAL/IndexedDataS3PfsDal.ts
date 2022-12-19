@@ -1,10 +1,9 @@
 import { Client, Request } from '@pepperi-addons/debug-server';
-import { CdnServers, LOCK_ADAL_TABLE_NAME, SECRETKEY_HEADER, TransactionType } from "../constants";
 import { PapiClient } from '@pepperi-addons/papi-sdk/dist/papi-client';
 import config from '../../addon.config.json';
 import { AddonData, FindOptions } from '@pepperi-addons/papi-sdk';
 import { AbstractS3PfsDal } from './AbstractS3PfsDal';
-import { Helper } from '../helper';
+import { CdnServers, LOCK_ADAL_TABLE_NAME, SharedHelper, TransactionType } from 'pfs-shared';
 
 export class IndexedDataS3PfsDal extends AbstractS3PfsDal 
 {
@@ -39,7 +38,7 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 			...(this.request.query && this.request.query.include_deleted && {include_deleted: this.request.query.include_deleted}),
 		}
 
-		const getPfsTableName = Helper.getPfsTableName(this.request.query.addon_uuid, this.clientSchemaName);
+		const getPfsTableName = SharedHelper.getPfsTableName(this.request.query.addon_uuid, this.clientSchemaName);
 		const res =  await this.papiClient.addons.data.uuid(config.AddonUUID).table(getPfsTableName).find(findOptions);
 
 		console.log(`Files listing done successfully.`);
@@ -158,7 +157,7 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 
 		console.log(`Attempting to unlock object: ${key}`);
 		const res = await this.papiClient.addons.data.uuid(config.AddonUUID).table(LOCK_ADAL_TABLE_NAME).key(lockKey).hardDelete(true);
-		console.log(`Succcessfully unlocked object: ${key}`);
+		console.log(`Successfully unlocked object: ${key}`);
 		return res;
 	}
 
@@ -190,7 +189,7 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 		delete newFileFields.PresignedURL //Don't store PresignedURL in ADAL
 
 
-		const tableName = Helper.getPfsTableName(this.request.query.addon_uuid, this.clientSchemaName);
+		const tableName = SharedHelper.getPfsTableName(this.request.query.addon_uuid, this.clientSchemaName);
         res = await this.papiClient.addons.data.uuid(config.AddonUUID).table(tableName).upsert(newFileFields);
 		
 		// Add back the PresignedURL

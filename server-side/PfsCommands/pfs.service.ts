@@ -1,8 +1,8 @@
 import { Client, Request } from '@pepperi-addons/debug-server';
+import { AddonData } from '@pepperi-addons/papi-sdk';
 import jwtDecode from 'jwt-decode';
-import { IPfsMutator } from '../DAL/IPfsMutator';
-import { IPfsGetter } from '../DAL/IPfsGetter';
-import { Helper } from '../helper';
+import { IPfsGetter, IPfsMutator } from 'pfs-shared';
+import { ServerHelper } from '../serverHelper';
 
 export abstract class PfsService 
 {
@@ -14,7 +14,7 @@ export abstract class PfsService
 
 	constructor(protected client: Client, protected request: Request, protected pfsMutator: IPfsMutator, protected pfsGetter: IPfsGetter ) 
 	{
-		request.header = Helper.getLowerCaseHeaders(request.header);
+		request.header = ServerHelper.getLowerCaseHeaders(request.header);
 				 
 		this.environment = jwtDecode(client.OAuthAccessToken)['pepperi.datacenter'];
 		this.DistributorUUID = jwtDecode(client.OAuthAccessToken)['pepperi.distributoruuid'];
@@ -70,7 +70,7 @@ export abstract class PfsService
 	 * Download the file's metadata.
 	 * @returns 
 	 */
-	protected async downloadFile(downloadKey? : string) 
+	protected async downloadFile(downloadKey? : string): Promise<AddonData>
 	{
 		const downloadKeyRes: string = downloadKey ?? ((this.request.body && this.request.body.Key) ? this.request.body.Key : this.request.query.Key); 
 		const canonizedPath = downloadKeyRes.startsWith('/') ? downloadKeyRes.slice(1) : downloadKeyRes;

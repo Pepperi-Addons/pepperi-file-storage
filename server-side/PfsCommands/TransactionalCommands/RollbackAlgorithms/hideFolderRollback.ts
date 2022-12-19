@@ -1,9 +1,9 @@
-import { Helper } from "../../../helper";
-import { SECRETKEY_HEADER } from "../../../constants";
 import { BaseRollbackAlgorithm } from "./baseRollback";
 import { PapiClient } from "@pepperi-addons/papi-sdk";
 import config from '../../../../addon.config.json';
 import { v4 as uuid } from 'uuid';
+import { ServerHelper } from "../../../serverHelper";
+import { SECRETKEY_HEADER } from "pfs-shared";
 
 export class HideFolderRollbackAlgorithm extends BaseRollbackAlgorithm 
 {
@@ -13,8 +13,8 @@ export class HideFolderRollbackAlgorithm extends BaseRollbackAlgorithm
 
 		// We should actually call the async endpoint
 		// await (new HideFolderTransactionalCommand(this.client, this.request, this.pfsMutator, this.pfsGetter)).execute();
-		const lowerCaseHeader = Helper.getLowerCaseHeaders(this.request.header);
-		const papiClient: PapiClient = Helper.createPapiClient(this.client, this.AddonUUID, lowerCaseHeader[SECRETKEY_HEADER]);
+		const lowerCaseHeader = ServerHelper.getLowerCaseHeaders(this.request.header);
+		const papiClient: PapiClient = ServerHelper.createPapiClient(this.client, this.AddonUUID, lowerCaseHeader[SECRETKEY_HEADER]);
 
 		// Create a rollbackUUID
 		const rollbackUUID = uuid();

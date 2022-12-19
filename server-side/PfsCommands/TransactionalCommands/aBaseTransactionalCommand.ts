@@ -1,4 +1,4 @@
-import { TestError } from "../../constants";
+import { TestError } from "pfs-shared";
 import AbstractCommand from "../abstractCommand";
 import { ITransactionalCommand } from "./iTransactionalCommand";
 import { RollbackAlgorithmFactory } from "./RollbackAlgorithms/rollbackAlgorithmFactory";

@@ -1,5 +1,5 @@
 import { Client, Request } from '@pepperi-addons/debug-server';
-import { dataURLRegex, S3Buckets, CloudfrontDistributions, CACHE_DEFAULT_VALUE, TransactionType } from "../constants";
+import { CACHE_DEFAULT_VALUE, CloudfrontDistributions, dataURLRegex, S3Buckets, TransactionType } from 'pfs-shared';
 import { AbstractBasePfsDal } from './AbstartcBasePfsDal';
 
 const AWS = require('aws-sdk'); // AWS is part of the lambda's environment. Importing it will result in it being rolled up redundently.
@@ -113,7 +113,7 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 			file.Thumbnails.map(thumbnail => invalidationPaths.push(encodeURI(`/thumbnails${keyInvalidationPath}_${thumbnail.Size}`)));
 		}
 
-		console.log(`Trying to invlidate ${invalidationPaths}...`);
+		console.log(`Trying to invalidate ${invalidationPaths}...`);
 
 		// Create invalidation request
 		const cloudfront = new AWS.CloudFront({apiVersion: '2020-05-31'});
@@ -128,11 +128,11 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
   			}
 		};
 
-		const invlidation = await cloudfront.createInvalidation(invalidationParams).promise();
+		const invalidation = await cloudfront.createInvalidation(invalidationParams).promise();
 
-		console.log(`Invalidation result:\n ${JSON.stringify(invlidation)}...`);
+		console.log(`Invalidation result:\n ${JSON.stringify(invalidation)}...`);
 
-		return invlidation;
+		return invalidation;
 	}
 
 	private validateInvalidationRequest(keyInvalidationPath: string/*, file: any*/) {
@@ -170,18 +170,18 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		keys = keys.filter(key => !key.endsWith('/'));
 		
 		// Call DeleteObjects
-		const deleteObjetcsRes = await this.deleteObjects(keys.map(key => this.getAbsolutePath(key)));
+		const deleteObjectsRes = await this.deleteObjects(keys.map(key => this.getAbsolutePath(key)));
 		
 		// Delete all thumbnails for the deleted files
 		await this.batchDeleteThumbnails(keys);
 
-		for (const error of deleteObjetcsRes.Errors) {
+		for (const error of deleteObjectsRes.Errors) {
 			console.error(`Delete objects encountered an error:${JSON.stringify(error)}`);
 		}
 
 		console.log(`Successfully deleted batch.`);
 
-		return deleteObjetcsRes;
+		return deleteObjectsRes;
 	}
 
 	//#endregion
@@ -358,7 +358,7 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		params.Delete.Quiet = true; // Non verbose, returns info only for failed deletes.
 		params.Delete.Objects = absolutePaths.map(key => { return { Key: key }; });
 
-		// For more information on S3's deleteObjets function see: https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/S3.html#deleteObjects-property
+		// For more information on S3's deleteObjects function see: https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/S3.html#deleteObjects-property
 		const deleteObjetcsRes = await this.s3.deleteObjects(params).promise();
 		return deleteObjetcsRes;
 	}

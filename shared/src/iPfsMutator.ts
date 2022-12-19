@@ -1,10 +1,10 @@
-import { TransactionType } from "../constants";
+import { TransactionType } from "./constants";
 
 export interface IPfsMutator
 {
 	/**
      * Delete the given file's given VersionID.
-     * @param Key The key whos version is to be deleted.
+     * @param Key The key whose version is to be deleted.
      * @param s3FileVersion The version to be deleted.
      */
     deleteS3FileVersion(Key: any, s3FileVersion: any);

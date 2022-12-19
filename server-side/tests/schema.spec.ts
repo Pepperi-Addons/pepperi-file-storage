@@ -5,8 +5,8 @@ import { mockClient } from './consts';
 import { Client, Request } from "@pepperi-addons/debug-server";
 import { PapiClient } from '@pepperi-addons/papi-sdk';
 import { PfsSchemeService } from '../pfs-scheme.service';
-import { Helper } from '../helper';
-import { pfsSchemaData } from '../constants';
+import { ServerHelper } from '../serverHelper';
+import { pfsSchemaData } from 'pfs-shared';
 
 chai.use(promised);
 
@@ -21,10 +21,10 @@ describe('Schema operations', async () => {
 
     let papiPostCounter = 0;
 
-    Helper.validateAddonSecretKey = async (header: any, client: Client, addonUUID:string) => {
+    ServerHelper.validateAddonSecretKey = async (header: any, client: Client, addonUUID:string) => {
         return;
     }
-    Helper.createPapiClient = (client: Client, addonUUID:string, addonSecretKey:string) => {
+    ServerHelper.createPapiClient = (client: Client, addonUUID:string, addonSecretKey:string) => {
         const papiClient =  new PapiClient({
             baseURL: mockClient.BaseURL,
             token: mockClient.OAuthAccessToken,

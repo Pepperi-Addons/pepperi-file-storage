@@ -22,7 +22,6 @@
           "@typescript-eslint/no-explicit-any": "off",
           "@typescript-eslint/explicit-module-boundary-types": "off",
         "indent": ["error", "tab"],
-        "linebreak-style": ["error", "windows"],
         "brace-style": ["error", "allman"]
     }
 }

@@ -1,6 +1,5 @@
 import { AbstractCommand } from './PfsCommands/abstractCommand'
 import { Client, Request } from '@pepperi-addons/debug-server'
-import { Helper } from './helper';
 import { PostTransactionalCommand } from './PfsCommands/TransactionalCommands/postTransactionalCommand';
 import { ListFolderContentsCommand } from './PfsCommands/AtomicCommands/listFolderContetntsCommand';
 import { ListObjectsCommand } from './PfsCommands/AtomicCommands/listObjectsCommand';
@@ -8,6 +7,8 @@ import { downloadFileCommand } from './PfsCommands/AtomicCommands/downloadFileCo
 import { RecordRemovedCommand } from './PfsCommands/AtomicCommands/recordRemovedCommand';
 import { InvalidateCommand } from './PfsCommands/AtomicCommands/invalidateCommand';
 import { HideFolderTransactionalCommand } from './PfsCommands/TransactionalCommands/hideFolderTransactionalCommand';
+import { SharedHelper } from 'pfs-shared';
+import { ServerHelper } from './serverHelper';
 
 export async function file(client: Client, request: Request) 
 {
@@ -17,12 +18,12 @@ export async function file(client: Client, request: Request)
 		request.query.Key = request.query.key;
 	}
 
-	Helper.validateResourceNameQueryParam(request);
+	SharedHelper.validateResourceNameQueryParam(request);
 
 	switch (request.method) 
 	{
 	case "GET": {
-		const dal = Helper.DalFactory(client, request);
+		const dal = ServerHelper.DalFactory(client, request);
 		const pfsCommand = new downloadFileCommand(client, request, dal, dal);
 
 		return pfsCommand.execute();
@@ -37,14 +38,14 @@ export async function files(client: Client, request: Request)
 {
 	console.log(`Request received: ${JSON.stringify(request)}`);
 
-	Helper.validateFilesQueryParams(request);
+	SharedHelper.validateFilesQueryParams(request);
 
 	let pfsCommand: AbstractCommand;
 
 	switch (request.method) 
 	{
 	case "GET": {
-		const dal = Helper.DalFactory(client, request);
+		const dal = ServerHelper.DalFactory(client, request);
 		
 		if (request.query.folder) 
 		{				
@@ -58,7 +59,7 @@ export async function files(client: Client, request: Request)
 		return pfsCommand.execute();
 	}
 	case "POST": {
-		const dal = Helper.DalFactory(client, request);
+		const dal = ServerHelper.DalFactory(client, request);
 		pfsCommand = new PostTransactionalCommand(client, request, dal, dal);
 
 		return pfsCommand.execute();
@@ -87,10 +88,10 @@ export async function record_removed(client: Client, request: Request)
 			throw new Error(errorMessage);
 		}
 
-		request.query.addon_uuid = Helper.addMinusesToUUID(splitResourceName[1]);
+		request.query.addon_uuid = SharedHelper.addMinusesToUUID(splitResourceName[1]);
 		request.query.resource_name = splitResourceName[2];
 
-		const dal = Helper.DalFactory(client, request);
+		const dal = ServerHelper.DalFactory(client, request);
 		const pfsCommand = new RecordRemovedCommand(client, request, dal, dal);
 
 		return await pfsCommand.execute();
@@ -108,10 +109,10 @@ export async function invalidate(client: Client, request: Request)
 	switch (request.method) 
 	{
 	case "POST": {
-		Helper.validateFilesQueryParams(request);
+		SharedHelper.validateFilesQueryParams(request);
 
 
-		const dal = Helper.DalFactory(client, request);
+		const dal = ServerHelper.DalFactory(client, request);
 		const pfsCommand = new InvalidateCommand(client, request, dal, dal);
 
 		return await pfsCommand.execute();
@@ -129,9 +130,9 @@ export async function hide_folder(client: Client, request: Request)
 	switch (request.method) 
 	{
 	case "POST": {
-		Helper.validateFilesQueryParams(request);
+		SharedHelper.validateFilesQueryParams(request);
 
-		const dal = Helper.DalFactory(client, request);
+		const dal = ServerHelper.DalFactory(client, request);
 		const pfsCommand = new HideFolderTransactionalCommand(client, request, dal, dal);
 
 		return await pfsCommand.execute();
