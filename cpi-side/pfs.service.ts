@@ -3,6 +3,10 @@ import { AddonData } from '@pepperi-addons/papi-sdk';
 // import { IPfsGetter, IPfsMutator } from 'pfs-shared';
 import { AbstractBasePfsDal } from './dal/AbstartcBasePfsDal';
 
+declare global {
+    //  for singleton
+    var downloadedFileKeysToLocalUrl: Map<string, {ModificationDateTime: string, LocalURL: string}>;
+}
 
 export abstract class PfsService 
 {
@@ -19,6 +23,16 @@ export abstract class PfsService
 		this.environment = "THIS_IS_TEMPORARY"
 		this.AddonUUID = this.request.query.addon_uuid;
 	}
+
+	static get downloadedFileKeysToLocalUrl(): Map<string, {ModificationDateTime: string, LocalURL: string}> 
+	{
+        if (!global.downloadedFileKeysToLocalUrl) 
+		{
+            global.downloadedFileKeysToLocalUrl = new Map<string, {ModificationDateTime: string, LocalURL: string}>();
+        }
+
+        return global.downloadedFileKeysToLocalUrl;
+    }
 
 	protected async getCurrentItemData() 
 	{
@@ -68,12 +82,12 @@ export abstract class PfsService
 	{
 		const downloadKeyRes: string = downloadKey ?? this.request.body?.Key ?? this.request.query.key; 
 		const canonizedPath = downloadKeyRes.startsWith('/') ? downloadKeyRes.slice(1) : downloadKeyRes;
-		const whereClause = `Key='${canonizedPath}'`;
+		const whereClause = `Key="${canonizedPath}"`;
 		const res = await this.pfsGetter.getObjects(whereClause);
 		if (res.Objects.length === 1) 
 		{
 			console.log(`File Downloaded`);
-			return res[0];
+			return res.Objects[0];
 		}
 		else 
 		{ //Couldn't find results
