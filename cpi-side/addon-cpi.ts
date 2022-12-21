@@ -53,7 +53,7 @@ router.get('/files/find', async (req, res, next) => {
         const OAuthAccessToken = await pepperi.auth.getAccessToken();
 
         const dal = new IndexedDataS3PfsDal(req, MAXIMAL_LOCK_TIME, OAuthAccessToken);
-        const listObjectsCommand = new ListObjectsCommand(req, dal, dal);
+        const listObjectsCommand = new ListObjectsCommand(req, OAuthAccessToken, dal, dal);
         const result = await listObjectsCommand.execute();
 
         res.json(result);
