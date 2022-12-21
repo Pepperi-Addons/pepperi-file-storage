@@ -1,6 +1,7 @@
+import { AddonsDataSearchResult } from '@pepperi-addons/cpi-node/build/cpi-side/client-api';
 import { Request } from '@pepperi-addons/debug-server';
 import { AddonData } from '@pepperi-addons/papi-sdk';
-// import { IPfsGetter, IPfsMutator } from 'pfs-shared';
+import { IPfsGetter, IPfsMutator } from 'pfs-shared';
 import { AbstractBasePfsDal } from './dal/AbstartcBasePfsDal';
 
 
@@ -11,7 +12,7 @@ export abstract class PfsService
 	existingFile: any;
 	newFileFields: any = {};
 
-	constructor(protected request: Request, protected pfsMutator: AbstractBasePfsDal, protected pfsGetter: AbstractBasePfsDal ) 
+	constructor(protected request: Request, protected pfsMutator: IPfsMutator, protected pfsGetter: IPfsGetter<AddonsDataSearchResult>) 
 	{
 		
 		// TODO: Figure out how to tell in which environment we're running.

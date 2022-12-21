@@ -1,16 +1,12 @@
 import '@pepperi-addons/cpi-node'
 import { MAXIMAL_LOCK_TIME } from 'pfs-shared';
-import { URL } from 'url';
 import { IndexedDataS3PfsDal } from './dal/IndexedDataS3PfsDal';
-import { DownloadFileCommand } from './downloadFileCommand';
+import { DownloadFileCommand } from './pfsCommands/downloadFileCommand';
+import { ListObjectsCommand } from './pfsCommands/listObjectsCommand';
 
 export const router = Router();
 
 export async function load(configuration: any) { }
-
-router.get('/hello', async (req, res, next) => {
-        debugger;
-});
 
 router.get('/file', async (req, res, next) => {
     try {
@@ -39,6 +35,27 @@ router.get('/file', async (req, res, next) => {
         // export const existsAsync = util.promisify(fs.exists);
         // export const mkdirAsync = util.promisify(fs.mkdir);
         // global['app']['getLocaFilePath'](filePath, fileBaseURL)
+
+        res.json(result);
+    } catch (err) {
+        console.log(err);
+        next(err)
+    }
+});
+
+router.get('/files/find', async (req, res, next) => {
+    try {
+        const addonUUID = req.query.addon_uuid?.toString();
+        const schemaName = req.query.resource_name?.toString();
+
+        if(!addonUUID || !schemaName) {
+            throw new Error('Missing required parameters');
+        }
+        const OAuthAccessToken = await pepperi.auth.getAccessToken();
+
+        const dal = new IndexedDataS3PfsDal(req, MAXIMAL_LOCK_TIME, OAuthAccessToken);
+        const listObjectsCommand = new ListObjectsCommand(req, dal, dal);
+        const result = await listObjectsCommand.execute();
 
         res.json(result);
     } catch (err) {
