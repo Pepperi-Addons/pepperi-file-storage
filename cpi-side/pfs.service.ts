@@ -1,7 +1,8 @@
 import { Request } from '@pepperi-addons/debug-server';
 import { AddonData } from '@pepperi-addons/papi-sdk';
-// import { IPfsGetter, IPfsMutator } from 'pfs-shared';
-import { AbstractBasePfsDal } from './dal/AbstartcBasePfsDal';
+import { IPfsGetter, IPfsMutator } from 'pfs-shared';
+import jwtDecode from 'jwt-decode';
+import { AddonsDataSearchResult } from '@pepperi-addons/cpi-node/build/cpi-side/client-api';
 
 declare global {
     //  for singleton
@@ -14,13 +15,12 @@ export abstract class PfsService
 	readonly environment: string;
 	existingFile: any;
 	newFileFields: any = {};
+	DistributorUUID: string;
 
-	constructor(protected request: Request, protected pfsMutator: AbstractBasePfsDal, protected pfsGetter: AbstractBasePfsDal ) 
+	constructor(protected request: Request, OAuthAccessToken: string, protected pfsMutator: IPfsMutator, protected pfsGetter: IPfsGetter<AddonsDataSearchResult> ) 
 	{
-		
-		// TODO: Figure out how to tell in which environment we're running.
-		// This is needed for POST.
-		this.environment = "THIS_IS_TEMPORARY"
+		this.environment = jwtDecode(OAuthAccessToken)['pepperi.datacenter'];
+		this.DistributorUUID = jwtDecode(OAuthAccessToken)['pepperi.distributoruuid'];
 		this.AddonUUID = this.request.query.addon_uuid;
 	}
 

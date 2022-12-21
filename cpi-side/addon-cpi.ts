@@ -19,7 +19,7 @@ router.get('/file', async (req, res, next) => {
         const OAuthAccessToken = await pepperi.auth.getAccessToken();
 
         const dal = new IndexedDataS3PfsDal(req, MAXIMAL_LOCK_TIME, OAuthAccessToken);
-        const downloadFileCommand = new DownloadFileCommand(req, dal, dal);
+        const downloadFileCommand = new DownloadFileCommand(req, OAuthAccessToken, dal, dal);
         const result = await downloadFileCommand.execute();
 
         // localURL = await pepperi.files.rootDir() + Key
