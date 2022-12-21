@@ -1,9 +1,10 @@
-import { Client, Request } from '@pepperi-addons/debug-server';
-import { AddonData } from '@pepperi-addons/papi-sdk';
-import jwtDecode from 'jwt-decode';
+import { AddonsDataSearchResult } from '@pepperi-addons/cpi-node/build/cpi-side/client-api';
+import { Request } from '@pepperi-addons/debug-server';
 import { IPfsGetter, IPfsMutator, TransactionType } from 'pfs-shared';
+import jwtDecode from 'jwt-decode';
 
-export abstract class AbstractBasePfsDal implements IPfsGetter<AddonData[]>, IPfsMutator
+
+export abstract class AbstractBasePfsDal implements IPfsMutator, IPfsGetter<AddonsDataSearchResult>
 {
 	protected environment: string;
     protected DistributorUUID: string;
@@ -11,10 +12,11 @@ export abstract class AbstractBasePfsDal implements IPfsGetter<AddonData[]>, IPf
 	protected readonly MAXIMAL_LOCK_TIME; 
 	protected clientSchemaName: string;
     
-	constructor(protected client: Client, protected request: Request, maximalLockTime:number)
+	constructor(protected request: Request, maximalLockTime:number, OAuthAccessToken: string)
 	{
-		this.environment = jwtDecode(client.OAuthAccessToken)['pepperi.datacenter'];
-        this.DistributorUUID = jwtDecode(client.OAuthAccessToken)['pepperi.distributoruuid'];
+		this.environment = jwtDecode(OAuthAccessToken)['pepperi.datacenter'];
+        this.DistributorUUID = jwtDecode(OAuthAccessToken)['pepperi.distributoruuid'];
+        this.DistributorUUID = "00000000-0000-0000-0000-0000000f11e5";
 		this.clientAddonUUID = this.request.query.addon_uuid;
 		this.clientSchemaName = this.request.query.resource_name;
 		this.MAXIMAL_LOCK_TIME = maximalLockTime;
@@ -51,7 +53,7 @@ export abstract class AbstractBasePfsDal implements IPfsGetter<AddonData[]>, IPf
 
 	abstract getObjectS3FileVersion(Key: any);
 
-	abstract getObjects(whereClause?: string): Promise<AddonData[]>;
+	abstract getObjects(whereClause?: string): Promise<AddonsDataSearchResult>;
 	//#endregion
 	
 

@@ -1,11 +1,12 @@
 import { Client, Request } from "@pepperi-addons/debug-server/dist";
+import { AddonData } from "@pepperi-addons/papi-sdk";
 import { IPfsGetter, IPfsMutator } from "pfs-shared";
 import { HideFolderRollbackAlgorithm } from "./hideFolderRollback";
 import { IRollbackAlgorithm } from "./iRollbackAlgorithm";
 import { PostRollbackAlgorithm } from "./postRollback";
 
 export class RollbackAlgorithmFactory{
-    public static getRollbackAlgorithm(client: Client, request: Request, pfsMutator: IPfsMutator, pfsGetter: IPfsGetter, lockedFile: any): IRollbackAlgorithm{
+    public static getRollbackAlgorithm(client: Client, request: Request, pfsMutator: IPfsMutator, pfsGetter: IPfsGetter<AddonData[]>, lockedFile: any): IRollbackAlgorithm{
         // Creating a new concrete class that implements the ITransactionalCommand interface
         // must also include a new implementation of the IRollbackAlgorithm interface. 
         // This new IRollbackAlgorithm implementation should be added to the

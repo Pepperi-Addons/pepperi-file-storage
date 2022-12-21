@@ -1,29 +1,23 @@
-import { Client, Request } from '@pepperi-addons/debug-server';
+import { Request } from '@pepperi-addons/debug-server';
 import { AddonData } from '@pepperi-addons/papi-sdk';
-import jwtDecode from 'jwt-decode';
-import { IPfsGetter, IPfsMutator } from 'pfs-shared';
-import { ServerHelper } from '../serverHelper';
+// import { IPfsGetter, IPfsMutator } from 'pfs-shared';
+import { AbstractBasePfsDal } from './dal/AbstartcBasePfsDal';
+
 
 export abstract class PfsService 
 {
-	DistributorUUID: string;
 	AddonUUID: string;
 	readonly environment: string;
 	existingFile: any;
 	newFileFields: any = {};
 
-	constructor(protected client: Client, protected request: Request, protected pfsMutator: IPfsMutator, protected pfsGetter: IPfsGetter<AddonData[]> ) 
+	constructor(protected request: Request, protected pfsMutator: AbstractBasePfsDal, protected pfsGetter: AbstractBasePfsDal ) 
 	{
-		request.header = ServerHelper.getLowerCaseHeaders(request.header);
-				 
-		this.environment = jwtDecode(client.OAuthAccessToken)['pepperi.datacenter'];
-		this.DistributorUUID = jwtDecode(client.OAuthAccessToken)['pepperi.distributoruuid'];
+		
+		// TODO: Figure out how to tell in which environment we're running.
+		// This is needed for POST.
+		this.environment = "THIS_IS_TEMPORARY"
 		this.AddonUUID = this.request.query.addon_uuid;
-
-		if(this.request.body && typeof this.request.body.Hidden === 'string')
-		{
-			this.request.body.Hidden = this.request.body.Hidden.toLowerCase() === 'true';
-		}
 	}
 
 	protected async getCurrentItemData() 
@@ -76,7 +70,7 @@ export abstract class PfsService
 		const canonizedPath = downloadKeyRes.startsWith('/') ? downloadKeyRes.slice(1) : downloadKeyRes;
 		const whereClause = `Key='${canonizedPath}'`;
 		const res = await this.pfsGetter.getObjects(whereClause);
-		if (res.length === 1) 
+		if (res.Objects.length === 1) 
 		{
 			console.log(`File Downloaded`);
 			return res[0];
