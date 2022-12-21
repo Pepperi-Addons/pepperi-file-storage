@@ -6,7 +6,7 @@ import { AddonsDataSearchResult } from '@pepperi-addons/cpi-node/build/cpi-side/
 
 declare global {
     //  for singleton
-    var downloadedFileKeysToLocalUrl: Map<string, {ModificationDateTime: string, LocalURL: string}>;
+    var downloadedFileKeysToLocalUrl: Map<{Key: string, ModificationDateTime: string}, string>;
 }
 
 export abstract class PfsService 
@@ -24,11 +24,11 @@ export abstract class PfsService
 		this.AddonUUID = this.request.query.addon_uuid;
 	}
 
-	static get downloadedFileKeysToLocalUrl(): Map<string, {ModificationDateTime: string, LocalURL: string}> 
+	static get downloadedFileKeysToLocalUrl(): Map<{Key: string, ModificationDateTime: string}, string>
 	{
         if (!global.downloadedFileKeysToLocalUrl) 
 		{
-            global.downloadedFileKeysToLocalUrl = new Map<string, {ModificationDateTime: string, LocalURL: string}>();
+            global.downloadedFileKeysToLocalUrl = new Map<{Key: string, ModificationDateTime: string}, string>();
         }
 
         return global.downloadedFileKeysToLocalUrl;
