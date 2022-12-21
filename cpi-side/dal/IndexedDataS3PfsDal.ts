@@ -24,7 +24,6 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 			...(this.request.query?.order_by && {SortBy: this.request.query.order_by}),
 			...(this.request.query?.include_count && {IncludeCount: this.request.query.include_count}),
 		}
-		debugger;
 		const res = await pepperi.addons.data.uuid(config.AddonUUID).table(getPfsTableName).search(addonsDataSearch);
 
 		// Set v={{modificationDateTime}} on each URL to avoid browser cache.

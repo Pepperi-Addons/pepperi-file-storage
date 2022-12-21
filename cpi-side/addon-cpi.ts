@@ -9,7 +9,6 @@ export async function load(configuration: any) { }
 
 router.get('/file', async (req, res, next) => {
     try {
-        debugger;
         const addonUUID = req.query.addon_uuid?.toString();
         const fileKey = req.query.key?.toString();
         const schemaName = req.query.resource_name?.toString();
