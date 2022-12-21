@@ -4,6 +4,8 @@ import { CdnServers, LOCK_ADAL_TABLE_NAME, SharedHelper, TransactionType } from 
 import { AddonsDataSearchParams, AddonsDataSearchResult } from '@pepperi-addons/cpi-node/build/cpi-side/client-api';
 import { AddonData } from '@pepperi-addons/papi-sdk';
 import lodashPick from 'lodash.pick'
+import { URL } from 'url';
+import PfsService from '../pfs.service';
 
 export class IndexedDataS3PfsDal extends AbstractS3PfsDal 
 {    
@@ -18,7 +20,7 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 		// The Fields filter will be enforced after the GET from the schema.
 		const addonsDataSearch: AddonsDataSearchParams = {
 			...(this.request.query?.where && {Where: this.request.query.where}),
-			...(whereClause && {where: whereClause}), // If there's a where clause, use it instead 
+			...(whereClause && {Where: whereClause}), // If there's a where clause, use it instead 
 			...(this.request.query?.page_size && {PageSize: parseInt(this.request.query.page_size)}),
 			...(this.request.query?.page && {Page: this.getRequestedPageNumber()}),
 			...(this.request.query?.order_by && {SortBy: this.request.query.order_by}),
@@ -49,7 +51,10 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 		const resObjects: AddonData[] = new Array<AddonData>();
 		objects.map(object => {
 			const objectCopy = {... object};
-			objectCopy.URL = `${objectCopy.URL}?v=${objectCopy.ModificationDateTime}`;
+			const modificationDateNumber = new Date(objectCopy.ModificationDateTime!).getTime();
+			objectCopy.URL = `${objectCopy.URL}?v=${modificationDateNumber}`;
+
+			resObjects.push(objectCopy);
 		})
 
 		return resObjects;
@@ -84,15 +89,31 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 		}
 
 		// Download to device only the needed files
-		const resultObjects = objects.filter(object => object.Sync !== 'None' && object.Sync !== 'DeviceThumbnail' && object.MIME !== "pepperi/folder");
+		const resultObjects = objects.filter(object => object.Sync !== 'None' && object.Sync !== 'DeviceThumbnail' && object.URL);
 
 		for (const object of resultObjects)
-		{
-			// This forces a download to the device (if it exists)
-			await global['app'].getLocalFilePath(object.URL.pathname, object.URL.origin);
-			// Get the new baseURL (local root, instead of cdn), and concat the existing URL's pathname
-			// Use URL.pathname instead of Key, since we now have the ModificationDateTime concatenated as a query param.
-			object.URL = await pepperi["files"].baseURL() + object.URL.pathname;
+		{	
+			// If this version of the file has been downloaded and cached, serve it.
+			if(PfsService.downloadedFileKeysToLocalUrl.get(object.Key!)?.ModificationDateTime === object.ModificationDateTime)
+			{
+				object.URL = PfsService.downloadedFileKeysToLocalUrl.get(object.Key!)?.LocalURL;
+			}
+			// Otherwise, download the file to the device, then cache the result for future use.
+			else
+			{
+				// This forces a download to the device (if it exists)
+				const objectUrl = new URL(object.URL);
+				await global['app'].getLocalFilePath(objectUrl.pathname, objectUrl.origin);
+				// Get the new baseURL (local root, instead of cdn), and concat the existing URL's pathname
+				// Use URL.pathname instead of Key, since we now have the ModificationDateTime concatenated as a query param.
+				object.URL = await pepperi["files"].baseURL() + objectUrl.pathname + objectUrl.search;
+
+				// Cache the result, so we won't have to download the file again.
+				PfsService.downloadedFileKeysToLocalUrl.set(object.Key!, {
+					LocalURL: object.URL,
+					ModificationDateTime: object.ModificationDateTime!
+				});
+			}
 		}
 
 		return resultObjects;
