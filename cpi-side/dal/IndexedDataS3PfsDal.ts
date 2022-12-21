@@ -21,11 +21,10 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 			...(whereClause && {where: whereClause}), // If there's a where clause, use it instead 
 			...(this.request.query?.page_size && {PageSize: parseInt(this.request.query.page_size)}),
 			...(this.request.query?.page && {Page: this.getRequestedPageNumber()}),
-			// ...(this.request.query?.fields && {Fields: this.request.query.fields.split(',')}),
 			...(this.request.query?.order_by && {SortBy: this.request.query.order_by}),
 			...(this.request.query?.include_count && {IncludeCount: this.request.query.include_count}),
 		}
-
+		debugger;
 		const res = await pepperi.addons.data.uuid(config.AddonUUID).table(getPfsTableName).search(addonsDataSearch);
 
 		// Set v={{modificationDateTime}} on each URL to avoid browser cache.
@@ -46,6 +45,8 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 		objects.map(object => {
 			const objectCopy = {... object};
 			objectCopy.URL = `${objectCopy.URL}?v=${objectCopy.ModificationDateTime}`;
+
+			resObjects.push(objectCopy);
 		})
 
 		return resObjects;

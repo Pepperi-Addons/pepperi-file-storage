@@ -2,7 +2,7 @@ import { Request } from '@pepperi-addons/debug-server';
 import { CACHE_DEFAULT_VALUE, CloudfrontDistributions, dataURLRegex, S3Buckets, TransactionType } from 'pfs-shared';
 import { AbstractBasePfsDal } from './AbstartcBasePfsDal';
 
-const AWS = require('aws-sdk'); // AWS is part of the lambda's environment. Importing it will result in it being rolled up redundently.
+// const AWS = require('aws-sdk'); // AWS is part of the lambda's environment. Importing it will result in it being rolled up redundently.
 
 export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 {
@@ -14,7 +14,7 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 	{
 		super(request, maximalLockTime, OAuthAccessToken);
 
-		this.s3 = new AWS.S3({apiVersion: '2006-03-01'}); //lock API version
+		// this.s3 = new AWS.S3({apiVersion: '2006-03-01'}); //lock API version
 		this.S3Bucket = S3Buckets[this.environment];
 		this.CloudfrontDistribution = CloudfrontDistributions[this.environment];
 	}

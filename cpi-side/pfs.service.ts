@@ -66,7 +66,7 @@ export abstract class PfsService
 	 */
 	protected async downloadFile(downloadKey? : string): Promise<AddonData>
 	{
-		const downloadKeyRes: string = downloadKey ?? ((this.request.body && this.request.body.Key) ? this.request.body.Key : this.request.query.Key); 
+		const downloadKeyRes: string = downloadKey ?? this.request.body?.Key ?? this.request.query.key; 
 		const canonizedPath = downloadKeyRes.startsWith('/') ? downloadKeyRes.slice(1) : downloadKeyRes;
 		const whereClause = `Key='${canonizedPath}'`;
 		const res = await this.pfsGetter.getObjects(whereClause);

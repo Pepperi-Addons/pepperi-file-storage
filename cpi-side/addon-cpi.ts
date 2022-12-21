@@ -1,16 +1,11 @@
 import '@pepperi-addons/cpi-node'
 import { MAXIMAL_LOCK_TIME } from 'pfs-shared';
-import { URL } from 'url';
 import { IndexedDataS3PfsDal } from './dal/IndexedDataS3PfsDal';
 import { DownloadFileCommand } from './downloadFileCommand';
 
 export const router = Router();
 
 export async function load(configuration: any) { }
-
-router.get('/hello', async (req, res, next) => {
-        debugger;
-});
 
 router.get('/file', async (req, res, next) => {
     try {
