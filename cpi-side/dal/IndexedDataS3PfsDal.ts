@@ -20,7 +20,7 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 		// The Fields filter will be enforced after the GET from the schema.
 		const addonsDataSearch: AddonsDataSearchParams = {
 			...(this.request.query?.where && {Where: this.request.query.where}),
-			...(whereClause && {where: whereClause}), // If there's a where clause, use it instead 
+			...(whereClause && {Where: whereClause}), // If there's a where clause, use it instead 
 			...(this.request.query?.page_size && {PageSize: parseInt(this.request.query.page_size)}),
 			...(this.request.query?.page && {Page: this.getRequestedPageNumber()}),
 			...(this.request.query?.order_by && {SortBy: this.request.query.order_by}),
@@ -45,7 +45,8 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 		const resObjects: AddonData[] = new Array<AddonData>();
 		objects.map(object => {
 			const objectCopy = {... object};
-			objectCopy.URL = `${objectCopy.URL}?v=${objectCopy.ModificationDateTime}`;
+			const modificationDateNumber = new Date(objectCopy.ModificationDateTime!).getTime();
+			objectCopy.URL = `${objectCopy.URL}?v=${modificationDateNumber}`;
 
 			resObjects.push(objectCopy);
 		})

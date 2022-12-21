@@ -16,7 +16,6 @@ export abstract class AbstractBasePfsDal implements IPfsMutator, IPfsGetter<Addo
 	{
 		this.environment = jwtDecode(OAuthAccessToken)['pepperi.datacenter'];
         this.DistributorUUID = jwtDecode(OAuthAccessToken)['pepperi.distributoruuid'];
-        this.DistributorUUID = "00000000-0000-0000-0000-0000000f11e5";
 		this.clientAddonUUID = this.request.query.addon_uuid;
 		this.clientSchemaName = this.request.query.resource_name;
 		this.MAXIMAL_LOCK_TIME = maximalLockTime;
