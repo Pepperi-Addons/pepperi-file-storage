@@ -33,15 +33,13 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 		res.Objects = this.addVersionToObjectsUrl(res.Objects);
 
 		// Handle downloading files to device if needed
-		res.Objects = await this.downloadFilesToDevice(res.Objects);
+		await this.downloadFilesToDevice(res.Objects);
 
 		// Return only needed Fields
 		// This must happen after we set the version, and after we download the files to the device.
 		// Setting the version requires the ModificationDateTime field, and downloading the files
 		// is based on the Sync field.
 		res.Objects = this.pickRequestedFields(res.Objects, this.request.query?.fields);
-
-		
 
 		console.log(`Files listing done successfully.`);
 		return res;
@@ -76,47 +74,52 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 	}
 
 	/**
-	 * Downloads the files to the device if needed ()
+	 * Downloads the files to the device if needed, and update URLs to point to the local files for downloaded files.
 	 * @param objects 
 	 * @returns 
 	 */
-	private async downloadFilesToDevice(objects: AddonData[]): Promise<AddonData[]> 
+	private async downloadFilesToDevice(objects: AddonData[]): Promise<void> 
 	{
 		// If webapp, no need to download files to device.
 		if(await global['app']['wApp']['isWebApp']())
 		{
-			return objects;
+			return;
 		}
 
-		// Download to device only the needed files
-		const resultObjects = objects.filter(object => object.Sync !== 'None' && object.Sync !== 'DeviceThumbnail' && object.URL);
+		// Only download to device files that are supposed to be synced, have a URL, and are not already cached.
+		const downloadRequiringObjects = objects.filter(object => object.Sync !== 'None' &&
+																	object.Sync !== 'DeviceThumbnail' &&
+																	object.URL &&
+																	!PfsService.downloadedFileKeysToLocalUrl.has({
+																		Key: object.Key!,
+																		ModificationDateTime: object.ModificationDateTime!
+																	}));
 
-		for (const object of resultObjects)
+		for (const object of downloadRequiringObjects)
 		{	
-			// If this version of the file has been downloaded and cached, serve it.
-			if(PfsService.downloadedFileKeysToLocalUrl.get(object.Key!)?.ModificationDateTime === object.ModificationDateTime)
-			{
-				object.URL = PfsService.downloadedFileKeysToLocalUrl.get(object.Key!)?.LocalURL;
-			}
-			// Otherwise, download the file to the device, then cache the result for future use.
-			else
-			{
-				// This forces a download to the device (if it exists)
+				// Force a download to the device
 				const objectUrl = new URL(object.URL);
 				await global['app'].getLocalFilePath(objectUrl.pathname, objectUrl.origin);
 				// Get the new baseURL (local root, instead of cdn), and concat the existing URL's pathname
 				// Use URL.pathname instead of Key, since we now have the ModificationDateTime concatenated as a query param.
-				object.URL = await pepperi["files"].baseURL() + objectUrl.pathname + objectUrl.search;
+				const objectLocalURL = await pepperi["files"].baseURL() + objectUrl.pathname + objectUrl.search;
 
 				// Cache the result, so we won't have to download the file again.
-				PfsService.downloadedFileKeysToLocalUrl.set(object.Key!, {
-					LocalURL: object.URL,
+				PfsService.downloadedFileKeysToLocalUrl.set({
+					Key: object.Key!,
 					ModificationDateTime: object.ModificationDateTime!
-				});
-			}
+				}, objectLocalURL);
 		}
 
-		return resultObjects;
+		// Update the objects' URL if they have a cached local URL.
+		objects.map(object => {
+			object.URL = PfsService.downloadedFileKeysToLocalUrl.get({
+				Key: object.Key!,
+				ModificationDateTime: object.ModificationDateTime!
+			}) ?? object.URL;
+		});
+
+		return;
 	}
 
 	private async getObjectFromTable(key, tableName, getHidden: boolean = false){
