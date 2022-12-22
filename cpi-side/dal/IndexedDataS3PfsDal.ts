@@ -53,7 +53,7 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 			// Folder do not have a URL, so there's no need to concatenate anything...
 			if(object.URL)
 			{
-				const resObject = {... object};
+				resObject = {... object};
 				const modificationDateNumber = new Date(resObject.ModificationDateTime!).getTime();
 			
 				resObject.URL = `${resObject.URL}?v=${modificationDateNumber}`;
@@ -103,18 +103,22 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 																	object.URL &&
 																	!PfsService.downloadedFileKeysToLocalUrl.has(`${object.Key!}${object.ModificationDateTime!}`));
 
-		for (const object of downloadRequiringObjects)
-		{	
-				// Force a download to the device
-				const objectUrl = new URL(object.URL);
-				await global['app'].getLocalFilePath(objectUrl.pathname, objectUrl.origin);
-				// Get the new baseURL (local root, instead of cdn), and concat the existing URL's pathname
-				// Use URL.pathname instead of Key, since we now have the ModificationDateTime concatenated as a query param.
-				const objectLocalURL = await pepperi["files"].baseURL() + objectUrl.pathname + objectUrl.search;
+		const downloadFiles = async (object: AddonData) =>
+		{
+			// Force a download to the device
+			const objectUrl = new URL(object.URL);
+			await global['app'].getLocalFilePath(objectUrl.pathname, objectUrl.origin);
+			// Get the new baseURL (local root, instead of cdn), and concat the existing URL's pathname
+			// Use URL.pathname instead of Key, since we now have the ModificationDateTime concatenated as a query param.
+			const objectLocalURL = await pepperi["files"].baseURL() + objectUrl.pathname + objectUrl.search;
 
-				// Cache the result, so we won't have to download the file again.
-				PfsService.downloadedFileKeysToLocalUrl.set(`${object.Key!}${object.ModificationDateTime!}`, objectLocalURL);
+			// Cache the result, so we won't have to download the file again.
+			PfsService.downloadedFileKeysToLocalUrl.set(`${object.Key!}${object.ModificationDateTime!}`, objectLocalURL);
 		}
+		
+		const downloadFilesPromises = downloadRequiringObjects.map(file => downloadFiles(file));
+		// Use allSettled to download files in parallel.
+		await Promise.allSettled(downloadFilesPromises);
 
 		// Update the objects' URL if they have a cached local URL.
 		objects.map(object => {
