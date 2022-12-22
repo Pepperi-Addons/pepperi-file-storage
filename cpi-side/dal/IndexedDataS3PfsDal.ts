@@ -12,7 +12,7 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 
 	//#region IPfsGetter
 
-	async getObjects(whereClause?: string): Promise<AddonsDataSearchResult>
+	async getObjects(whereClause?: string): Promise<AddonData[]>
 	{
 		const pfsTableName = SharedHelper.getPfsTableName(this.request.query.addon_uuid, this.clientSchemaName);
 
@@ -42,7 +42,7 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 		res.Objects = this.pickRequestedFields(res.Objects, this.request.query?.fields);
 
 		console.log(`Files listing done successfully.`);
-		return res;
+		return res.Objects;
 	}
 
 	private addVersionToObjectsUrl(objects: AddonData[]): AddonData[] {
