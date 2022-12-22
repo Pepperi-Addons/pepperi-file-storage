@@ -17,7 +17,7 @@ export abstract class PfsService
 	newFileFields: any = {};
 	DistributorUUID: string;
 
-	constructor(protected request: Request, OAuthAccessToken: string, protected pfsMutator: IPfsMutator, protected pfsGetter: IPfsGetter<AddonsDataSearchResult> ) 
+	constructor(protected request: Request, OAuthAccessToken: string, protected pfsMutator: IPfsMutator, protected pfsGetter: IPfsGetter ) 
 	{
 		this.environment = jwtDecode(OAuthAccessToken)['pepperi.datacenter'];
 		this.DistributorUUID = jwtDecode(OAuthAccessToken)['pepperi.distributoruuid'];
@@ -84,10 +84,10 @@ export abstract class PfsService
 		const canonizedPath = downloadKeyRes.startsWith('/') ? downloadKeyRes.slice(1) : downloadKeyRes;
 		const whereClause = `Key="${canonizedPath}"`;
 		const res = await this.pfsGetter.getObjects(whereClause);
-		if (res.Objects.length === 1) 
+		if (res.length === 1) 
 		{
 			console.log(`File Downloaded`);
-			return res.Objects[0];
+			return res[0];
 		}
 		else 
 		{ //Couldn't find results
