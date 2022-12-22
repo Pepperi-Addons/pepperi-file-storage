@@ -44,11 +44,22 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 	private addVersionToObjectsUrl(objects: AddonData[]): AddonData[] {
 		const resObjects: AddonData[] = new Array<AddonData>();
 		objects.map(object => {
-			const objectCopy = {... object};
-			const modificationDateNumber = new Date(objectCopy.ModificationDateTime!).getTime();
-			objectCopy.URL = `${objectCopy.URL}?v=${modificationDateNumber}`;
+			let resObject: any;
+			
+			// Folder do not have a URL, so there's no need to concatenate anything...
+			if(object.URL)
+			{
+				const resObject = {... object};
+				const modificationDateNumber = new Date(resObject.ModificationDateTime!).getTime();
+			
+				resObject.URL = `${resObject.URL}?v=${modificationDateNumber}`;
+			}
+			else
+			{
+				resObject = object;
+			}
 
-			resObjects.push(objectCopy);
+			resObjects.push(resObject);
 		})
 
 		return resObjects;
@@ -81,10 +92,7 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 		const downloadRequiringObjects = objects.filter(object => object.Sync !== 'None' &&
 																	object.Sync !== 'DeviceThumbnail' &&
 																	object.URL &&
-																	!PfsService.downloadedFileKeysToLocalUrl.has({
-																		Key: object.Key!,
-																		ModificationDateTime: object.ModificationDateTime!
-																	}));
+																	!PfsService.downloadedFileKeysToLocalUrl.has(`${object.Key!}${object.ModificationDateTime!}`));
 
 		for (const object of downloadRequiringObjects)
 		{	
@@ -96,18 +104,12 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 				const objectLocalURL = await pepperi["files"].baseURL() + objectUrl.pathname + objectUrl.search;
 
 				// Cache the result, so we won't have to download the file again.
-				PfsService.downloadedFileKeysToLocalUrl.set({
-					Key: object.Key!,
-					ModificationDateTime: object.ModificationDateTime!
-				}, objectLocalURL);
+				PfsService.downloadedFileKeysToLocalUrl.set(`${object.Key!}${object.ModificationDateTime!}`, objectLocalURL);
 		}
 
 		// Update the objects' URL if they have a cached local URL.
 		objects.map(object => {
-			object.URL = PfsService.downloadedFileKeysToLocalUrl.get({
-				Key: object.Key!,
-				ModificationDateTime: object.ModificationDateTime!
-			}) ?? object.URL;
+			object.URL = PfsService.downloadedFileKeysToLocalUrl.get(`${object.Key!}${object.ModificationDateTime!}`) ?? object.URL;
 		});
 
 		return;
