@@ -28,18 +28,6 @@ router.get('/file', async (req, res, next) =>
 		const downloadFileCommand = new DownloadFileCommand(req, OAuthAccessToken, dal, dal);
 		const result = await downloadFileCommand.execute();
 
-		// localURL = await pepperi.files.rootDir() + Key
-		// filePath = Key, fileBaseURL=baseUrl
-		// If file is already downloaded to disk
-		//      Does nothing, returns local path.
-		// else
-		//      Tries to download and return local path.
-
-		// Need to validate that the file is actually on disk!
-		// export const existsAsync = util.promisify(fs.exists);
-		// export const mkdirAsync = util.promisify(fs.mkdir);
-		// global['app']['getLocaFilePath'](filePath, fileBaseURL)
-
 		res.json(result);
 	}
 	catch (err) 
