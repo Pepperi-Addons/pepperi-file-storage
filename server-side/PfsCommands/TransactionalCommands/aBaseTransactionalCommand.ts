@@ -1,9 +1,10 @@
 import { TestError } from "pfs-shared";
-import AbstractCommand from "../abstractCommand";
+import ICommand from "../iCommand";
+import PfsService from "../pfs.service";
 import { ITransactionalCommand } from "./iTransactionalCommand";
 import { RollbackAlgorithmFactory } from "./RollbackAlgorithms/rollbackAlgorithmFactory";
 
-export abstract class ABaseTransactionalCommand extends AbstractCommand implements ITransactionalCommand {
+export abstract class ABaseTransactionalCommand extends PfsService implements ITransactionalCommand, ICommand {
     abstract preLockLogic(): Promise<void>;
     abstract lock(): Promise<void>;
     abstract executeTransaction(): Promise<any>;

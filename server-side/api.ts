@@ -1,7 +1,6 @@
-import { AbstractCommand } from './PfsCommands/abstractCommand'
 import { Client, Request } from '@pepperi-addons/debug-server'
 import { PostTransactionalCommand } from './PfsCommands/TransactionalCommands/postTransactionalCommand';
-import { ListFolderContentsCommand } from './PfsCommands/AtomicCommands/listFolderContetntsCommand';
+import { ListFolderContentsCommand } from './PfsCommands/AtomicCommands/listFolderContentsCommand';
 import { ListObjectsCommand } from './PfsCommands/AtomicCommands/listObjectsCommand';
 import { downloadFileCommand } from './PfsCommands/AtomicCommands/downloadFileCommand';
 import { RecordRemovedCommand } from './PfsCommands/AtomicCommands/recordRemovedCommand';
@@ -9,6 +8,7 @@ import { InvalidateCommand } from './PfsCommands/AtomicCommands/invalidateComman
 import { HideFolderTransactionalCommand } from './PfsCommands/TransactionalCommands/hideFolderTransactionalCommand';
 import { SharedHelper } from 'pfs-shared';
 import { ServerHelper } from './serverHelper';
+import ICommand from './PfsCommands/iCommand';
 
 export async function file(client: Client, request: Request) 
 {
@@ -40,7 +40,7 @@ export async function files(client: Client, request: Request)
 
 	SharedHelper.validateFilesQueryParams(request);
 
-	let pfsCommand: AbstractCommand;
+	let pfsCommand: ICommand;
 
 	switch (request.method) 
 	{

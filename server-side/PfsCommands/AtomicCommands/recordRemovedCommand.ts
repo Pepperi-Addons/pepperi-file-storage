@@ -1,8 +1,9 @@
 import { AWS_MAX_DELETE_OBJECTS_NUMBER } from 'pfs-shared';
 import { ServerHelper } from '../../serverHelper';
-import AbstractCommand from '../abstractCommand';
+import ICommand from '../iCommand';
+import PfsService from '../pfs.service';
 
-export class RecordRemovedCommand extends AbstractCommand 
+export class RecordRemovedCommand extends PfsService implements ICommand
 {
 
 	public async execute(): Promise<any>{
