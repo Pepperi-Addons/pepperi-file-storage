@@ -1,9 +1,6 @@
 import '@pepperi-addons/cpi-node'
-import { MAXIMAL_LOCK_TIME } from 'pfs-shared';
+import { ListFolderContentsCommand, ListObjectsCommand, DownloadFileCommand, MAXIMAL_LOCK_TIME } from 'pfs-shared';
 import { IndexedDataS3PfsDal } from './dal/IndexedDataS3PfsDal';
-import { DownloadFileCommand } from './pfsCommands/downloadFileCommand';
-import { ListFolderContentsCommand } from './pfsCommands/listFolderContentsCommand';
-import { ListObjectsCommand } from './pfsCommands/listObjectsCommand';
 
 export const router = Router();
 
@@ -25,7 +22,7 @@ router.get('/file', async (req, res, next) =>
 		const OAuthAccessToken = await pepperi.auth.getAccessToken();
 
 		const dal = new IndexedDataS3PfsDal(req, MAXIMAL_LOCK_TIME, OAuthAccessToken);
-		const downloadFileCommand = new DownloadFileCommand(req, OAuthAccessToken, dal, dal);
+		const downloadFileCommand = new DownloadFileCommand(OAuthAccessToken, req, dal, dal);
 		const result = await downloadFileCommand.execute();
 
 		res.json(result);
@@ -56,13 +53,13 @@ router.get('/files/find', async (req, res, next) =>
 
 		if(req.query.folder)
 		{
-			const listFolderContentsCommand = new ListFolderContentsCommand(req, OAuthAccessToken, dal, dal);
+			const listFolderContentsCommand = new ListFolderContentsCommand(OAuthAccessToken, req, dal, dal);
 			result = await listFolderContentsCommand.execute();
 
 		}
 		else
 		{
-			const listObjectsCommand = new ListObjectsCommand(req, OAuthAccessToken, dal, dal);
+			const listObjectsCommand = new ListObjectsCommand(OAuthAccessToken, req, dal, dal);
 			result = await listObjectsCommand.execute();
 		}
 

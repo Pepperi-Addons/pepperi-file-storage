@@ -1,14 +1,10 @@
 import { Client, Request } from '@pepperi-addons/debug-server'
 import { PostTransactionalCommand } from './PfsCommands/TransactionalCommands/postTransactionalCommand';
-import { ListFolderContentsCommand } from './PfsCommands/AtomicCommands/listFolderContentsCommand';
-import { ListObjectsCommand } from './PfsCommands/AtomicCommands/listObjectsCommand';
-import { downloadFileCommand } from './PfsCommands/AtomicCommands/downloadFileCommand';
 import { RecordRemovedCommand } from './PfsCommands/AtomicCommands/recordRemovedCommand';
 import { InvalidateCommand } from './PfsCommands/AtomicCommands/invalidateCommand';
 import { HideFolderTransactionalCommand } from './PfsCommands/TransactionalCommands/hideFolderTransactionalCommand';
-import { SharedHelper } from 'pfs-shared';
+import { DownloadFileCommand, ICommand, ListFolderContentsCommand, ListObjectsCommand, SharedHelper } from 'pfs-shared';
 import { ServerHelper } from './serverHelper';
-import ICommand from './PfsCommands/iCommand';
 
 export async function file(client: Client, request: Request) 
 {
@@ -24,7 +20,7 @@ export async function file(client: Client, request: Request)
 	{
 	case "GET": {
 		const dal = ServerHelper.DalFactory(client, request);
-		const pfsCommand = new downloadFileCommand(client.OAuthAccessToken, request, dal, dal);
+		const pfsCommand = new DownloadFileCommand(client.OAuthAccessToken, request, dal, dal);
 
 		return pfsCommand.execute();
 	}
@@ -92,7 +88,7 @@ export async function record_removed(client: Client, request: Request)
 		request.query.resource_name = splitResourceName[2];
 
 		const dal = ServerHelper.DalFactory(client, request);
-		const pfsCommand = new RecordRemovedCommand(client.OAuthAccessToken, request, dal, dal);
+		const pfsCommand = new RecordRemovedCommand(client, request, dal, dal);
 
 		return await pfsCommand.execute();
 	}
@@ -113,7 +109,7 @@ export async function invalidate(client: Client, request: Request)
 
 
 		const dal = ServerHelper.DalFactory(client, request);
-		const pfsCommand = new InvalidateCommand(client.OAuthAccessToken, request, dal, dal);
+		const pfsCommand = new InvalidateCommand(client, request, dal, dal);
 
 		return await pfsCommand.execute();
 	}

@@ -1,4 +1,3 @@
-import { AddonsDataSearchResult } from '@pepperi-addons/cpi-node/build/cpi-side/client-api';
 import { Request } from '@pepperi-addons/debug-server';
 import { IPfsGetter, IPfsMutator, TransactionType } from 'pfs-shared';
 import jwtDecode from 'jwt-decode';

@@ -1,6 +1,5 @@
 import { Client, Request } from "@pepperi-addons/debug-server/dist";
-import { IPfsGetter, IPfsMutator, TestError } from "pfs-shared";
-import ICommand from "../iCommand";
+import { ICommand, IPfsGetter, IPfsMutator, TestError } from "pfs-shared";
 import PfsService from "../onlinePfs.service";
 import { ITransactionalCommand } from "./iTransactionalCommand";
 import { RollbackAlgorithmFactory } from "./RollbackAlgorithms/rollbackAlgorithmFactory";
@@ -9,7 +8,7 @@ export abstract class ABaseTransactionalCommand extends PfsService implements IT
 {
 	constructor(protected client: Client, protected request: Request, protected pfsMutator: IPfsMutator, protected pfsGetter: IPfsGetter )
 	{
-		super(client.OAuthAccessToken, request, pfsMutator, pfsGetter);
+		super(client, request, pfsMutator, pfsGetter);
 	}
 	
     abstract preLockLogic(): Promise<void>;

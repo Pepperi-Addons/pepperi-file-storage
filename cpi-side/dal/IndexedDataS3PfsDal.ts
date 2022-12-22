@@ -1,11 +1,11 @@
 import config from '../../addon.config.json';
 import { AbstractS3PfsDal } from './AbstractS3PfsDal';
 import { CdnServers, LOCK_ADAL_TABLE_NAME, SharedHelper, TransactionType } from 'pfs-shared';
-import { AddonsDataSearchParams, AddonsDataSearchResult } from '@pepperi-addons/cpi-node/build/cpi-side/client-api';
+import { AddonsDataSearchParams } from '@pepperi-addons/cpi-node/build/cpi-side/client-api';
 import { AddonData } from '@pepperi-addons/papi-sdk';
 import lodashPick from 'lodash.pick'
 import { URL } from 'url';
-import PfsService from '../pfs.service';
+import { PfsService } from '../cpiPfs.service';
 
 export class IndexedDataS3PfsDal extends AbstractS3PfsDal 
 {    

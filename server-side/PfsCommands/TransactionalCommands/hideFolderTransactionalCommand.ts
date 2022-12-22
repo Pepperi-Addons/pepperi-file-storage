@@ -1,7 +1,6 @@
-import { ListObjectsCommand } from "../AtomicCommands/listObjectsCommand";
 import { ABaseTransactionalCommand } from "./aBaseTransactionalCommand";
 import { PapiClient } from "@pepperi-addons/papi-sdk";
-import { TransactionType } from "pfs-shared";
+import { ListObjectsCommand, TransactionType } from "pfs-shared";
 import { ServerHelper } from "../../serverHelper";
 
 export class HideFolderTransactionalCommand extends ABaseTransactionalCommand{

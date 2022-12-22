@@ -1,15 +1,15 @@
-import { Request } from '@pepperi-addons/debug-server';
+import { Client, Request } from '@pepperi-addons/debug-server';
 import { AddonData } from '@pepperi-addons/papi-sdk';
-import { IPfsGetter, IPfsMutator } from 'pfs-shared';
+import { IPfsGetter, IPfsMutator, PfsService as SharedPfsService  } from 'pfs-shared';
 import { ServerHelper } from '../serverHelper';
-import {PfsService as SharedPfsService} from './pfs.service'
+// import {PfsService as SharedPfsService} from './pfs.service'
 
 
 export abstract class PfsService extends SharedPfsService
 {
-	constructor(OAuthAccessToken: string, protected request: Request, protected pfsMutator: IPfsMutator, protected pfsGetter: IPfsGetter ) 
+	constructor(protected client: Client, protected request: Request, protected pfsMutator: IPfsMutator, protected pfsGetter: IPfsGetter ) 
 	{
-		super(OAuthAccessToken, request, pfsMutator, pfsGetter);
+		super(client.OAuthAccessToken, request, pfsMutator, pfsGetter);
 		request.header = ServerHelper.getLowerCaseHeaders(request.header);
 	}
 
