@@ -1,5 +1,3 @@
-import { AddonsDataSearchResult } from "@pepperi-addons/cpi-node/build/cpi-side/client-api";
-import { AddonData } from "@pepperi-addons/papi-sdk";
 
 export interface IPfsGetter<T>
 {

@@ -26,13 +26,13 @@ export abstract class PfsService
 
 	static get downloadedFileKeysToLocalUrl(): Map<string, string>
 	{
-        if (!global.downloadedFileKeysToLocalUrl) 
+		if (!global.downloadedFileKeysToLocalUrl) 
 		{
-            global.downloadedFileKeysToLocalUrl = new Map<string, string>();
-        }
+			global.downloadedFileKeysToLocalUrl = new Map<string, string>();
+		}
 
-        return global.downloadedFileKeysToLocalUrl;
-    }
+		return global.downloadedFileKeysToLocalUrl;
+	}
 
 	protected async getCurrentItemData() 
 	{
