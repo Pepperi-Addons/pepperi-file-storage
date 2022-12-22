@@ -49,7 +49,7 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 			// Folder do not have a URL, so there's no need to concatenate anything...
 			if(object.URL)
 			{
-				const resObject = {... object};
+				resObject = {... object};
 				const modificationDateNumber = new Date(resObject.ModificationDateTime!).getTime();
 			
 				resObject.URL = `${resObject.URL}?v=${modificationDateNumber}`;
