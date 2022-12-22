@@ -1,4 +1,5 @@
 import { Client, Request } from "@pepperi-addons/debug-server/dist";
+import { AddonData } from "@pepperi-addons/papi-sdk";
 import { IPfsGetter, IPfsMutator } from "pfs-shared";
 import PfsService from "../../pfs.service";
 import { IRollbackAlgorithm } from "./iRollbackAlgorithm";
@@ -8,7 +9,7 @@ export abstract class BaseRollbackAlgorithm extends PfsService implements IRollb
     constructor (client: Client,
 				request: Request,
 				pfsMutator: IPfsMutator,
-				pfsGetter: IPfsGetter,
+				pfsGetter: IPfsGetter<AddonData[]>,
 				protected lockedFile: any)
 	{
 		super(client, request, pfsMutator, pfsGetter);

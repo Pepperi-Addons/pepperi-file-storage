@@ -1,30 +1,38 @@
-import { Client, Request } from '@pepperi-addons/debug-server';
+import { Request } from '@pepperi-addons/debug-server';
 import { AddonData } from '@pepperi-addons/papi-sdk';
-import jwtDecode from 'jwt-decode';
 import { IPfsGetter, IPfsMutator } from 'pfs-shared';
-import { ServerHelper } from '../serverHelper';
+import jwtDecode from 'jwt-decode';
+import { AddonsDataSearchResult } from '@pepperi-addons/cpi-node/build/cpi-side/client-api';
+
+declare global {
+    //  for singleton
+    var downloadedFileKeysToLocalUrl: Map<string, string>;
+}
 
 export abstract class PfsService 
 {
-	DistributorUUID: string;
 	AddonUUID: string;
 	readonly environment: string;
 	existingFile: any;
 	newFileFields: any = {};
+	DistributorUUID: string;
 
-	constructor(protected client: Client, protected request: Request, protected pfsMutator: IPfsMutator, protected pfsGetter: IPfsGetter<AddonData[]> ) 
+	constructor(protected request: Request, OAuthAccessToken: string, protected pfsMutator: IPfsMutator, protected pfsGetter: IPfsGetter<AddonsDataSearchResult> ) 
 	{
-		request.header = ServerHelper.getLowerCaseHeaders(request.header);
-				 
-		this.environment = jwtDecode(client.OAuthAccessToken)['pepperi.datacenter'];
-		this.DistributorUUID = jwtDecode(client.OAuthAccessToken)['pepperi.distributoruuid'];
+		this.environment = jwtDecode(OAuthAccessToken)['pepperi.datacenter'];
+		this.DistributorUUID = jwtDecode(OAuthAccessToken)['pepperi.distributoruuid'];
 		this.AddonUUID = this.request.query.addon_uuid;
-
-		if(this.request.body && typeof this.request.body.Hidden === 'string')
-		{
-			this.request.body.Hidden = this.request.body.Hidden.toLowerCase() === 'true';
-		}
 	}
+
+	static get downloadedFileKeysToLocalUrl(): Map<string, string>
+	{
+        if (!global.downloadedFileKeysToLocalUrl) 
+		{
+            global.downloadedFileKeysToLocalUrl = new Map<string, string>();
+        }
+
+        return global.downloadedFileKeysToLocalUrl;
+    }
 
 	protected async getCurrentItemData() 
 	{
@@ -72,14 +80,14 @@ export abstract class PfsService
 	 */
 	protected async downloadFile(downloadKey? : string): Promise<AddonData>
 	{
-		const downloadKeyRes: string = downloadKey ?? ((this.request.body && this.request.body.Key) ? this.request.body.Key : this.request.query.Key); 
+		const downloadKeyRes: string = downloadKey ?? this.request.body?.Key ?? this.request.query.key; 
 		const canonizedPath = downloadKeyRes.startsWith('/') ? downloadKeyRes.slice(1) : downloadKeyRes;
-		const whereClause = `Key='${canonizedPath}'`;
+		const whereClause = `Key="${canonizedPath}"`;
 		const res = await this.pfsGetter.getObjects(whereClause);
-		if (res.length === 1) 
+		if (res.Objects.length === 1) 
 		{
 			console.log(`File Downloaded`);
-			return res[0];
+			return res.Objects[0];
 		}
 		else 
 		{ //Couldn't find results
