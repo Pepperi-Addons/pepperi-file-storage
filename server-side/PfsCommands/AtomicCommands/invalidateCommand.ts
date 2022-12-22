@@ -1,5 +1,6 @@
+import { AddonData } from "@pepperi-addons/papi-sdk";
 import ICommand from "../iCommand";
-import PfsService from "../pfs.service";
+import PfsService from '../onlinePfs.service';
 
 
 export class InvalidateCommand extends PfsService implements ICommand 

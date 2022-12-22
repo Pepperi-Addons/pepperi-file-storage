@@ -24,7 +24,7 @@ export async function file(client: Client, request: Request)
 	{
 	case "GET": {
 		const dal = ServerHelper.DalFactory(client, request);
-		const pfsCommand = new downloadFileCommand(client, request, dal, dal);
+		const pfsCommand = new downloadFileCommand(client.OAuthAccessToken, request, dal, dal);
 
 		return pfsCommand.execute();
 	}
@@ -49,11 +49,11 @@ export async function files(client: Client, request: Request)
 		
 		if (request.query.folder) 
 		{				
-			pfsCommand = new ListFolderContentsCommand(client, request, dal, dal);
+			pfsCommand = new ListFolderContentsCommand(client.OAuthAccessToken, request, dal, dal);
 		}
 		else 
 		{
-			pfsCommand = new ListObjectsCommand(client, request, dal, dal);
+			pfsCommand = new ListObjectsCommand(client.OAuthAccessToken, request, dal, dal);
 		}
 
 		return pfsCommand.execute();
@@ -92,7 +92,7 @@ export async function record_removed(client: Client, request: Request)
 		request.query.resource_name = splitResourceName[2];
 
 		const dal = ServerHelper.DalFactory(client, request);
-		const pfsCommand = new RecordRemovedCommand(client, request, dal, dal);
+		const pfsCommand = new RecordRemovedCommand(client.OAuthAccessToken, request, dal, dal);
 
 		return await pfsCommand.execute();
 	}
@@ -113,7 +113,7 @@ export async function invalidate(client: Client, request: Request)
 
 
 		const dal = ServerHelper.DalFactory(client, request);
-		const pfsCommand = new InvalidateCommand(client, request, dal, dal);
+		const pfsCommand = new InvalidateCommand(client.OAuthAccessToken, request, dal, dal);
 
 		return await pfsCommand.execute();
 	}

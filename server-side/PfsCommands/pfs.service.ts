@@ -1,10 +1,10 @@
-import { Client, Request } from '@pepperi-addons/debug-server';
+import { Request } from '@pepperi-addons/debug-server';
 import { AddonData } from '@pepperi-addons/papi-sdk';
 import jwtDecode from 'jwt-decode';
 import { IPfsGetter, IPfsMutator } from 'pfs-shared';
 import { ServerHelper } from '../serverHelper';
 
-export abstract class PfsService 
+export abstract class PfsService
 {
 	DistributorUUID: string;
 	AddonUUID: string;
@@ -12,12 +12,12 @@ export abstract class PfsService
 	existingFile: any;
 	newFileFields: any = {};
 
-	constructor(protected client: Client, protected request: Request, protected pfsMutator: IPfsMutator, protected pfsGetter: IPfsGetter<AddonData[]> ) 
+	constructor(OAuthAccessToken: string, protected request: Request, protected pfsMutator: IPfsMutator, protected pfsGetter: IPfsGetter ) 
 	{
 		request.header = ServerHelper.getLowerCaseHeaders(request.header);
 				 
-		this.environment = jwtDecode(client.OAuthAccessToken)['pepperi.datacenter'];
-		this.DistributorUUID = jwtDecode(client.OAuthAccessToken)['pepperi.distributoruuid'];
+		this.environment = jwtDecode(OAuthAccessToken)['pepperi.datacenter'];
+		this.DistributorUUID = jwtDecode(OAuthAccessToken)['pepperi.distributoruuid'];
 		this.AddonUUID = this.request.query.addon_uuid;
 
 		if(this.request.body && typeof this.request.body.Hidden === 'string')

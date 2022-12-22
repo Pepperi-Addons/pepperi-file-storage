@@ -168,7 +168,7 @@ export class HideFolderTransactionalCommand extends ABaseTransactionalCommand{
 		// Retrieve only the Key property, saving memory
 		requestCopy.query.fields = "Key";
 
-		return (await (new ListObjectsCommand(this.client, requestCopy, this.pfsMutator, this.pfsGetter)).execute()).map(resObj => resObj.Key);
+		return (await (new ListObjectsCommand(this.client.OAuthAccessToken, requestCopy, this.pfsMutator, this.pfsGetter)).execute()).map(resObj => resObj.Key);
 	}
 
 	private async hideObjectsUsingPfsBatchDisregardingExistingLocks(filesKeys: any) {
