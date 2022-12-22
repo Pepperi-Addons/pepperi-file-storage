@@ -2,6 +2,7 @@ import '@pepperi-addons/cpi-node'
 import { MAXIMAL_LOCK_TIME } from 'pfs-shared';
 import { IndexedDataS3PfsDal } from './dal/IndexedDataS3PfsDal';
 import { DownloadFileCommand } from './pfsCommands/downloadFileCommand';
+import { ListFolderContentsCommand } from './pfsCommands/listFolderContentsCommand';
 import { ListObjectsCommand } from './pfsCommands/listObjectsCommand';
 
 export const router = Router();
@@ -50,11 +51,23 @@ router.get('/files/find', async (req, res, next) => {
         if(!addonUUID || !schemaName) {
             throw new Error('Missing required parameters');
         }
-        const OAuthAccessToken = await pepperi.auth.getAccessToken();
 
+        const OAuthAccessToken = await pepperi.auth.getAccessToken();
         const dal = new IndexedDataS3PfsDal(req, MAXIMAL_LOCK_TIME, OAuthAccessToken);
-        const listObjectsCommand = new ListObjectsCommand(req, OAuthAccessToken, dal, dal);
-        const result = await listObjectsCommand.execute();
+
+        let result: any;
+
+        if(req.query.folder)
+        {
+            const listFolderContentsCommand = new ListFolderContentsCommand(req, OAuthAccessToken, dal, dal);
+            result = await listFolderContentsCommand.execute();
+
+        }
+        else
+        {
+            const listObjectsCommand = new ListObjectsCommand(req, OAuthAccessToken, dal, dal);
+            result = await listObjectsCommand.execute();
+        }
 
         res.json(result);
     } catch (err) {
