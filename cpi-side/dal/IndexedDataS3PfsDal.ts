@@ -14,7 +14,7 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 
 	async getObjects(whereClause?: string): Promise<AddonsDataSearchResult>
 	{
-		const getPfsTableName = SharedHelper.getPfsTableName(this.request.query.addon_uuid, this.clientSchemaName);
+		const pfsTableName = SharedHelper.getPfsTableName(this.request.query.addon_uuid, this.clientSchemaName);
 
 		// ModificationDateTime is always needed so we could add the version later on in the function.
 		// The Fields filter will be enforced after the GET from the schema.
@@ -26,16 +26,20 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 			...(this.request.query?.order_by && {SortBy: this.request.query.order_by}),
 			...(this.request.query?.include_count && {IncludeCount: this.request.query.include_count}),
 		}
-		const res = await pepperi.addons.data.uuid(config.AddonUUID).table(getPfsTableName).search(addonsDataSearch);
+
+		const res = await pepperi.addons.data.uuid(config.AddonUUID).table(pfsTableName).search(addonsDataSearch);
 
 		// Set v={{modificationDateTime}} on each URL to avoid browser cache.
 		res.Objects = this.addVersionToObjectsUrl(res.Objects);
 
-		// Return only needed Fields
-		res.Objects = this.pickRequestedFields(res.Objects, this.request.query?.fields);
-
 		// Handle downloading files to device if needed
 		await this.downloadFilesToDevice(res.Objects);
+
+		// Return only needed Fields
+		// This must happen after we set the version, and after we download the files to the device.
+		// Setting the version requires the ModificationDateTime field, and downloading the files
+		// is based on the Sync field.
+		res.Objects = this.pickRequestedFields(res.Objects, this.request.query?.fields);
 
 		console.log(`Files listing done successfully.`);
 		return res;
@@ -80,7 +84,12 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 		return resObjects;
 	}
 
-	async downloadFilesToDevice(objects: AddonData[]): Promise<void> 
+	/**
+	 * Downloads the files to the device if needed, and update URLs to point to the local files for downloaded files.
+	 * @param objects 
+	 * @returns 
+	 */
+	private async downloadFilesToDevice(objects: AddonData[]): Promise<void> 
 	{
 		// If webapp, no need to download files to device.
 		if(await global['app']['wApp']['isWebApp']())
@@ -94,18 +103,22 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 																	object.URL &&
 																	!PfsService.downloadedFileKeysToLocalUrl.has(`${object.Key!}${object.ModificationDateTime!}`));
 
-		for (const object of downloadRequiringObjects)
-		{	
-				// Force a download to the device
-				const objectUrl = new URL(object.URL);
-				await global['app'].getLocalFilePath(objectUrl.pathname, objectUrl.origin);
-				// Get the new baseURL (local root, instead of cdn), and concat the existing URL's pathname
-				// Use URL.pathname instead of Key, since we now have the ModificationDateTime concatenated as a query param.
-				const objectLocalURL = await pepperi["files"].baseURL() + objectUrl.pathname + objectUrl.search;
+		const downloadFiles = async (object: AddonData) =>
+		{
+			// Force a download to the device
+			const objectUrl = new URL(object.URL);
+			await global['app'].getLocalFilePath(objectUrl.pathname, objectUrl.origin);
+			// Get the new baseURL (local root, instead of cdn), and concat the existing URL's pathname
+			// Use URL.pathname instead of Key, since we now have the ModificationDateTime concatenated as a query param.
+			const objectLocalURL = await pepperi["files"].baseURL() + objectUrl.pathname + objectUrl.search;
 
-				// Cache the result, so we won't have to download the file again.
-				PfsService.downloadedFileKeysToLocalUrl.set(`${object.Key!}${object.ModificationDateTime!}`, objectLocalURL);
+			// Cache the result, so we won't have to download the file again.
+			PfsService.downloadedFileKeysToLocalUrl.set(`${object.Key!}${object.ModificationDateTime!}`, objectLocalURL);
 		}
+		
+		const downloadFilesPromises = downloadRequiringObjects.map(file => downloadFiles(file));
+		// Use allSettled to download files in parallel.
+		await Promise.allSettled(downloadFilesPromises);
 
 		// Update the objects' URL if they have a cached local URL.
 		objects.map(object => {
@@ -124,7 +137,6 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 				Where: `Key='${key}'`
 			}
 
-			// const downloaded = await this.papiClient.addons.data.uuid(config.AddonUUID).table(tableName).find(findOptions);
 			const downloaded = await pepperi.addons.data.uuid(config.AddonUUID).table(tableName).search(addonsDataSearchParams);
 			if(downloaded.Objects.length === 1)
 			{

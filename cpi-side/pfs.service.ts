@@ -1,8 +1,8 @@
+import { AddonsDataSearchResult } from '@pepperi-addons/cpi-node/build/cpi-side/client-api';
 import { Request } from '@pepperi-addons/debug-server';
 import { AddonData } from '@pepperi-addons/papi-sdk';
 import { IPfsGetter, IPfsMutator } from 'pfs-shared';
 import jwtDecode from 'jwt-decode';
-import { AddonsDataSearchResult } from '@pepperi-addons/cpi-node/build/cpi-side/client-api';
 
 declare global {
     //  for singleton

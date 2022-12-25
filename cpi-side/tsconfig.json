@@ -12,7 +12,7 @@
         "allowJs": true,
         "resolveJsonModule": true,
         "lib": [
-        "es2019"
+        "es2020.Promise"
         ]
     },
     "exclude": [

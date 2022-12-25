@@ -1,4 +1,4 @@
-import PfsService from './pfs.service';
+import PfsService from '../pfs.service';
 
 export abstract class AbstractCommand extends PfsService
 {
