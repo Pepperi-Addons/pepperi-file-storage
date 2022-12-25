@@ -9,7 +9,7 @@ export abstract class BaseRollbackAlgorithm extends PfsService implements IRollb
     constructor (client: Client,
 				request: Request,
 				pfsMutator: IPfsMutator,
-				pfsGetter: IPfsGetter,
+				pfsGetter: IPfsGetter<AddonData[]>,
 				protected lockedFile: any)
 	{
 		super(client, request, pfsMutator, pfsGetter);
