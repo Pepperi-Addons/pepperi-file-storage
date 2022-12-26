@@ -1,5 +1,5 @@
-import { AddonData } from "@pepperi-addons/papi-sdk";
-import ICommand from "../iCommand";
+
+import { ICommand } from 'pfs-shared';
 import PfsService from '../onlinePfs.service';
 
 

@@ -1,5 +1,4 @@
 import { Client, Request } from "@pepperi-addons/debug-server/dist";
-import { AddonData } from "@pepperi-addons/papi-sdk";
 import { IPfsGetter, IPfsMutator } from "pfs-shared";
 import PfsService from "../../onlinePfs.service";
 import { IRollbackAlgorithm } from "./iRollbackAlgorithm";

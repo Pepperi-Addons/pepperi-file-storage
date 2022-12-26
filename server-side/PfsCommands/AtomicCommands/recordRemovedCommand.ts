@@ -1,6 +1,5 @@
-import { AWS_MAX_DELETE_OBJECTS_NUMBER } from 'pfs-shared';
+import { AWS_MAX_DELETE_OBJECTS_NUMBER, ICommand } from 'pfs-shared';
 import { ServerHelper } from '../../serverHelper';
-import ICommand from '../iCommand';
 import PfsService from '../onlinePfs.service';
 
 export class RecordRemovedCommand extends PfsService implements ICommand
