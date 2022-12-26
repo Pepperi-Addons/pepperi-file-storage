@@ -1,7 +1,6 @@
-import { AddonsDataSearchResult } from "@pepperi-addons/cpi-node/build/cpi-side/client-api";
 import { AddonData } from "@pepperi-addons/papi-sdk";
 
-export interface IPfsGetter<T>
+export interface IPfsGetter
 {
 	/**
      * Returns the S3 VersionId if one exists. Undefined otherwise;
@@ -12,5 +11,5 @@ export interface IPfsGetter<T>
     /**
      * Get a list of objects (files and folders). Standard Pepperi flags apply (i.e. where clause, include_deleted, etc.).
      */
-     getObjects(whereClause?: string): Promise<T>;
+     getObjects(whereClause?: string): Promise<AddonData[]>;
 }

@@ -12,7 +12,7 @@ export abstract class PfsService
 	existingFile: any;
 	newFileFields: any = {};
 
-	constructor(protected client: Client, protected request: Request, protected pfsMutator: IPfsMutator, protected pfsGetter: IPfsGetter<AddonData[]> ) 
+	constructor(protected client: Client, protected request: Request, protected pfsMutator: IPfsMutator, protected pfsGetter: IPfsGetter ) 
 	{
 		request.header = ServerHelper.getLowerCaseHeaders(request.header);
 				 

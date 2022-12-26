@@ -2,9 +2,10 @@ import { AddonsDataSearchResult } from '@pepperi-addons/cpi-node/build/cpi-side/
 import { Request } from '@pepperi-addons/debug-server';
 import { IPfsGetter, IPfsMutator, TransactionType } from 'pfs-shared';
 import jwtDecode from 'jwt-decode';
+import { AddonData } from '@pepperi-addons/papi-sdk';
 
 
-export abstract class AbstractBasePfsDal implements IPfsMutator, IPfsGetter<AddonsDataSearchResult>
+export abstract class AbstractBasePfsDal implements IPfsMutator, IPfsGetter
 {
 	protected environment: string;
     protected DistributorUUID: string;
@@ -52,7 +53,7 @@ export abstract class AbstractBasePfsDal implements IPfsMutator, IPfsGetter<Addo
 
 	abstract getObjectS3FileVersion(Key: any);
 
-	abstract getObjects(whereClause?: string): Promise<AddonsDataSearchResult>;
+	abstract getObjects(whereClause?: string): Promise<AddonData[]>;
 	//#endregion
 	
 
