@@ -71,7 +71,8 @@ router.get('/files/find', async (req, res, next) =>
 		next(err)
 	}
 });
-async function getDal(req) {
+async function getDal(req) 
+{
 	const OAuthAccessToken = await pepperi.auth.getAccessToken();
 
 	const awsDal = new CpiAwsDal();
