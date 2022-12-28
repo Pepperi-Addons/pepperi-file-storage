@@ -9,7 +9,7 @@ export abstract class PfsService extends SharedPfsService
 {
 	constructor(protected client: Client, protected request: Request, protected pfsMutator: IPfsMutator, protected pfsGetter: IPfsGetter ) 
 	{
-		super(client.OAuthAccessToken, request, pfsMutator, pfsGetter);
+		super(request, pfsMutator, pfsGetter);
 		request.header = ServerHelper.getLowerCaseHeaders(request.header);
 	}
 

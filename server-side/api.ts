@@ -20,7 +20,7 @@ export async function file(client: Client, request: Request)
 	{
 	case "GET": {
 		const dal = ServerHelper.DalFactory(client, request);
-		const pfsCommand = new DownloadFileCommand(client.OAuthAccessToken, request, dal, dal);
+		const pfsCommand = new DownloadFileCommand(request, dal, dal);
 
 		return pfsCommand.execute();
 	}
@@ -45,11 +45,11 @@ export async function files(client: Client, request: Request)
 		
 		if (request.query.folder) 
 		{				
-			pfsCommand = new ListFolderContentsCommand(client.OAuthAccessToken, request, dal, dal);
+			pfsCommand = new ListFolderContentsCommand(request, dal, dal);
 		}
 		else 
 		{
-			pfsCommand = new ListObjectsCommand(client.OAuthAccessToken, request, dal, dal);
+			pfsCommand = new ListObjectsCommand(request, dal, dal);
 		}
 
 		return pfsCommand.execute();

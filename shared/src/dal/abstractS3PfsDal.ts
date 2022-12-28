@@ -1,16 +1,14 @@
-import { Client, Request } from '@pepperi-addons/debug-server';
-import { CACHE_DEFAULT_VALUE, dataURLRegex, TransactionType } from 'pfs-shared';
-import { AbstractBasePfsDal } from './AbstartcBasePfsDal';
+import { Request } from '@pepperi-addons/debug-server';
+import { CACHE_DEFAULT_VALUE, dataURLRegex, TransactionType } from '../';
+import { AbstractBasePfsDal } from './abstractBasePfsDal';
 import { IAws } from './iAws';
-
-const AWS = require('aws-sdk'); // AWS is part of the lambda's environment. Importing it will result in it being rolled up redundently.
 
 export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 {
     
-	constructor(client: Client, request: Request, maximalLockTime: number, private awsDal: IAws)
+	constructor(OAuthAccessToken: string, request: Request, maximalLockTime: number, private awsDal: IAws)
 	{
-		super(client, request, maximalLockTime);
+		super(OAuthAccessToken, request, maximalLockTime);
 	}
 
 	//#region IPfsMutator

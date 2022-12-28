@@ -7,5 +7,8 @@ export * from './sharedHelper'
 export * from './pfsAtomicCommands/downloadFileCommand'
 export * from './pfsAtomicCommands/listFolderContentsCommand'
 export * from './pfsAtomicCommands/listObjectsCommand'
-
-
+export * from './dal/abstractBasePfsDal'
+export * from './dal/indexedDataS3PfsDal'
+export * from './dal/abstractBasePfsDal'
+export * from './dal/iAws'
+export * from './dal/iPepperiDal'

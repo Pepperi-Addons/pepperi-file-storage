@@ -1,8 +1,14 @@
 import { Client, Request } from "@pepperi-addons/debug-server/dist";
 import { PapiClient } from "@pepperi-addons/papi-sdk";
-import { IndexedDataS3PfsDal } from "./DAL/IndexedDataS3PfsDal";
 import { FailAfterLock, FailAfterMutatingAdal, FailAfterMutatingS3 } from "./DAL/TestLockMechanism";
-import { DEBUG_MAXIMAL_LOCK_TIME, DIMX_ADDON_UUID, MAXIMAL_LOCK_TIME } from "pfs-shared";
+import { CloudfrontDistributions, DEBUG_MAXIMAL_LOCK_TIME, DIMX_ADDON_UUID, IAws, IndexedDataS3PfsDal, IPepperiDal, MAXIMAL_LOCK_TIME, S3Buckets,  } from "pfs-shared";
+import config from '../addon.config.json';
+import docDbDal from "./DAL/docDbDal";
+import AwsDal from "./DAL/AwsDal";
+import jwtDecode from 'jwt-decode';
+
+
+const AWS = require('aws-sdk'); // AWS is part of the lambda's environment. Importing it will result in it being rolled up redundantly.
 
 export class ServerHelper
 {
@@ -13,24 +19,32 @@ export class ServerHelper
 			request.query = {};
 		}
 
+		const iPepperiDal: IPepperiDal = new docDbDal(ServerHelper.createPapiClient(client, config.AddonUUID));
+
+		const environment = jwtDecode(client.OAuthAccessToken)['pepperi.datacenter'];
+		const s3 = new AWS.S3({apiVersion: '2006-03-01'}); //lock API version
+		const s3Bucket = S3Buckets[environment];
+		const cloudfrontDistribution = CloudfrontDistributions[environment];
+		const iAws: IAws = new AwsDal(s3Bucket, cloudfrontDistribution, s3);
+
 		switch(request.query.testing_transaction)
 		{
 		//**** Testing scenarios ****//
 
 		case "stop_after_lock":{
-			return new FailAfterLock(client, request, DEBUG_MAXIMAL_LOCK_TIME);
+			return new FailAfterLock(client.OAuthAccessToken, request, DEBUG_MAXIMAL_LOCK_TIME, iAws, iPepperiDal);
 		}
 		case "stop_after_S3":{
-			return new FailAfterMutatingS3(client, request, DEBUG_MAXIMAL_LOCK_TIME);
+			return new FailAfterMutatingS3(client.OAuthAccessToken, request, DEBUG_MAXIMAL_LOCK_TIME, iAws, iPepperiDal);
 		}
 		case "stop_after_ADAL":{
-			return new FailAfterMutatingAdal(client, request, DEBUG_MAXIMAL_LOCK_TIME);
+			return new FailAfterMutatingAdal(client.OAuthAccessToken, request, DEBUG_MAXIMAL_LOCK_TIME, iAws, iPepperiDal);
 		}
 
 		//**** End of testing scenarios ****//
 
 		default:{
-			return new IndexedDataS3PfsDal(client, request, request.query.testRollback ? 0 : MAXIMAL_LOCK_TIME);
+			return new IndexedDataS3PfsDal(client.OAuthAccessToken, request, request.query.testRollback ? 0 : MAXIMAL_LOCK_TIME, iAws, iPepperiDal);
 		}
 		}
 	}

@@ -1,4 +1,5 @@
-import { IAws } from "./iAws";
+import { IAws } from "pfs-shared";
+
 
 const AWS = require('aws-sdk'); // AWS is part of the lambda's environment. Importing it will result in it being rolled up redundantly.
 

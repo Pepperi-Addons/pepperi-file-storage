@@ -6,17 +6,13 @@ import { IPfsMutator } from './iPfsMutator';
 
 export abstract class PfsService
 {
-	DistributorUUID: string;
 	AddonUUID: string;
-	readonly environment: string;
 	existingFile: any;
 	newFileFields: any = {};
 
-	constructor(OAuthAccessToken: string, protected request: Request, protected pfsMutator: IPfsMutator, protected pfsGetter: IPfsGetter ) 
+	constructor(protected request: Request, protected pfsMutator: IPfsMutator, protected pfsGetter: IPfsGetter ) 
 	{
 				 
-		this.environment = jwtDecode(OAuthAccessToken)['pepperi.datacenter'];
-		this.DistributorUUID = jwtDecode(OAuthAccessToken)['pepperi.distributoruuid'];
 		this.AddonUUID = this.request.query.addon_uuid;
 
 		if(this.request.body && typeof this.request.body.Hidden === 'string')

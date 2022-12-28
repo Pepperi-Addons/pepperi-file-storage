@@ -1,26 +1,15 @@
-import { Client, Request } from '@pepperi-addons/debug-server';
-import { PapiClient } from '@pepperi-addons/papi-sdk/dist/papi-client';
-import config from '../../addon.config.json';
+import { Request } from '@pepperi-addons/debug-server';
 import { AddonData, FindOptions } from '@pepperi-addons/papi-sdk';
-import { AbstractS3PfsDal } from './AbstractS3PfsDal';
-import { CdnServers, LOCK_ADAL_TABLE_NAME, SharedHelper, TransactionType } from 'pfs-shared';
+import { AbstractS3PfsDal } from './abstractS3PfsDal';
+import { CdnServers, LOCK_ADAL_TABLE_NAME, SharedHelper, TransactionType } from '../';
+import { IAws } from './iAws';
+import { IPepperiDal } from './iPepperiDal';
 
-export class IndexedDataS3PfsDal extends AbstractS3PfsDal 
-{
-	private papiClient: PapiClient;
-    
-	constructor(client: Client, request: Request, maximalLockTime:number)
+export class IndexedDataS3PfsDal extends AbstractS3PfsDal
+{    
+	constructor(OAuthAccessToken: string, request: Request, maximalLockTime:number, iAws: IAws, protected pepperiDal: IPepperiDal)
 	{
-        super(client, request, maximalLockTime);
-		
-		//Used for operations on the lock table.
-		this.papiClient = new PapiClient({
-			baseURL: client.BaseURL,
-			token: client.OAuthAccessToken,
-			addonUUID: client.AddonUUID,
-			actionUUID: client.ActionUUID,
-			addonSecretKey: client.AddonSecretKey
-		});
+        super(OAuthAccessToken, request, maximalLockTime, iAws);
 	}
 
 	//#region IPfsGetter
@@ -39,7 +28,7 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 		}
 
 		const getPfsTableName = SharedHelper.getPfsTableName(this.request.query.addon_uuid, this.clientSchemaName);
-		const res =  await this.papiClient.addons.data.uuid(config.AddonUUID).table(getPfsTableName).find(findOptions);
+		const res =  await this.pepperiDal.getDataFromTable(getPfsTableName, findOptions);
 
 		console.log(`Files listing done successfully.`);
 		return res;
@@ -54,8 +43,7 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 				where: `Key='${key}'`,
 				include_deleted: getHidden
 			}
-
-			const downloaded = await this.papiClient.addons.data.uuid(config.AddonUUID).table(tableName).find(findOptions);
+			const downloaded =  await this.pepperiDal.getDataFromTable(tableName, findOptions);
 			if(downloaded.length === 1)
 			{
 				console.log(`File Downloaded`);
@@ -120,7 +108,7 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 							TransactionType : transactionType
 						};
 
-		const lockRes =  await this.papiClient.addons.data.uuid(config.AddonUUID).table(LOCK_ADAL_TABLE_NAME).upsert(item);
+		const lockRes =  await this.pepperiDal.postDocumentToTable(LOCK_ADAL_TABLE_NAME, item);
 
 		lockRes.Key = this.getRelativePath(item.Key.replace(new RegExp("~", 'g'), "/"));
 
@@ -135,7 +123,7 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 
 		itemCopy.Key = this.getAbsolutePath(item.Key).replace(new RegExp("/", 'g'), "~");
 
-		const lockRes = await this.papiClient.addons.data.uuid(config.AddonUUID).table(LOCK_ADAL_TABLE_NAME).upsert(itemCopy);
+		const lockRes =  await this.pepperiDal.postDocumentToTable(LOCK_ADAL_TABLE_NAME, itemCopy);
 
 		lockRes.Key = this.getRelativePath(itemCopy.Key.replace(new RegExp("~", 'g'), "/"));
 
@@ -156,7 +144,7 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 		const lockKey = this.getAbsolutePath(key).replace(new RegExp("/", 'g'), "~");
 
 		console.log(`Attempting to unlock object: ${key}`);
-		const res = await this.papiClient.addons.data.uuid(config.AddonUUID).table(LOCK_ADAL_TABLE_NAME).key(lockKey).hardDelete(true);
+		const res = await this.pepperiDal.hardDeleteDocumentFromTable(LOCK_ADAL_TABLE_NAME, lockKey);
 		console.log(`Successfully unlocked object: ${key}`);
 		return res;
 	}
@@ -166,7 +154,7 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 
 	//#region private methods
     
-	private getRequestedPageNumber(): number
+	protected getRequestedPageNumber(): number
 	{
 		let res = parseInt(this.request.query.page);
 		if(res === 0)
@@ -190,7 +178,8 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 
 
 		const tableName = SharedHelper.getPfsTableName(this.request.query.addon_uuid, this.clientSchemaName);
-        res = await this.papiClient.addons.data.uuid(config.AddonUUID).table(tableName).upsert(newFileFields);
+
+		res = await this.pepperiDal.postDocumentToTable(tableName, newFileFields)
 		
 		// Add back the PresignedURL
 		res.PresignedURL = presignedURL;
