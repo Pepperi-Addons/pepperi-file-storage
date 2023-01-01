@@ -6,7 +6,7 @@ export class ListObjectsCommand extends AbstractCommand
 {
 
 	public async execute(): Promise<AddonsDataSearchResult>{
-		return await this.listObjects();
+		return {Objects: await this.listObjects()};
 	}
 
 	private async listObjects(whereClause?:string)
