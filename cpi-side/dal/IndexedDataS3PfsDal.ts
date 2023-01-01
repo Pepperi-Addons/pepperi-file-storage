@@ -1,7 +1,7 @@
 import config from '../../addon.config.json';
 import { AbstractS3PfsDal } from './AbstractS3PfsDal';
-import { CdnServers, LOCK_ADAL_TABLE_NAME, SharedHelper, TransactionType } from 'pfs-shared';
-import { AddonsDataSearchParams, AddonsDataSearchResult } from '@pepperi-addons/cpi-node/build/cpi-side/client-api';
+import { LOCK_ADAL_TABLE_NAME, SharedHelper, TransactionType } from 'pfs-shared';
+import { AddonsDataSearchParams } from '@pepperi-addons/cpi-node/build/cpi-side/client-api';
 import { AddonData } from '@pepperi-addons/papi-sdk';
 import lodashPick from 'lodash.pick'
 import { URL } from 'url';
@@ -155,9 +155,9 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 			{ //Couldn't find results
 				console.error(`Could not find requested item: '${key}'`);
 
-				const err: any = new Error(`Could not find requested item: '${this.getRelativePath(key)}'`);
-				err.code = 404;
-				throw err;
+				// const err: any = new Error(`Could not find requested item: '${this.getRelativePath(key)}'`);
+				// err.code = 404;
+				// throw err;
 			}
 		}
 		catch (err) 
@@ -179,10 +179,10 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 		const tableName = LOCK_ADAL_TABLE_NAME;
 		try
 		{
-			const lockAbsoluteKey = this.getAbsolutePath(key).replace(new RegExp("/", 'g'), "~");
-			const getHidden: boolean = true;
-			res = await this.getObjectFromTable(lockAbsoluteKey, tableName, getHidden);
-			res.Key = this.getRelativePath(res.Key.replace(new RegExp("~", 'g'), "/"));
+			// const lockAbsoluteKey = this.getAbsolutePath(key).replace(new RegExp("/", 'g'), "~");
+			// const getHidden: boolean = true;
+			// res = await this.getObjectFromTable(lockAbsoluteKey, tableName, getHidden);
+			// res.Key = this.getRelativePath(res.Key.replace(new RegExp("~", 'g'), "/"));
 		}
 		catch // If the object isn't locked, the getObjectFromTable will throw an "object not found" error. Return null to indicate this object isn't locked.
 		{}
@@ -194,40 +194,40 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 
 	//#region IPfsMutator
 	async lock(Key: any, transactionType: TransactionType){
-		console.log(`Attempting to lock key: ${Key}`);
+		// console.log(`Attempting to lock key: ${Key}`);
 
-		const item: any = 
-						{
-							Key : this.getAbsolutePath(Key).replace(new RegExp("/", 'g'), "~"),
-							TransactionType : transactionType
-						};
+		// const item: any = 
+		// 				{
+		// 					Key : this.getAbsolutePath(Key).replace(new RegExp("/", 'g'), "~"),
+		// 					TransactionType : transactionType
+		// 				};
 
-		const lockRes =  await pepperi.addons.data.uuid(config.AddonUUID).table(LOCK_ADAL_TABLE_NAME).upsert(item);
+		// const lockRes =  await pepperi.addons.data.uuid(config.AddonUUID).table(LOCK_ADAL_TABLE_NAME).upsert(item);
 
-		lockRes.Key = this.getRelativePath(item.Key.replace(new RegExp("~", 'g'), "/"));
+		// lockRes.Key = this.getRelativePath(item.Key.replace(new RegExp("~", 'g'), "/"));
 
-		console.log(`Successfully locked key: ${lockRes.Key}`);
+		// console.log(`Successfully locked key: ${lockRes.Key}`);
 
-		return lockRes;
+		// return lockRes;
 	}
 
 	async setRollbackData(item: any) {
-		console.log(`Setting rollback data to key: ${item.Key}`);
-		const itemCopy = {...item};
+		// console.log(`Setting rollback data to key: ${item.Key}`);
+		// const itemCopy = {...item};
 
-		itemCopy.Key = this.getAbsolutePath(item.Key).replace(new RegExp("/", 'g'), "~");
+		// itemCopy.Key = this.getAbsolutePath(item.Key).replace(new RegExp("/", 'g'), "~");
 
-		const lockRes = await pepperi.addons.data.uuid(config.AddonUUID).table(LOCK_ADAL_TABLE_NAME).upsert(itemCopy);
+		// const lockRes = await pepperi.addons.data.uuid(config.AddonUUID).table(LOCK_ADAL_TABLE_NAME).upsert(itemCopy);
 
-		lockRes.Key = this.getRelativePath(itemCopy.Key.replace(new RegExp("~", 'g'), "/"));
+		// lockRes.Key = this.getRelativePath(itemCopy.Key.replace(new RegExp("~", 'g'), "/"));
 
-		console.log(`Successfully set rollback data for key: ${lockRes.Key}`);
+		// console.log(`Successfully set rollback data for key: ${lockRes.Key}`);
 
-		return lockRes;
+		// return lockRes;
 	}
 
 	async mutateADAL(newFileFields: any, existingFile: any) {
-		return await this.uploadFileMetadata(newFileFields, existingFile);
+		// return await this.uploadFileMetadata(newFileFields, existingFile);
 	}
 
 	async notify(newFileFields: any, existingFile: any){
@@ -235,11 +235,11 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 	}
 	
 	async unlock(key: string){
-		const lockKey = this.getAbsolutePath(key).replace(new RegExp("/", 'g'), "~");
+		// const lockKey = this.getAbsolutePath(key).replace(new RegExp("/", 'g'), "~");
 
-		console.log(`Attempting to unlock object: ${key}`);
-		// const res = await pepperi.addons.data.uuid(config.AddonUUID).table(LOCK_ADAL_TABLE_NAME).key(lockKey).hardDelete(true);
-		console.log(`Successfully unlocked object: ${key}`);
+		// console.log(`Attempting to unlock object: ${key}`);
+		// // const res = await pepperi.addons.data.uuid(config.AddonUUID).table(LOCK_ADAL_TABLE_NAME).key(lockKey).hardDelete(true);
+		// console.log(`Successfully unlocked object: ${key}`);
 		// return res;
 	}
 
@@ -261,45 +261,45 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 
 	private async uploadFileMetadata(newFileFields: any, existingFile: any): Promise<any> 
 	{
-		let res: any;
-		newFileFields.Key = this.removeSlashPrefix(newFileFields.Key);
-		newFileFields.Folder = this.removeSlashPrefix(newFileFields.Folder);
-		// Set Urls
-		this.setUrls(newFileFields, existingFile);
+		// let res: any;
+		// newFileFields.Key = this.removeSlashPrefix(newFileFields.Key);
+		// newFileFields.Folder = this.removeSlashPrefix(newFileFields.Folder);
+		// // Set Urls
+		// this.setUrls(newFileFields, existingFile);
 		
-		const presignedURL = newFileFields.PresignedURL;
-		delete newFileFields.PresignedURL //Don't store PresignedURL in ADAL
+		// const presignedURL = newFileFields.PresignedURL;
+		// delete newFileFields.PresignedURL //Don't store PresignedURL in ADAL
 
 
-		const tableName = SharedHelper.getPfsTableName(this.request.query.addon_uuid, this.clientSchemaName);
-        // res = await this.papiClient.addons.data.uuid(config.AddonUUID).table(tableName).upsert(newFileFields);
-        res = await pepperi.addons.data.uuid(config.AddonUUID).table(tableName).upsert(newFileFields);
+		// const tableName = SharedHelper.getPfsTableName(this.request.query.addon_uuid, this.clientSchemaName);
+        // // res = await this.papiClient.addons.data.uuid(config.AddonUUID).table(tableName).upsert(newFileFields);
+        // res = await pepperi.addons.data.uuid(config.AddonUUID).table(tableName).upsert(newFileFields);
 		
-		// Add back the PresignedURL
-		res.PresignedURL = presignedURL;
+		// // Add back the PresignedURL
+		// res.PresignedURL = presignedURL;
 		
-		return res;
+		// return res;
 	}
 
 	private setUrls(newFileFields: any, existingFile: any) 
 	{
 
-		if (!existingFile.doesFileExist) 
-		{
-			if (!newFileFields.Key.endsWith('/')) //Add URL if this isn't a folder and this file doesn't exist.
-			{
-				newFileFields.URL = `${CdnServers[this.environment]}/${this.getAbsolutePath(newFileFields.Key)}`;
-			}
-			else
-			{
-				newFileFields.URL = ``;
-			}
-		}
-		if(newFileFields.Thumbnails){
-			newFileFields.Thumbnails.forEach(thumbnail => {
-				thumbnail.URL = `${CdnServers[this.environment]}/thumbnails/${this.getAbsolutePath(newFileFields.Key)}_${thumbnail.Size}`;
-			});
-		}
+		// if (!existingFile.doesFileExist) 
+		// {
+		// 	if (!newFileFields.Key.endsWith('/')) //Add URL if this isn't a folder and this file doesn't exist.
+		// 	{
+		// 		newFileFields.URL = `${CdnServers[this.environment]}/${this.getAbsolutePath(newFileFields.Key)}`;
+		// 	}
+		// 	else
+		// 	{
+		// 		newFileFields.URL = ``;
+		// 	}
+		// }
+		// if(newFileFields.Thumbnails){
+		// 	newFileFields.Thumbnails.forEach(thumbnail => {
+		// 		thumbnail.URL = `${CdnServers[this.environment]}/thumbnails/${this.getAbsolutePath(newFileFields.Key)}_${thumbnail.Size}`;
+		// 	});
+		// }
 	}
 
 	//#endregion

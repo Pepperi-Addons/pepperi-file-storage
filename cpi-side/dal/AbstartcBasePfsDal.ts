@@ -1,22 +1,16 @@
-import { AddonsDataSearchResult } from '@pepperi-addons/cpi-node/build/cpi-side/client-api';
 import { Request } from '@pepperi-addons/debug-server';
 import { IPfsGetter, IPfsMutator, TransactionType } from 'pfs-shared';
-import jwtDecode from 'jwt-decode';
 import { AddonData } from '@pepperi-addons/papi-sdk';
 
 
 export abstract class AbstractBasePfsDal implements IPfsMutator, IPfsGetter
 {
-	protected environment: string;
-    protected DistributorUUID: string;
 	protected clientAddonUUID: string;
 	protected readonly MAXIMAL_LOCK_TIME; 
 	protected clientSchemaName: string;
     
-	constructor(protected request: Request, maximalLockTime:number, OAuthAccessToken: string)
+	constructor(protected request: Request, maximalLockTime:number)
 	{
-		this.environment = jwtDecode(OAuthAccessToken)['pepperi.datacenter'];
-        this.DistributorUUID = jwtDecode(OAuthAccessToken)['pepperi.distributoruuid'];
 		this.clientAddonUUID = this.request.query.addon_uuid;
 		this.clientSchemaName = this.request.query.resource_name;
 		this.MAXIMAL_LOCK_TIME = maximalLockTime;
@@ -65,13 +59,13 @@ export abstract class AbstractBasePfsDal implements IPfsMutator, IPfsGetter
 	 * @param relativePath the path relative to the addon's folder
 	 * @returns a string in the format ${this.DistributorUUID}/${this.AddonUUID}/${relativePath}
 	 */
-	protected getAbsolutePath(relativePath: string): string 
-	{
-		relativePath = this.removeSlashPrefix(relativePath);
+	// protected getAbsolutePath(relativePath: string): string 
+	// {
+	// 	relativePath = this.removeSlashPrefix(relativePath);
 
-		const absolutePrefix = `${this.DistributorUUID}/${this.clientAddonUUID}/${this.clientSchemaName}/`;
-		return relativePath.startsWith(absolutePrefix) ? relativePath : `${absolutePrefix}${relativePath}`;
-	}
+	// 	const absolutePrefix = `${this.DistributorUUID}/${this.clientAddonUUID}/${this.clientSchemaName}/`;
+	// 	return relativePath.startsWith(absolutePrefix) ? relativePath : `${absolutePrefix}${relativePath}`;
+	// }
 
 	protected removeSlashPrefix(path: string){
 		if (path != '/' && path?.startsWith('/')) {
@@ -86,12 +80,12 @@ export abstract class AbstractBasePfsDal implements IPfsMutator, IPfsGetter
 	 * @param absolutePath the original path the addon requested
 	 * @returns a relative path string
 	 */
-	protected getRelativePath(absolutePath: string): string 
-	{
-		const relativePath = absolutePath.split(`${this.DistributorUUID}/${this.clientAddonUUID}/${this.clientSchemaName}/`)[1]
-		const res = relativePath === '' ? '/' : relativePath; // Handle root folder case
-		return res;
-	}
+	// protected getRelativePath(absolutePath: string): string 
+	// {
+	// 	const relativePath = absolutePath.split(`${this.DistributorUUID}/${this.clientAddonUUID}/${this.clientSchemaName}/`)[1]
+	// 	const res = relativePath === '' ? '/' : relativePath; // Handle root folder case
+	// 	return res;
+	// }
 
 	//#endregion
 }

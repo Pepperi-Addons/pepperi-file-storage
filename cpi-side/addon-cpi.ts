@@ -22,10 +22,9 @@ router.get('/file', async (req, res, next) =>
 		{
 			throw new Error('Missing required parameters');
 		}
-		const OAuthAccessToken = await pepperi.auth.getAccessToken();
 
-		const dal = new IndexedDataS3PfsDal(req, MAXIMAL_LOCK_TIME, OAuthAccessToken);
-		const downloadFileCommand = new DownloadFileCommand(req, OAuthAccessToken, dal, dal);
+		const dal = new IndexedDataS3PfsDal(req, MAXIMAL_LOCK_TIME);
+		const downloadFileCommand = new DownloadFileCommand(req, dal, dal);
 		const result = await downloadFileCommand.execute();
 
 		res.json(result);
@@ -49,20 +48,19 @@ router.get('/files/find', async (req, res, next) =>
 			throw new Error('Missing required parameters');
 		}
 
-		const OAuthAccessToken = await pepperi.auth.getAccessToken();
-		const dal = new IndexedDataS3PfsDal(req, MAXIMAL_LOCK_TIME, OAuthAccessToken);
+		const dal = new IndexedDataS3PfsDal(req, MAXIMAL_LOCK_TIME);
 
 		let result: any;
 
 		if(req.query.folder)
 		{
-			const listFolderContentsCommand = new ListFolderContentsCommand(req, OAuthAccessToken, dal, dal);
+			const listFolderContentsCommand = new ListFolderContentsCommand(req, dal, dal);
 			result = await listFolderContentsCommand.execute();
 
 		}
 		else
 		{
-			const listObjectsCommand = new ListObjectsCommand(req, OAuthAccessToken, dal, dal);
+			const listObjectsCommand = new ListObjectsCommand(req, dal, dal);
 			result = await listObjectsCommand.execute();
 		}
 

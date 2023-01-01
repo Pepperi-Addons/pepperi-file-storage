@@ -1,23 +1,10 @@
-import { Request } from '@pepperi-addons/debug-server';
-import { CACHE_DEFAULT_VALUE, CloudfrontDistributions, dataURLRegex, S3Buckets, TransactionType } from 'pfs-shared';
+import { CACHE_DEFAULT_VALUE, dataURLRegex, TransactionType } from 'pfs-shared';
 import { AbstractBasePfsDal } from './AbstartcBasePfsDal';
 
 // const AWS = require('aws-sdk'); // AWS is part of the lambda's environment. Importing it will result in it being rolled up redundently.
 
 export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 {
-	private s3: any;
-	private S3Bucket: any;
-	private CloudfrontDistribution: any;
-    
-	constructor(request: Request, maximalLockTime: number, OAuthAccessToken: string)
-	{
-		super(request, maximalLockTime, OAuthAccessToken);
-
-		// this.s3 = new AWS.S3({apiVersion: '2006-03-01'}); //lock API version
-		this.S3Bucket = S3Buckets[this.environment];
-		this.CloudfrontDistribution = CloudfrontDistributions[this.environment];
-	}
 
 	//#region IPfsMutator
 	public async mutateS3(newFileFields: any, existingFile: any){
@@ -224,8 +211,8 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 	//#region private methods
 	private async uploadFileData(file: any, isCache = CACHE_DEFAULT_VALUE): Promise<any> 
 	{
-		const key = this.getAbsolutePath(file.Key);
-		return this.uploadToS3(key, file.buffer, isCache);
+		// const key = this.getAbsolutePath(file.Key);
+		// return this.uploadToS3(key, file.buffer, isCache);
 	}
 
 	private async uploadToS3(key, buffer, isCache = CACHE_DEFAULT_VALUE){
@@ -249,38 +236,38 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 
 	private async deleteFileData(removedKey: string): Promise<any> 
 	{
-		console.log(`Trying to delete Key: ${removedKey}`);
-		const params: any = {};
+		// console.log(`Trying to delete Key: ${removedKey}`);
+		// const params: any = {};
 
-		// Create S3 params
-		params.Bucket = this.S3Bucket;
-		params.Key = this.getAbsolutePath(removedKey);
+		// // Create S3 params
+		// params.Bucket = this.S3Bucket;
+		// params.Key = this.getAbsolutePath(removedKey);
 		
-		// Delete from S3 bucket.
-		const deletedFile = await this.s3.deleteObject(params).promise();
-		console.log(`Successfully deleted Key ${removedKey}: ${JSON.stringify(deletedFile)}`);
+		// // Delete from S3 bucket.
+		// const deletedFile = await this.s3.deleteObject(params).promise();
+		// console.log(`Successfully deleted Key ${removedKey}: ${JSON.stringify(deletedFile)}`);
 
-		return deletedFile;
+		// return deletedFile;
 	}
 
 	private async uploadThumbnail(Key: string, size: string, Body: Buffer, isCache = CACHE_DEFAULT_VALUE): Promise<any> 
 	{
-		const key = `thumbnails/${this.getAbsolutePath(Key)}_${size}`;
-		return this.uploadToS3(key, Body, isCache);
+		// const key = `thumbnails/${this.getAbsolutePath(Key)}_${size}`;
+		// return this.uploadToS3(key, Body, isCache);
 	}
 
 	private async deleteThumbnail(key: any, size: any) {
-		const params: any = {};
+		// const params: any = {};
 
-		// Create S3 params
-		params.Bucket = this.S3Bucket;
-		params.Key = `thumbnails/${this.getAbsolutePath(key)}_${size}`;
+		// // Create S3 params
+		// params.Bucket = this.S3Bucket;
+		// params.Key = `thumbnails/${this.getAbsolutePath(key)}_${size}`;
 		
-		// delete thumbnail from S3 bucket.
-		const deleted = await this.s3.deleteObject(params).promise();
-		console.log(`Thumbnail successfully deleted:  ${deleted}`);
+		// // delete thumbnail from S3 bucket.
+		// const deleted = await this.s3.deleteObject(params).promise();
+		// console.log(`Thumbnail successfully deleted:  ${deleted}`);
 
-		return deleted;
+		// return deleted;
 	}
 
 	private getMimeType(): any 
@@ -302,17 +289,17 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 
 	private async generatePreSignedURL(file)
 	{
-		const entryName = this.getAbsolutePath(file.Key);
+		// const entryName = this.getAbsolutePath(file.Key);
 
-		const params =  {
-			Bucket: S3Buckets[this.environment],
-			Key: entryName,
-			Expires: 24*60*60, //PUT presigned URL will expire after 24 hours = 60 sec * 60 min * 24 hrs
-			ContentType: this.getMimeType()
-		};
+		// const params =  {
+		// 	Bucket: S3Buckets[this.environment],
+		// 	Key: entryName,
+		// 	Expires: 24*60*60, //PUT presigned URL will expire after 24 hours = 60 sec * 60 min * 24 hrs
+		// 	ContentType: this.getMimeType()
+		// };
 			
-		const urlString = await this.s3.getSignedUrl('putObject',params);
-		return urlString;
+		// const urlString = await this.s3.getSignedUrl('putObject',params);
+		// return urlString;
 	}
 
 	private async batchDeleteThumbnails(keys: string[])
