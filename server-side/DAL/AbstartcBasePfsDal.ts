@@ -3,7 +3,7 @@ import { AddonData } from '@pepperi-addons/papi-sdk';
 import jwtDecode from 'jwt-decode';
 import { IPfsGetter, IPfsMutator, TransactionType } from 'pfs-shared';
 
-export abstract class AbstractBasePfsDal implements IPfsGetter<AddonData[]>, IPfsMutator
+export abstract class AbstractBasePfsDal implements IPfsGetter, IPfsMutator
 {
 	protected environment: string;
     protected DistributorUUID: string;
