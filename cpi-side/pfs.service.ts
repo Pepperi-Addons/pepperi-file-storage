@@ -1,6 +1,6 @@
 import { Request } from '@pepperi-addons/debug-server';
 import { AddonData } from '@pepperi-addons/papi-sdk';
-import { IPfsGetter, IPfsMutator } from 'pfs-shared';
+import { IPfsGetter } from 'pfs-shared';
 
 declare global {
     //  for singleton
@@ -13,7 +13,7 @@ export abstract class PfsService
 	existingFile: any;
 	newFileFields: any = {};
 
-	constructor(protected request: Request, protected pfsMutator: IPfsMutator, protected pfsGetter: IPfsGetter ) 
+	constructor(protected request: Request, protected pfsGetter: IPfsGetter ) 
 	{
 		this.AddonUUID = this.request.query.addon_uuid;
 	}
