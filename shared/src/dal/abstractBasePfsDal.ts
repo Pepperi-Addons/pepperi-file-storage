@@ -1,9 +1,9 @@
-import { Client, Request } from '@pepperi-addons/debug-server';
+import { Request } from '@pepperi-addons/debug-server';
 import { AddonData } from '@pepperi-addons/papi-sdk';
 import jwtDecode from 'jwt-decode';
-import { IPfsGetter, IPfsMutator, TransactionType } from 'pfs-shared';
+import { IPfsGetter, IPfsMutator, TransactionType } from '..';
 
-export abstract class AbstractBasePfsDal implements IPfsGetter<AddonData[]>, IPfsMutator
+export abstract class AbstractBasePfsDal implements IPfsGetter, IPfsMutator
 {
 	protected environment: string;
     protected DistributorUUID: string;
@@ -11,10 +11,10 @@ export abstract class AbstractBasePfsDal implements IPfsGetter<AddonData[]>, IPf
 	protected readonly MAXIMAL_LOCK_TIME; 
 	protected clientSchemaName: string;
     
-	constructor(protected client: Client, protected request: Request, maximalLockTime:number)
+	constructor(protected OAuthAccessToken: string, protected request: Request, maximalLockTime:number)
 	{
-		this.environment = jwtDecode(client.OAuthAccessToken)['pepperi.datacenter'];
-        this.DistributorUUID = jwtDecode(client.OAuthAccessToken)['pepperi.distributoruuid'];
+		this.environment = jwtDecode(OAuthAccessToken)['pepperi.datacenter'];
+        this.DistributorUUID = jwtDecode(OAuthAccessToken)['pepperi.distributoruuid'];
 		this.clientAddonUUID = this.request.query.addon_uuid;
 		this.clientSchemaName = this.request.query.resource_name;
 		this.MAXIMAL_LOCK_TIME = maximalLockTime;

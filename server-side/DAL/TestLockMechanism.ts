@@ -1,5 +1,4 @@
-import { TestError } from "pfs-shared";
-import { IndexedDataS3PfsDal } from "./IndexedDataS3PfsDal";
+import { IndexedDataS3PfsDal, TestError } from "pfs-shared";
 
 export class FailAfterLock extends IndexedDataS3PfsDal{
     public async mutateS3(newFileFields: any, existingFile: any): Promise<any> {

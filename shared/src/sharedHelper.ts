@@ -1,5 +1,5 @@
 import { Request } from "@pepperi-addons/debug-server/dist";
-import { v4 as uuidV4} from 'uuid'
+import { validate as uuidValidate } from 'uuid';
 import { PFS_TABLE_PREFIX } from "./constants";
 
 export class SharedHelper
@@ -53,9 +53,9 @@ export class SharedHelper
 
 	public static addMinusesToUUID(uuid: string): string 
 	{
-		const validUUID = uuid.substring(0,8)+"-"+uuid.substring(8,4)+"-"+uuid.substring(12,4)+"-"+uuid.substring(16,4)+"-"+uuid.substring(20);
+		const validUUID = `${uuid.slice(0, 8)}-${uuid.slice(8, 12)}-${uuid.slice(12, 16)}-${uuid.slice(16, 20)}-${uuid.slice(20)}`;
 
-		if(!uuidV4.validate(validUUID))
+		if(!uuidValidate(validUUID))
 		{
 			const errorMessage = `Passed UUID '${uuid}' is invalid.`;
 			console.error(errorMessage);

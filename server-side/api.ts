@@ -1,13 +1,9 @@
-import { AbstractCommand } from './PfsCommands/abstractCommand'
 import { Client, Request } from '@pepperi-addons/debug-server'
 import { PostTransactionalCommand } from './PfsCommands/TransactionalCommands/postTransactionalCommand';
-import { ListFolderContentsCommand } from './PfsCommands/AtomicCommands/listFolderContetntsCommand';
-import { ListObjectsCommand } from './PfsCommands/AtomicCommands/listObjectsCommand';
-import { downloadFileCommand } from './PfsCommands/AtomicCommands/downloadFileCommand';
 import { RecordRemovedCommand } from './PfsCommands/AtomicCommands/recordRemovedCommand';
 import { InvalidateCommand } from './PfsCommands/AtomicCommands/invalidateCommand';
 import { HideFolderTransactionalCommand } from './PfsCommands/TransactionalCommands/hideFolderTransactionalCommand';
-import { SharedHelper } from 'pfs-shared';
+import { DownloadFileCommand, ICommand, ListFolderContentsCommand, ListObjectsCommand, SharedHelper } from 'pfs-shared';
 import { ServerHelper } from './serverHelper';
 
 export async function file(client: Client, request: Request) 
@@ -24,7 +20,7 @@ export async function file(client: Client, request: Request)
 	{
 	case "GET": {
 		const dal = ServerHelper.DalFactory(client, request);
-		const pfsCommand = new downloadFileCommand(client, request, dal, dal);
+		const pfsCommand = new DownloadFileCommand(request, dal, dal);
 
 		return pfsCommand.execute();
 	}
@@ -40,7 +36,7 @@ export async function files(client: Client, request: Request)
 
 	SharedHelper.validateFilesQueryParams(request);
 
-	let pfsCommand: AbstractCommand;
+	let pfsCommand: ICommand;
 
 	switch (request.method) 
 	{
@@ -49,11 +45,11 @@ export async function files(client: Client, request: Request)
 		
 		if (request.query.folder) 
 		{				
-			pfsCommand = new ListFolderContentsCommand(client, request, dal, dal);
+			pfsCommand = new ListFolderContentsCommand(request, dal, dal);
 		}
 		else 
 		{
-			pfsCommand = new ListObjectsCommand(client, request, dal, dal);
+			pfsCommand = new ListObjectsCommand(request, dal, dal);
 		}
 
 		return pfsCommand.execute();

@@ -1,7 +1,6 @@
-import { ListObjectsCommand } from "../AtomicCommands/listObjectsCommand";
 import { ABaseTransactionalCommand } from "./aBaseTransactionalCommand";
 import { PapiClient } from "@pepperi-addons/papi-sdk";
-import { TransactionType } from "pfs-shared";
+import { ListObjectsCommand, TransactionType } from "pfs-shared";
 import { ServerHelper } from "../../serverHelper";
 
 export class HideFolderTransactionalCommand extends ABaseTransactionalCommand{
@@ -168,7 +167,7 @@ export class HideFolderTransactionalCommand extends ABaseTransactionalCommand{
 		// Retrieve only the Key property, saving memory
 		requestCopy.query.fields = "Key";
 
-		return (await (new ListObjectsCommand(this.client, requestCopy, this.pfsMutator, this.pfsGetter)).execute()).map(resObj => resObj.Key);
+		return (await (new ListObjectsCommand(requestCopy, this.pfsMutator, this.pfsGetter)).execute()).map(resObj => resObj.Key);
 	}
 
 	private async hideObjectsUsingPfsBatchDisregardingExistingLocks(filesKeys: any) {

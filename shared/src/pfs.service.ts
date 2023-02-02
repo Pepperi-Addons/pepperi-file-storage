@@ -1,37 +1,24 @@
-import { AddonsDataSearchResult } from '@pepperi-addons/cpi-node/build/cpi-side/client-api';
 import { Request } from '@pepperi-addons/debug-server';
 import { AddonData } from '@pepperi-addons/papi-sdk';
-import { IPfsGetter, IPfsMutator } from 'pfs-shared';
 import jwtDecode from 'jwt-decode';
+import { IPfsGetter } from './iPfsGetter';
+import { IPfsMutator } from './iPfsMutator';
 
-declare global {
-    //  for singleton
-    var downloadedFileKeysToLocalUrl: Map<string, string>;
-}
-
-export abstract class PfsService 
+export abstract class PfsService
 {
 	AddonUUID: string;
-	readonly environment: string;
 	existingFile: any;
 	newFileFields: any = {};
-	DistributorUUID: string;
 
-	constructor(protected request: Request, OAuthAccessToken: string, protected pfsMutator: IPfsMutator, protected pfsGetter: IPfsGetter<AddonsDataSearchResult> ) 
+	constructor(protected request: Request, protected pfsMutator: IPfsMutator, protected pfsGetter: IPfsGetter ) 
 	{
-		this.environment = jwtDecode(OAuthAccessToken)['pepperi.datacenter'];
-		this.DistributorUUID = jwtDecode(OAuthAccessToken)['pepperi.distributoruuid'];
+				 
 		this.AddonUUID = this.request.query.addon_uuid;
-	}
 
-	static get downloadedFileKeysToLocalUrl(): Map<string, string>
-	{
-		if (!global.downloadedFileKeysToLocalUrl) 
+		if(this.request.body && typeof this.request.body.Hidden === 'string')
 		{
-			global.downloadedFileKeysToLocalUrl = new Map<string, string>();
+			this.request.body.Hidden = this.request.body.Hidden.toLowerCase() === 'true';
 		}
-
-		return global.downloadedFileKeysToLocalUrl;
 	}
 
 	protected async getCurrentItemData() 
@@ -80,14 +67,14 @@ export abstract class PfsService
 	 */
 	protected async downloadFile(downloadKey? : string): Promise<AddonData>
 	{
-		const downloadKeyRes: string = downloadKey ?? this.request.body?.Key ?? this.request.query.key; 
+		const downloadKeyRes: string = downloadKey ?? ((this.request.body && this.request.body.Key) ? this.request.body.Key : this.request.query.Key); 
 		const canonizedPath = downloadKeyRes.startsWith('/') ? downloadKeyRes.slice(1) : downloadKeyRes;
-		const whereClause = `Key="${canonizedPath}"`;
+		const whereClause = `Key='${canonizedPath}'`;
 		const res = await this.pfsGetter.getObjects(whereClause);
-		if (res.Objects.length === 1) 
+		if (res.length === 1) 
 		{
 			console.log(`File Downloaded`);
-			return res.Objects[0];
+			return res[0];
 		}
 		else 
 		{ //Couldn't find results

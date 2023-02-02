@@ -1,31 +1,14 @@
-import { Client, Request } from '@pepperi-addons/debug-server';
-import { CACHE_DEFAULT_VALUE, CloudfrontDistributions, dataURLRegex, S3Buckets, TransactionType } from 'pfs-shared';
-import { AbstractBasePfsDal } from './AbstartcBasePfsDal';
-
-const AWS = require('aws-sdk'); // AWS is part of the lambda's environment. Importing it will result in it being rolled up redundently.
+import { Request } from '@pepperi-addons/debug-server';
+import { CACHE_DEFAULT_VALUE, dataURLRegex, TransactionType } from '../';
+import { AbstractBasePfsDal } from './abstractBasePfsDal';
+import { IAws } from './iAws';
 
 export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 {
-	private s3: any;
-	private S3Bucket: any;
-	private CloudfrontDistribution: any;
     
-	constructor(client: Client, request: Request, maximalLockTime: number)
+	constructor(OAuthAccessToken: string, request: Request, maximalLockTime: number, private awsDal: IAws)
 	{
-		super(client, request, maximalLockTime);
-
-		// const accessKeyId="";
-		// const secretAccessKey="";
-		// const sessionToken="";
-		// AWS.config.update({
-		// 	accessKeyId,
-		// 	secretAccessKey,
-		// 	sessionToken
-		// });
-
-		this.s3 = new AWS.S3({apiVersion: '2006-03-01'}); //lock API version
-		this.S3Bucket = S3Buckets[this.environment];
-		this.CloudfrontDistribution = CloudfrontDistributions[this.environment];
+		super(OAuthAccessToken, request, maximalLockTime);
 	}
 
 	//#region IPfsMutator
@@ -115,20 +98,7 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 
 		console.log(`Trying to invalidate ${invalidationPaths}...`);
 
-		// Create invalidation request
-		const cloudfront = new AWS.CloudFront({apiVersion: '2020-05-31'});
-		const invalidationParams = {
-			DistributionId: this.CloudfrontDistribution,
-  			InvalidationBatch: {
-				CallerReference: (new Date()).getTime().toString(), //A unique string to represent each invalidation request.
-				Paths: { 
-					Quantity: invalidationPaths.length, 
-					Items: invalidationPaths
-				}
-  			}
-		};
-
-		const invalidation = await cloudfront.createInvalidation(invalidationParams).promise();
+		const invalidation = await this.awsDal.cloudFrontInvalidate(invalidationPaths);;
 
 		console.log(`Invalidation result:\n ${JSON.stringify(invalidation)}...`);
 
@@ -152,14 +122,9 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 
 	async deleteS3FileVersion(Key: any, s3FileVersion: any) {
 		console.log(`Trying to delete version: ${s3FileVersion} of key: ${Key}`);
-		const params: any = {};
 
-		// Create S3 params
-		params.Bucket = this.S3Bucket;
-		params.Key = this.getAbsolutePath(Key);
-		params.VersionId = s3FileVersion;
+		const deletedVersionRes = await this.awsDal.s3DeleteObject(this.getAbsolutePath(Key));
 
-		const deletedVersionRes = await this.s3.deleteObject(params).promise();
 		console.log(`Successfully deleted version: ${s3FileVersion} of key: ${Key}`);
 
 		return deletedVersionRes;
@@ -192,10 +157,6 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		const params: any = {};
 		let latestVersionId;
 
-		// Create S3 params
-		params.Bucket = this.S3Bucket;
-		params.Prefix = this.getAbsolutePath(Key);
-
 		if(Key.endsWith("/")) // If this is a folder, it has no S3 representations, and so has no VersionId.
 		{
 			latestVersionId = undefined;
@@ -205,7 +166,7 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		else
 		{
 			// Retrieve the list of versions.
-			const allVersions = await this.s3.listObjectVersions(params).promise();
+			const allVersions = await this.awsDal.s3ListObjectVersions(this.getAbsolutePath(Key));
 
 			// listObjectVersions GETs all file versions, in two arrays: 
 			// 1. Versions, used for all available versions.
@@ -240,8 +201,6 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 	private async uploadToS3(key, buffer, isCache = CACHE_DEFAULT_VALUE){
 		const params: any = {};
 
-		// Create S3 params
-		params.Bucket = this.S3Bucket;
 		params.Key = key;
 		params.Body = buffer;
 		params.ContentType = this.getMimeType();
@@ -250,7 +209,7 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		}
 
 		// Upload to S3 bucket.
-		const uploaded = await this.s3.upload(params).promise();
+		const uploaded = await this.awsDal.s3Upload(params);
 		console.log(`File uploaded successfully to ${uploaded.Location}`);
 
 		return uploaded;
@@ -259,14 +218,11 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 	private async deleteFileData(removedKey: string): Promise<any> 
 	{
 		console.log(`Trying to delete Key: ${removedKey}`);
-		const params: any = {};
 
-		// Create S3 params
-		params.Bucket = this.S3Bucket;
-		params.Key = this.getAbsolutePath(removedKey);
+		const keyToDelete = this.getAbsolutePath(removedKey);
 		
 		// Delete from S3 bucket.
-		const deletedFile = await this.s3.deleteObject(params).promise();
+		const deletedFile = await this.awsDal.s3DeleteObject(keyToDelete);
 		console.log(`Successfully deleted Key ${removedKey}: ${JSON.stringify(deletedFile)}`);
 
 		return deletedFile;
@@ -279,14 +235,11 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 	}
 
 	private async deleteThumbnail(key: any, size: any) {
-		const params: any = {};
 
-		// Create S3 params
-		params.Bucket = this.S3Bucket;
-		params.Key = `thumbnails/${this.getAbsolutePath(key)}_${size}`;
+		const keyToDelete = `thumbnails/${this.getAbsolutePath(key)}_${size}`;
 		
 		// delete thumbnail from S3 bucket.
-		const deleted = await this.s3.deleteObject(params).promise();
+		const deleted = await this.awsDal.s3DeleteObject(keyToDelete);
 		console.log(`Thumbnail successfully deleted:  ${deleted}`);
 
 		return deleted;
@@ -314,13 +267,11 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		const entryName = this.getAbsolutePath(file.Key);
 
 		const params =  {
-			Bucket: S3Buckets[this.environment],
 			Key: entryName,
-			Expires: 24*60*60, //PUT presigned URL will expire after 24 hours = 60 sec * 60 min * 24 hrs
 			ContentType: this.getMimeType()
 		};
 			
-		const urlString = await this.s3.getSignedUrl('putObject',params);
+		const urlString = await this.awsDal.s3GetSignedUrl(params);
 		return urlString;
 	}
 
@@ -338,29 +289,23 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		keys = keys.map(key => `thumbnails/${this.getAbsolutePath(key)}_200x200`);
 
 		// Call DeleteObjects
-		const deleteObjetcsRes = await this.deleteObjects(keys);
+		const deleteObjectsRes = await this.deleteObjects(keys);
 
-		for (const error of deleteObjetcsRes.Errors) {
+		for (const error of deleteObjectsRes.Errors) {
 			console.error(`Delete objects encountered an error:${JSON.stringify(error)}`);
 		}
 
 		console.log(`Successfully deleted batch.`);
 
-		return deleteObjetcsRes;
+		return deleteObjectsRes;
 	}
 
 	private async deleteObjects(absolutePaths: string[]) 
 	{
-		const params: any = {};
-		params.Bucket = this.S3Bucket;
-
-		params['Delete'] = {};
-		params.Delete.Quiet = true; // Non verbose, returns info only for failed deletes.
-		params.Delete.Objects = absolutePaths.map(key => { return { Key: key }; });
 
 		// For more information on S3's deleteObjects function see: https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/S3.html#deleteObjects-property
-		const deleteObjetcsRes = await this.s3.deleteObjects(params).promise();
-		return deleteObjetcsRes;
+		const deleteObjectsRes = await this.awsDal.s3DeleteObjects(absolutePaths)
+		return deleteObjectsRes;
 	}
 
 	//#endregion

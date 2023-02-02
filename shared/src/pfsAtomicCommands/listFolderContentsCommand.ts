@@ -1,6 +1,7 @@
-import AbstractCommand from './abstractCommand';
+import { ICommand } from '../iCommand';
+import PfsService from '../pfs.service';
 
-export class ListFolderContentsCommand extends AbstractCommand 
+export class ListFolderContentsCommand extends PfsService implements ICommand 
 {
 
 	public async execute(): Promise<any>{
@@ -22,7 +23,7 @@ export class ListFolderContentsCommand extends AbstractCommand
 				throw err;
 			}
 
-			const whereClause = `Folder='${requestedFolder}'${(this.request.query && this.request.query.where) ? "AND(" + this.request.query.where + ")" :""}`
+			const whereClause = `Folder='${requestedFolder}'${(this.request.query && this.request.query.where) ? " AND (" + this.request.query.where + ")" :""}`
 			return this.pfsGetter.getObjects(whereClause)
 
 		}
