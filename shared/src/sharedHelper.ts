@@ -53,7 +53,7 @@ export class SharedHelper
 
 	public static addMinusesToUUID(uuid: string): string 
 	{
-		const validUUID = uuid.slice(0, 8) + '-' + uuid.slice(8, 12) + '-' + uuid.slice(12, 16) + '-' + uuid.slice(16, 20) + '-' + uuid.slice(20);
+		const validUUID = `${uuid.slice(0, 8)}-${uuid.slice(8, 12)}-${uuid.slice(12, 16)}-${uuid.slice(16, 20)}-${uuid.slice(20)}`;
 
 		if(!uuidValidate(validUUID))
 		{
