@@ -17,10 +17,11 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 			return await this.deleteFileData(existingFile.Key);
 		}
 		const isCache = this.shouldUseCache(newFileFields, existingFile);
-
-		if(!this.request.body.URI && !existingFile.doesFileExist) //The file does not yet exist, and no data was provided. Assign a presigned URL for data upload.
+		if(!this.request.body.URI && !existingFile.doesFileExist) // The file does not yet exist, and no data was provided. Assign a presigned URL for data upload.
 		{ 
-			newFileFields.PresignedURL = await this.generatePreSignedURL(newFileFields);
+			const presignedUrlKey = this.getAbsolutePath(newFileFields.Key);
+			const presignedUrlMimeType = this.getMimeType();
+			newFileFields.PresignedURL = await this.generatePreSignedURL(presignedUrlKey, presignedUrlMimeType);
 		}
 		else if (this.request.body.URI) // The file already has data, or data was provided.
 		{ 
@@ -73,6 +74,12 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 			isCache = existingFile.Cache;
 		}
 		return isCache;
+	}
+
+	public async createTempFile(tempFileName: string, MIME: string): Promise<string>
+	{
+		const presignedUrl = await this.generatePreSignedURL(tempFileName, MIME);
+		return presignedUrl;
 	}
 
 	abstract lock(item: any, transactionType: TransactionType);
@@ -245,7 +252,7 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		return deleted;
 	}
 
-	private getMimeType(): any 
+	private getMimeType(): string 
 	{
 		let MIME = this.request.body.MIME;
 		if(this.request.body.URI && this.isDataURL(this.request.body.URI))
@@ -257,18 +264,16 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		return MIME;
 	}
 
-	private isDataURL(s) 
+	private isDataURL(s): boolean
 	{
 		return !!s.match(dataURLRegex);
 	}
 
-	private async generatePreSignedURL(file)
+	private async generatePreSignedURL(key: string, contentType: string): Promise<string>
 	{
-		const entryName = this.getAbsolutePath(file.Key);
-
 		const params =  {
-			Key: entryName,
-			ContentType: this.getMimeType()
+			Key: key,
+			ContentType: contentType
 		};
 			
 		const urlString = await this.awsDal.s3GetSignedUrl(params);

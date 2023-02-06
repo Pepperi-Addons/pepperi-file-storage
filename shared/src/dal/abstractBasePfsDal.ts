@@ -42,6 +42,8 @@ export abstract class AbstractBasePfsDal implements IPfsGetter, IPfsMutator
 	abstract deleteS3FileVersion(Key: any, s3FileVersion: any);
 
 	abstract batchDeleteS3(keys: string[]);
+
+	abstract createTempFile(tempFileName: string, MIME: string);
 	
 	//#endregion
 

@@ -43,6 +43,13 @@ export interface IPfsMutator
     mutateADAL(newFileFields: any, existingFile: any);
 
     /**
+     * 
+     * @param {string} tempFileName - The temporaryFileName
+       @param {string} MIME - The temp file's MIME type
+     */
+    createTempFile(tempFileName: string, MIME: string);
+
+    /**
      * Notify subscribers of changes in file data or metadata.
      * @param newFileFields The new file data and metadata.
      * @param existingFile The previous file's metadata.

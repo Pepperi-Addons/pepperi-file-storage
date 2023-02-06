@@ -6,9 +6,7 @@ import config from '../addon.config.json';
 import docDbDal from "./DAL/docDbDal";
 import AwsDal from "./DAL/AwsDal";
 import jwtDecode from 'jwt-decode';
-
-
-const AWS = require('aws-sdk'); // AWS is part of the lambda's environment. Importing it will result in it being rolled up redundantly.
+import AWS from 'aws-sdk';
 
 export class ServerHelper
 {
@@ -20,9 +18,8 @@ export class ServerHelper
 		}
 
 		const iPepperiDal: IPepperiDal = new docDbDal(ServerHelper.createPapiClient(client, config.AddonUUID));
-
 		const environment = jwtDecode(client.OAuthAccessToken)['pepperi.datacenter'];
-		const s3 = new AWS.S3({apiVersion: '2006-03-01'}); //lock API version
+		const s3 = new AWS.S3({apiVersion: '2006-03-01', }); //lock API version
 		const s3Bucket = S3Buckets[environment];
 		const cloudfrontDistribution = CloudfrontDistributions[environment];
 		const iAws: IAws = new AwsDal(s3Bucket, cloudfrontDistribution, s3);

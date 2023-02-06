@@ -1,13 +1,12 @@
 import { IAws } from "pfs-shared";
-
-
-const AWS = require('aws-sdk'); // AWS is part of the lambda's environment. Importing it will result in it being rolled up redundantly.
+import AWS from 'aws-sdk'; // AWS is part of the lambda's environment. Importing it will result in it being rolled up redundantly.
+import { PromiseResult } from "aws-sdk/lib/request";
 
 
 export default class AwsDal implements IAws
 {
 
-	constructor(private S3Bucket: string, private CloudFrontDistribution: string, private s3: any)
+	constructor(private S3Bucket: string, private CloudFrontDistribution: string, private s3: AWS.S3)
 	{
 	}
 
@@ -17,11 +16,17 @@ export default class AwsDal implements IAws
         Body: any, 
         ContentType: string,
         CacheControl?: string
-    }): Promise<any>
+    }): Promise<AWS.S3.ManagedUpload.SendData>
     {			
-        params.Bucket = params.Bucket ?? this.S3Bucket;
+        const uploadParams: AWS.S3.PutObjectRequest = {
+			Bucket: params.Bucket ?? this.S3Bucket,
+			Key: params.Key,
+			Body: params.Body,
+			ContentType: params.ContentType,
+			...(params.CacheControl && {CacheControl: params.CacheControl})
+		}
 
-		const uploaded = await this.s3.upload(params).promise();
+		const uploaded = await this.s3.upload(uploadParams).promise();
 		return uploaded;
     }
 
@@ -38,7 +43,7 @@ export default class AwsDal implements IAws
 		return urlString;
     }
 
-    public async s3DeleteObjects(objectsPaths: Array<string>): Promise<any>
+    public async s3DeleteObjects(objectsPaths: Array<string>): Promise<PromiseResult<AWS.S3.DeleteObjectsOutput, AWS.AWSError>>
 	{
 		const params: any = {};
 
@@ -53,7 +58,7 @@ export default class AwsDal implements IAws
 		return deleteObjectsRes;
 	}
 
-    public async s3DeleteObject(objectsPath: string): Promise<any>
+    public async s3DeleteObject(objectsPath: string): Promise<PromiseResult<AWS.S3.DeleteObjectOutput, AWS.AWSError>>
 	{
 		const params: any = {};
 
@@ -67,7 +72,7 @@ export default class AwsDal implements IAws
 		return deleted;
 	}
 
-    public async s3ListObjectVersions(objectPath: string): Promise<any>
+    public async s3ListObjectVersions(objectPath: string): Promise<PromiseResult<AWS.S3.ListObjectVersionsOutput, AWS.AWSError>>
 	{
 		const params = {
             Bucket: this.S3Bucket,
@@ -78,11 +83,11 @@ export default class AwsDal implements IAws
 		return allVersions;
 	}
 
-    public async cloudFrontInvalidate(objectsPath: string[]): Promise<any>
+    public async cloudFrontInvalidate(objectsPath: string[]): Promise<PromiseResult<AWS.CloudFront.CreateInvalidationResult, AWS.AWSError>>
     {
         // Create invalidation request
 		const cloudfront = new AWS.CloudFront({apiVersion: '2020-05-31'});
-		const invalidationParams = {
+		const invalidationParams: AWS.CloudFront.CreateInvalidationRequest = {
 			DistributionId: this.CloudFrontDistribution,
   			InvalidationBatch: {
 				CallerReference: (new Date()).getTime().toString(), //A unique string to represent each invalidation request.

@@ -1,7 +1,4 @@
-import config from '../../addon.config.json';
-
-import { CdnServers, IndexedDataS3PfsDal, LOCK_ADAL_TABLE_NAME, SharedHelper, TransactionType } from 'pfs-shared';
-import { AddonsDataSearchParams } from '@pepperi-addons/cpi-node/build/cpi-side/client-api';
+import { IndexedDataS3PfsDal, SharedHelper } from 'pfs-shared';
 import { AddonData, FindOptions } from '@pepperi-addons/papi-sdk';
 import lodashPick from 'lodash.pick'
 import { URL } from 'url';
