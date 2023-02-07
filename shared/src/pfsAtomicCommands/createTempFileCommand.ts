@@ -1,17 +1,20 @@
 import { TempFile } from '../constants';
 import { ICommand } from '../iCommand';
 import PfsService from '../pfs.service';
+import { v4 as createUUID } from 'uuid';
 
 export class CreateTempFileCommand extends PfsService implements ICommand 
 {
 
-	public async execute(): Promise<any>{
-		return await this.downloadFile();
+	public async execute(): Promise<TempFile>{
+		return await this.createTempFile();
 	}
 
 	private async createTempFile(): Promise<TempFile>
 	{
-		// /{{distUUID}}/temp/{{randomUUID}}/`FileName ? FileName : createUUID()
-		const tempFileRequest = `/${this}/temp/${this.createUUID()}/${this.request.query.FileName ? this.request.query.FileName : this.createUUID()}`;
+		const tempFileName = this.request.body.FileName ? this.request.body.FileName : createUUID();
+		const res: TempFile = await this.pfsMutator.createTempFile(tempFileName, this.request.body.MIME);
+		
+		return res;
 	}
 }

@@ -1,4 +1,4 @@
-import { TransactionType } from "./constants";
+import { TempFile, TransactionType } from "./constants";
 
 export interface IPfsMutator
 {
@@ -46,8 +46,10 @@ export interface IPfsMutator
      * 
      * @param {string} tempFileName - The temporaryFileName
        @param {string} MIME - The temp file's MIME type
+
+       @returns {Promise} - A promise that resolves to the newly created TempFile
      */
-    createTempFile(tempFileName: string, MIME: string);
+    createTempFile(tempFileName: string, MIME: string): Promise<TempFile>;
 
     /**
      * Notify subscribers of changes in file data or metadata.

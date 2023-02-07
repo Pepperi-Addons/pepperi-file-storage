@@ -1,5 +1,5 @@
 import { Request } from '@pepperi-addons/debug-server';
-import { CACHE_DEFAULT_VALUE, dataURLRegex, TransactionType } from '../';
+import { CACHE_DEFAULT_VALUE, CdnServers, dataURLRegex, TempFile, TransactionType } from '../';
 import { AbstractBasePfsDal } from './abstractBasePfsDal';
 import { IAws } from './iAws';
 
@@ -76,10 +76,19 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		return isCache;
 	}
 
-	public async createTempFile(tempFileName: string, MIME: string): Promise<string>
+	public async createTempFile(tempFileName: string, MIME: string): Promise<TempFile>
 	{
-		const presignedUrl = await this.generatePreSignedURL(tempFileName, MIME);
-		return presignedUrl;
+		const tempFileKey = this.createTempFileFullPath(tempFileName);
+		const presignedUrl = await this.generatePreSignedURL(tempFileKey, MIME);
+		
+		const getUrl =  `${CdnServers[this.environment]}/${tempFileKey}`;
+
+		const res: TempFile = {
+			PutURL: presignedUrl,
+			DownloadURL: getUrl
+		};
+
+		return res;
 	}
 
 	abstract lock(item: any, transactionType: TransactionType);
