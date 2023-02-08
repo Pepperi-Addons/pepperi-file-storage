@@ -130,7 +130,7 @@ export async function temporary_file(client: Client, request: Request)
 
 
 		const dal = ServerHelper.DalFactory(client, request);
-		const pfsCommand = new CreateTempFileCommand(request, dal, dal);
+		const pfsCommand = new CreateTempFileCommand(client.OAuthAccessToken, request, dal, dal);
 
 		return await pfsCommand.execute();
 	}

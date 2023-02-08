@@ -76,19 +76,11 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		return isCache;
 	}
 
-	public async createTempFile(tempFileName: string, MIME: string): Promise<TempFile>
+	public async createTempFile(tempFileName: string, MIME: string): Promise<string>
 	{
-		const tempFileKey = this.createTempFileFullPath(tempFileName);
-		const presignedUrl = await this.generatePreSignedURL(tempFileKey, MIME);
-		
-		const getUrl =  `${CdnServers[this.environment]}/${tempFileKey}`;
+		const presignedUrl = await this.generatePreSignedURL(tempFileName, MIME);
 
-		const res: TempFile = {
-			PutURL: presignedUrl,
-			DownloadURL: getUrl
-		};
-
-		return res;
+		return presignedUrl;
 	}
 
 	abstract lock(item: any, transactionType: TransactionType);
