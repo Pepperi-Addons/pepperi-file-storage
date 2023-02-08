@@ -1,6 +1,7 @@
 import { IAws } from "pfs-shared";
 import AWS from 'aws-sdk'; // AWS is part of the lambda's environment. Importing it will result in it being rolled up redundantly.
 import { PromiseResult } from "aws-sdk/lib/request";
+import { URL } from "url";
 
 
 export default class AwsDal implements IAws
@@ -103,4 +104,50 @@ export default class AwsDal implements IAws
 		return invalidation;
     }
 
+	public async copyS3Object(originURL: string, destinationKey: string, cacheControl: boolean | undefined): Promise<PromiseResult<AWS.S3.CopyObjectOutput, AWS.AWSError>>
+	{
+		const copyParams: AWS.S3.CopyObjectRequest = {
+			Bucket: this.S3Bucket,
+			CopySource: encodeURI(`/${this.S3Bucket}${new URL(originURL).pathname}`),
+			Key: destinationKey,
+			...(!cacheControl && {CacheControl: 'no-cache'}),
+		}
+
+		console.log(`Trying to copy object from ${originURL} to ${destinationKey}...`);
+		console.log(JSON.stringify(copyParams));
+
+		let copyRes: PromiseResult<AWS.S3.CopyObjectOutput, AWS.AWSError>;
+		try
+		{
+			copyRes = await this.s3.copyObject(copyParams).promise();
+		}
+		catch (err)
+		{
+			console.error(`Error copying object from ${originURL} to ${destinationKey}: ${err instanceof Error ? err.message : 'An unknown error occurred'}`);
+			throw err;
+		}
+
+		console.log(`Copied object from ${originURL} to ${destinationKey}`);
+
+		return copyRes;
+	}
+
+	public async getFileSize(key: string): Promise<number>
+	{
+		const params: AWS.S3.HeadObjectRequest = {
+			Bucket: this.S3Bucket,
+			Key: key
+		}
+		const head = await this.s3.headObject(params).promise();
+		if (head.$response.error || !head.$response.data)
+		{
+			console.error(`Error getting file size of ${key}: ${head.$response.error?.message ?? 'An unknown error occurred'}`);
+			throw head.$response.error;
+		}
+		else if (head.$response.data)
+		{
+			console.log(`Got file size of ${key}`);
+		}
+		return head.ContentLength ?? 0;
+	}
 }

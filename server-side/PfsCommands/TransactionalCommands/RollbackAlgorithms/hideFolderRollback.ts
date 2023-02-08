@@ -29,7 +29,7 @@ export class HideFolderRollbackAlgorithm extends BaseRollbackAlgorithm
 			await this.pfsMutator.setRollbackData(this.lockedFile);
 	
 			// Since this unlocking a HideFolder transaction is an async operation,
-			// and we might get here through a regular synchroneous request, we should
+			// and we might get here through a regular synchronous request, we should
 			// create a new async call, and throw an exception with the ActionUUID.
 			const numberOfRetries = 3;
 

@@ -88,7 +88,7 @@ export class HideFolderTransactionalCommand extends ABaseTransactionalCommand{
 		await this.hideRequestedFolder();
 
 		// Then, delete all files and folders inside the requested folder.
-		// It should be possible to hide the files and folder concurrently, but for simplicty and readability, we'll do it sequentially.
+		// It should be possible to hide the files and folder concurrently, but for simplicity and readability, we'll do it sequentially.
 		await this.hideSubtreeFiles();
 		await this.hideSubtreeFolders();
     }

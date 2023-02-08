@@ -23,6 +23,14 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 			const presignedUrlMimeType = this.getMimeType();
 			newFileFields.PresignedURL = await this.generatePreSignedURL(presignedUrlKey, presignedUrlMimeType);
 		}
+		else if(newFileFields.IsTempFile)
+		{
+			// Copy the file's data from the temp location to the final location.
+			const absolutePath = this.getAbsolutePath(newFileFields.Key);
+			const res = await this.awsDal.copyS3Object(this.request.body.URI, absolutePath, isCache);
+			newFileFields.FileVersion = res.$response.data?.VersionId;
+			newFileFields.FileSize = await this.awsDal.getFileSize(absolutePath);
+		}
 		else if (this.request.body.URI) // The file already has data, or data was provided.
 		{ 
 			const uploadRes = await this.uploadFileData(newFileFields, isCache);
@@ -30,6 +38,8 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 			
 			delete newFileFields.buffer;
 		}
+
+		delete newFileFields.IsTempFile
 
 		if(Array.isArray(newFileFields.Thumbnails)){
             for (const thumbnail of newFileFields.Thumbnails) {
