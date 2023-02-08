@@ -19,7 +19,7 @@ export class ServerHelper
 			request.query = {};
 		}
 
-		const iPepperiDal: IPepperiDal = new docDbDal(ServerHelper.createPapiClient(client, config.AddonUUID));
+		const iPepperiDal: IPepperiDal = new docDbDal(ServerHelper.createPapiClient(client, config.AddonUUID, client.AddonSecretKey));
 
 		const environment = jwtDecode(client.OAuthAccessToken)['pepperi.datacenter'];
 		const s3 = new AWS.S3({apiVersion: '2006-03-01'}); //lock API version
