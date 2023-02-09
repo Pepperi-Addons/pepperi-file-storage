@@ -18,13 +18,14 @@ export class CreateTempFileCommand extends PfsService implements ICommand
 
 		this.environment = jwtDecode(OAuthAccessToken)['pepperi.datacenter'];
 	}
-	public async execute(): Promise<TempFile>{
+	public async execute(): Promise<TempFile>
+	{
 		return await this.createTempFile();
 	}
 
 	protected async createTempFile(): Promise<TempFile>
 	{
-		const tempFileService = new TempFileService(this.OAuthAccessToken)
+		const tempFileService = new TempFileService(this.OAuthAccessToken);
 		const tempFileKey = tempFileService.createTempFileFullPath(this.request.body.FileName);
 		const putURL = await this.pfsMutator.createTempFile(tempFileKey, this.request.body.MIME);
 

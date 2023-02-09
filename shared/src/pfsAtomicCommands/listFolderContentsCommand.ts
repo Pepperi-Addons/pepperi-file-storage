@@ -4,7 +4,8 @@ import PfsService from '../pfs.service';
 export class ListFolderContentsCommand extends PfsService implements ICommand 
 {
 
-	public async execute(): Promise<any>{
+	public async execute(): Promise<any>
+	{
 		return await this.listFolderContent();
 	}
 
@@ -23,8 +24,8 @@ export class ListFolderContentsCommand extends PfsService implements ICommand
 				throw err;
 			}
 
-			const whereClause = `Folder='${requestedFolder}'${(this.request.query && this.request.query.where) ? " AND (" + this.request.query.where + ")" :""}`
-			return this.pfsGetter.getObjects(whereClause)
+			const whereClause = `Folder='${requestedFolder}'${(this.request.query && this.request.query.where) ? " AND (" + this.request.query.where + ")" :""}`;
+			return this.pfsGetter.getObjects(whereClause);
 
 		}
 		catch (err) 

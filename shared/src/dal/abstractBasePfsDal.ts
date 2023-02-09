@@ -2,11 +2,12 @@ import { Request } from '@pepperi-addons/debug-server';
 import { AddonData } from '@pepperi-addons/papi-sdk';
 import jwtDecode from 'jwt-decode';
 import { IPfsGetter, IPfsMutator, TransactionType } from '..';
-import { v4 as createUUID } from 'uuid';
+
+
 export abstract class AbstractBasePfsDal implements IPfsGetter, IPfsMutator
 {
 	protected environment: string;
-    protected DistributorUUID: string;
+	protected DistributorUUID: string;
 	protected clientAddonUUID: string;
 	protected readonly MAXIMAL_LOCK_TIME; 
 	protected clientSchemaName: string;
@@ -14,13 +15,14 @@ export abstract class AbstractBasePfsDal implements IPfsGetter, IPfsMutator
 	constructor(protected OAuthAccessToken: string, protected request: Request, maximalLockTime:number)
 	{
 		this.environment = jwtDecode(OAuthAccessToken)['pepperi.datacenter'];
-        this.DistributorUUID = jwtDecode(OAuthAccessToken)['pepperi.distributoruuid'];
+		this.DistributorUUID = jwtDecode(OAuthAccessToken)['pepperi.distributoruuid'];
 		this.clientAddonUUID = this.request.query.addon_uuid;
 		this.clientSchemaName = this.request.query.resource_name;
 		this.MAXIMAL_LOCK_TIME = maximalLockTime;
 	}
 
-	getMaximalLockTime() {
+	getMaximalLockTime() 
+	{
 		return this.MAXIMAL_LOCK_TIME;
 	}
 	
@@ -73,8 +75,10 @@ export abstract class AbstractBasePfsDal implements IPfsGetter, IPfsMutator
 		return relativePath.startsWith(absolutePrefix) ? relativePath : `${absolutePrefix}${relativePath}`;
 	}
 
-	protected removeSlashPrefix(path: string){
-		if (path != '/' && path?.startsWith('/')) {
+	protected removeSlashPrefix(path: string)
+	{
+		if (path != '/' && path?.startsWith('/')) 
+		{
 			path = path.slice(1);
 		}
 		return path;
@@ -88,7 +92,7 @@ export abstract class AbstractBasePfsDal implements IPfsGetter, IPfsMutator
 	 */
 	protected getRelativePath(absolutePath: string): string 
 	{
-		const relativePath = absolutePath.split(`${this.DistributorUUID}/${this.clientAddonUUID}/${this.clientSchemaName}/`)[1]
+		const relativePath = absolutePath.split(`${this.DistributorUUID}/${this.clientAddonUUID}/${this.clientSchemaName}/`)[1];
 		const res = relativePath === '' ? '/' : relativePath; // Handle root folder case
 		return res;
 	}

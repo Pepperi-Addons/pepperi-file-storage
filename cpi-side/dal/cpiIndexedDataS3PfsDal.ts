@@ -1,6 +1,6 @@
 import { IndexedDataS3PfsDal, SharedHelper } from 'pfs-shared';
 import { AddonData, FindOptions } from '@pepperi-addons/papi-sdk';
-import lodashPick from 'lodash.pick'
+import lodashPick from 'lodash.pick';
 import { URL } from 'url';
 import { PfsService } from '../cpiPfs.service';
 
@@ -21,7 +21,7 @@ export class CpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal
 			...(this.request.query && this.request.query.order_by && {order_by: this.request.query.order_by}),
 			...(this.request.query && this.request.query.include_count && {include_count: this.request.query.include_count}),
 			...(this.request.query && this.request.query.include_deleted && {include_deleted: this.request.query.include_deleted}),
-		}
+		};
 
 		const getPfsTableName = SharedHelper.getPfsTableName(this.request.query.addon_uuid, this.clientSchemaName);
 		let resultObjects =  await this.pepperiDal.getDataFromTable(getPfsTableName, findOptions);
@@ -42,9 +42,11 @@ export class CpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal
 		return resultObjects;
 	}
 
-	private addVersionToObjectsUrl(objects: AddonData[]): AddonData[] {
+	private addVersionToObjectsUrl(objects: AddonData[]): AddonData[] 
+	{
 		const resObjects: AddonData[] = new Array<AddonData>();
-		objects.map(object => {
+		objects.map(object => 
+		{
 			let resObject: any;
 			
 			// Folder do not have a URL, so there's no need to concatenate anything...
@@ -61,12 +63,13 @@ export class CpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal
 			}
 
 			resObjects.push(resObject);
-		})
+		});
 
 		return resObjects;
 	}
 
-	private pickRequestedFields(objects: AddonData[], fields: string): AddonData[] {
+	private pickRequestedFields(objects: AddonData[], fields: string): AddonData[] 
+	{
 
 		if(!fields)
 		{
@@ -111,14 +114,15 @@ export class CpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal
 
 			// Cache the result, so we won't have to download the file again.
 			PfsService.downloadedFileKeysToLocalUrl.set(`${object.Key!}${object.ModificationDateTime!}`, objectLocalURL);
-		}
+		};
 		
 		const downloadFilesPromises = downloadRequiringObjects.map(file => downloadFiles(file));
 		// Use allSettled to download files in parallel.
 		await Promise.allSettled(downloadFilesPromises);
 
 		// Update the objects' URL if they have a cached local URL.
-		objects.map(object => {
+		objects.map(object => 
+		{
 			object.URL = PfsService.downloadedFileKeysToLocalUrl.get(`${object.Key!}${object.ModificationDateTime!}`) ?? object.URL;
 		});
 

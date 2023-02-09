@@ -18,7 +18,8 @@ export abstract class PfsService extends SharedPfsService
 		return res.length === 1;
 	}
 
-	protected returnASingleObjectFromDownloadResult(res: AddonData[]): AddonData {
+	protected returnASingleObjectFromDownloadResult(res: AddonData[]): AddonData 
+	{
 		return res[0];
 	}
 }

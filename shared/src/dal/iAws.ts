@@ -1,5 +1,6 @@
 import AWS from 'aws-sdk'; // AWS is part of the lambda's environment. Importing it will result in it being rolled up redundantly.
-import { PromiseResult } from "aws-sdk/lib/request";
+import { PromiseResult } from 'aws-sdk/lib/request';
+
 export interface IAws
 {
     s3Upload(params: {
