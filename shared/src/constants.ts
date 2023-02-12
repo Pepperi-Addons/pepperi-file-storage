@@ -106,6 +106,7 @@ export const dataURLRegex = /^\s*data:([a-z]+\/[\w-+\d.]+(;[a-z\-]+\=[a-z\-]+)?)
 
 export const METADATA_ADAL_TABLE_NAME = "S3ObjectsMetadata";
 export const LOCK_ADAL_TABLE_NAME = "PfsLockTable";
+export const FILES_TO_UPLOAD_TABLE_NAME = "filesToUpload";
 
 export const SECRETKEY_HEADER = 'x-pepperi-secretkey';
 

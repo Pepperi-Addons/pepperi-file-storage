@@ -11,13 +11,14 @@ import { Client, Request } from '@pepperi-addons/debug-server'
 import { AddonData, AddonDataScheme, FindOptions, PapiClient, Relation } from '@pepperi-addons/papi-sdk';
 import semverLessThan from 'semver/functions/lt';
 import clonedeep from 'lodash.clonedeep';
-import { LOCK_ADAL_TABLE_NAME, pfsSchemaData, PFS_TABLE_PREFIX } from 'pfs-shared';
+import { FILES_TO_UPLOAD_TABLE_NAME, LOCK_ADAL_TABLE_NAME, pfsSchemaData, PFS_TABLE_PREFIX } from 'pfs-shared';
 
 export async function install(client: Client, request: Request): Promise<any> 
 {
 
 	const papiClient = createPapiClient(client);
 	await createLockADALTable(papiClient);
+	await createFilesToUploadSchema(papiClient);
 	await createDimxRelations(papiClient, client);
 
 	return { success: true, resultObject: {} }
@@ -35,16 +36,26 @@ export async function upgrade(client: Client, request: Request): Promise<any>
 {
 	const papiClient = createPapiClient(client);
 
+	if(request.body.FromVersion && semverLessThan(request.body.FromVersion, '1.0.1'))
+	{
+		throw new Error('Upgrading from versions earlier than 1.0.1 is not supported. Please uninstall the addon and install it again.');
+	}
+	
+	if(request.body.FromVersion && semverLessThan(request.body.FromVersion, '1.2.7'))
+	{
+		console.log("Migrating internal schemas to have SyncData.PushLocalChanges = false...");
+		// For more details see DI-21812: https://pepperi.atlassian.net/browse/DI-21812
+		await migrateSchemasToNotPushLocalChanges(papiClient, client);
+
+		console.log("Creating a new schema for the files to upload table...");
+		await createFilesToUploadSchema(papiClient);
+	}
+
 	if(request.body.FromVersion && semverLessThan(request.body.FromVersion, '1.1.6'))
 	{
 		console.log("Migrating internal schemas to schemas that don't use '-' char...");
 		// For more details see DI-21812: https://pepperi.atlassian.net/browse/DI-21812
 		await migrateSchemasToNotUseMinusChar(papiClient, client);
-	}
-
-	if(request.body.FromVersion && semverLessThan(request.body.FromVersion, '1.0.1'))
-	{
-		throw new Error('Upgrading from versions earlier than 1.0.1 is not supported. Please uninstall the addon and install it again.');
 	}
 
 	if (request.body.FromVersion && semverLessThan(request.body.FromVersion, '1.0.4'))
@@ -339,3 +350,38 @@ async function migrateSchemasToNotUseMinusChar(papiClient: PapiClient, client: C
 }
 
 
+async function migrateSchemasToNotPushLocalChanges(papiClient: PapiClient, client: Client) {
+	const manipulatorFunction = async (schema: AddonDataScheme) : Promise<void> => 
+	{
+		// Set PushLocalChanges to false only if Sync is true
+		if (schema.SyncData?.Sync && !(schema.SyncData as any).PushLocalChanges)
+		{
+
+			console.log(`Setting SyncData.PushLocalChanges=false for schema "${schema.Name}"...`);
+			(schema.SyncData as any)["PushLocalChanges"] = false;
+
+			await papiClient.addons.data.schemes.post(schema);
+			console.log('Done setting SyncData.PushLocalChanges=false.');
+		}
+	}
+
+	await manipulateAllPfsSchemas(papiClient, manipulatorFunction);
+}
+
+async function createFilesToUploadSchema(papiClient: PapiClient) {
+	
+	const filesToUploadSchema: AddonDataScheme = {
+		Name: FILES_TO_UPLOAD_TABLE_NAME,
+		Fields: {
+			Key: {
+				Type: 'String',
+			}
+		},
+		SyncData: {
+			Sync: true,
+			PushLocalChanges: false,
+		} as any,
+	}
+
+	await papiClient.addons.data.schemes.post(filesToUploadSchema);
+}
