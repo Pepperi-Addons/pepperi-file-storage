@@ -46,13 +46,13 @@ export default class AwsDal implements IAws
 
 	public async s3DeleteObjects(objectsPaths: Array<string>): Promise<PromiseResult<AWS.S3.DeleteObjectsOutput, AWS.AWSError>>
 	{
-		const params: any = {};
-
-		params.Bucket = this.S3Bucket;
-
-		params['Delete'] = {};
-		params.Delete.Quiet = true; // Non verbose, returns info only for failed deletes.
-		params.Delete.Objects = objectsPaths;
+		const params: AWS.S3.DeleteObjectsRequest = {
+			Bucket: this.S3Bucket,
+			Delete: {
+				Objects: objectsPaths.map(key => ({Key: key})),
+				Quiet: true	// Non verbose, returns info only for failed deletes.
+			}
+		};
 
 		// For more information on S3's deleteObjects function see: https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/S3.html#deleteObjects-property
 		const deleteObjectsRes = await this.s3.deleteObjects(params).promise();
