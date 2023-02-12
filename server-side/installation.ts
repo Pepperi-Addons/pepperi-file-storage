@@ -9,7 +9,7 @@ The error Message is importent! it will be written in the audit log and help the
 
 import { Client, Request } from '@pepperi-addons/debug-server'
 import { AddonData, AddonDataScheme, FindOptions, PapiClient, Relation } from '@pepperi-addons/papi-sdk';
-import semver from 'semver';
+import semverLessThan from 'semver/functions/lt';
 import clonedeep from 'lodash.clonedeep';
 import { LOCK_ADAL_TABLE_NAME, pfsSchemaData, PFS_TABLE_PREFIX } from 'pfs-shared';
 
@@ -35,19 +35,19 @@ export async function upgrade(client: Client, request: Request): Promise<any>
 {
 	const papiClient = createPapiClient(client);
 
-	if (request.body.FromVersion && semver.compare(request.body.FromVersion, '1.1.6') < 0) 
+	if(request.body.FromVersion && semverLessThan(request.body.FromVersion, '1.1.6'))
 	{
 		console.log("Migrating internal schemas to schemas that don't use '-' char...");
 		// For more details see DI-21812: https://pepperi.atlassian.net/browse/DI-21812
 		await migrateSchemasToNotUseMinusChar(papiClient, client);
 	}
 
-	if (request.body.FromVersion && semver.compare(request.body.FromVersion, '1.0.1') < 0) 
+	if(request.body.FromVersion && semverLessThan(request.body.FromVersion, '1.0.1'))
 	{
 		throw new Error('Upgrading from versions earlier than 1.0.1 is not supported. Please uninstall the addon and install it again.');
 	}
 
-	if (request.body.FromVersion && semver.compare(request.body.FromVersion, '1.0.4') < 0) 
+	if (request.body.FromVersion && semverLessThan(request.body.FromVersion, '1.0.4'))
 	{
 		// Add the new TransactionType field to the lock table schema
 		await createLockADALTable(papiClient);
@@ -57,12 +57,12 @@ export async function upgrade(client: Client, request: Request): Promise<any>
 
 	}
 
-	if (request.body.FromVersion && semver.compare(request.body.FromVersion, '1.0.8') < 0) 
+	if (request.body.FromVersion && semverLessThan(request.body.FromVersion, '1.0.8'))
 	{
 		await addTrailingSlashToFolderProperty(papiClient, client);
 	}
 
-	if (request.body.FromVersion && semver.compare(request.body.FromVersion, '1.0.29') < 0) 
+	if (request.body.FromVersion && semverLessThan(request.body.FromVersion, '1.0.29'))
 	{
 		console.log("Updating \"Name\" field on all schemas");
 		await updateNameField(papiClient);
