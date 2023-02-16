@@ -136,7 +136,7 @@ export class CpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal
 		const superRes = await super.uploadFileMetadata(newFileFields, existingFile);
 
 		PfsService.downloadedFileKeysToLocalUrl.set(`${superRes.Key!}${superRes.ModificationDateTime!}`, superRes.URL!);
-		delete superRes.PresignedURL 
+		delete superRes.PresignedURL; 
 		return superRes;
 	}
 
