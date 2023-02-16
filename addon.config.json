@@ -16,7 +16,8 @@
     "ClientStack": "ng10",
     "Editors": [],
     "Dependencies": {
-      "adal": "1.4.60"
+      "adal": "1.4.60",
+      "cpi_data": "0.6.12"
     },
     "CPISide": [
       "addon-cpi.ts"
