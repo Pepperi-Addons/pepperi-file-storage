@@ -107,13 +107,13 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		return presignedUrl;
 	}
 
-	abstract lock(item: any, transactionType: TransactionType);
+	abstract override lock(item: any, transactionType: TransactionType);
 
-	abstract mutateADAL(newFileFields: any, existingFile: any);
+	abstract override mutateADAL(newFileFields: any, existingFile: any);
 
-	abstract notify(newFileFields: any, existingFile: any);
+	abstract override notify(newFileFields: any, existingFile: any);
 	
-	abstract unlock(key: string);
+	abstract override unlock(key: string);
 
 	async invalidateCDN(file: any)
 	{

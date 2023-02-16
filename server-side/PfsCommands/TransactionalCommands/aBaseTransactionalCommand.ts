@@ -6,7 +6,7 @@ import { RollbackAlgorithmFactory } from "./RollbackAlgorithms/rollbackAlgorithm
 
 export abstract class ABaseTransactionalCommand extends PfsService implements ITransactionalCommand, ICommand
 {
-	constructor(protected client: Client, protected request: Request, protected pfsMutator: IPfsMutator, protected pfsGetter: IPfsGetter )
+	constructor(client: Client, request: Request, pfsMutator: IPfsMutator, pfsGetter: IPfsGetter )
 	{
 		super(client, request, pfsMutator, pfsGetter);
 	}

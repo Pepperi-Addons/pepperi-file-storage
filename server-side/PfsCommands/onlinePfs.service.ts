@@ -7,7 +7,7 @@ import { ServerHelper } from '../serverHelper';
 
 export abstract class PfsService extends SharedPfsService
 {
-	constructor(protected client: Client, protected request: Request, protected pfsMutator: IPfsMutator, protected pfsGetter: IPfsGetter ) 
+	constructor(protected client: Client, request: Request, pfsMutator: IPfsMutator, pfsGetter: IPfsGetter ) 
 	{
 		super(request, pfsMutator, pfsGetter);
 		request.header = ServerHelper.getLowerCaseHeaders(request.header);

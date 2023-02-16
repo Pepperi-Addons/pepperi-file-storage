@@ -16,7 +16,8 @@
 	"dependencies": {
 		"@pepperi-addons/cpi-node": "^1.1.11",
 		"@pepperi-addons/debug-server": "*",
-		"@pepperi-addons/papi-sdk": "*",
+		"@pepperi-addons/papi-sdk": "^1.47.1",
+		"jimp": "^0.10.3",
 		"uuid": "^9.0.0"
 	},
 	"devDependencies": {
