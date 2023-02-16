@@ -1,5 +1,5 @@
 import { IAws } from "pfs-shared";
-import AWS from 'aws-sdk'; // AWS is part of the lambda's environment. Importing it will result in it being rolled up redundantly.
+import AWS from 'aws-sdk';
 import { URL } from "url";
 import { PromiseResult } from "aws-sdk/lib/request";
 
