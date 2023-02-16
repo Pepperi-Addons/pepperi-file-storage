@@ -172,12 +172,12 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 		return res;
 	}
 
-	private async uploadFileMetadata(newFileFields: any, existingFile: any): Promise<AddonData> 
+	protected async uploadFileMetadata(newFileFields: any, existingFile: any): Promise<AddonData> 
 	{
 		newFileFields.Key = this.removeSlashPrefix(newFileFields.Key);
 		newFileFields.Folder = this.removeSlashPrefix(newFileFields.Folder);
 		// Set Urls
-		this.setUrls(newFileFields, existingFile);
+		await this.setUrls(newFileFields, existingFile);
 		
 		const presignedURL = newFileFields.PresignedURL;
 		delete newFileFields.PresignedURL; //Don't store PresignedURL in ADAL
@@ -193,7 +193,7 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 		return res;
 	}
 
-	private setUrls(newFileFields: any, existingFile: any) 
+	protected async setUrls(newFileFields: any, existingFile: any) 
 	{
 
 		if (!existingFile.doesFileExist) 

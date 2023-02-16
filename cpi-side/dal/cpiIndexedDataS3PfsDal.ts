@@ -3,13 +3,15 @@ import { AddonData, FindOptions } from '@pepperi-addons/papi-sdk';
 import lodashPick from 'lodash.pick';
 import { URL } from 'url';
 import { PfsService } from '../cpiPfs.service';
+import fs from 'fs';
+import path from 'path';
 
 export class CpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal 
 {    
 
 	//#region IPfsGetter
 
-	async getObjects(whereClause?: string): Promise<AddonData[]>
+	override async getObjects(whereClause?: string): Promise<AddonData[]>
 	{
 		// ModificationDateTime is always needed so we could add the version later on in the function.
 		// The Fields filter will be enforced after the GET from the schema.
@@ -127,5 +129,46 @@ export class CpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal
 		});
 
 		return;
+	}
+
+	protected override async uploadFileMetadata(newFileFields: any, existingFile: any): Promise<AddonData> 
+	{
+		const superRes = await super.uploadFileMetadata(newFileFields, existingFile);
+
+		PfsService.downloadedFileKeysToLocalUrl.set(`${superRes.Key!}${superRes.ModificationDateTime!}`, superRes.URL!);
+		delete superRes.PresignedURL 
+		return superRes;
+	}
+
+	protected override async setUrls(newFileFields: any, existingFile: any): Promise<void>
+	{
+		// If it's a file - set URL to to point to the local file.
+		if(!newFileFields.Key.endsWith('/'))
+		{
+			newFileFields.URL = `${await pepperi.files.baseURL()}/${this.getAbsolutePath(newFileFields.Key)}`;
+		}
+	}
+
+	public override async mutateS3(newFileFields: any, existingFile: any): Promise<void> 
+	{
+		const canonizedKey = this.removeSlashPrefix(newFileFields.Key);
+
+		// Save dataUri to local file
+		const localFilePath = `${await pepperi.files.rootDir()}/${this.getAbsolutePath(canonizedKey)}`;
+		await this.locallySaveBase64ToFile(newFileFields.buffer, localFilePath);
+
+		delete newFileFields.buffer;
+		delete newFileFields.IsTempFile;
+	}
+
+	public async locallySaveBase64ToFile(buffer: Buffer, filePath: string): Promise<void> 
+	{
+		const dir = path.dirname(filePath);
+
+		// Create any missing directories in the file path
+		await fs.promises.mkdir(dir, { recursive: true });
+
+		// Write the file to the path
+		await fs.promises.writeFile(filePath, buffer);
 	}
 }

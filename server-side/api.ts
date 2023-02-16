@@ -1,10 +1,11 @@
 import { Client, Request } from '@pepperi-addons/debug-server'
-import { PostTransactionalCommand } from './PfsCommands/TransactionalCommands/postTransactionalCommand';
+import { PostTransactionalCommand } from './PfsCommands/TransactionalCommands/postCommand/postTransactionalCommand';
 import { RecordRemovedCommand } from './PfsCommands/AtomicCommands/recordRemovedCommand';
 import { InvalidateCommand } from './PfsCommands/AtomicCommands/invalidateCommand';
 import { HideFolderTransactionalCommand } from './PfsCommands/TransactionalCommands/hideFolderTransactionalCommand';
 import { CreateTempFileCommand, DownloadFileCommand, ICommand, ListFolderContentsCommand, ListObjectsCommand, SharedHelper } from 'pfs-shared';
 import { ServerHelper } from './serverHelper';
+import { PapiClient } from '@pepperi-addons/papi-sdk';
 
 export async function file(client: Client, request: Request) 
 {
@@ -56,7 +57,8 @@ export async function files(client: Client, request: Request)
 	}
 	case "POST": {
 		const dal = ServerHelper.DalFactory(client, request);
-		pfsCommand = new PostTransactionalCommand(client, request, dal, dal);
+		const papiClient: PapiClient = ServerHelper.createPapiClient(client, client.AddonUUID, client.AddonSecretKey);
+		pfsCommand = new PostTransactionalCommand(client, papiClient, request, dal, dal);
 
 		return pfsCommand.execute();
 	}

@@ -1,5 +1,6 @@
 import '@pepperi-addons/cpi-node'
 import { ListFolderContentsCommand, ListObjectsCommand, DownloadFileCommand, MAXIMAL_LOCK_TIME } from 'pfs-shared';
+import { CpiPostCommand } from './commands/cpiPostCommand';
 import CpiAwsDal from './dal/awsDal';
 import { CpiIndexedDataS3PfsDal } from './dal/cpiIndexedDataS3PfsDal';
 import CpiPepperiDal from './dal/pepperiDal';
@@ -13,6 +14,7 @@ router.get('/file', async (req, res, next) =>
 {
 	try 
 	{
+		debugger;
 		const addonUUID = req.query.addon_uuid?.toString();
 		const fileKey = req.query.key?.toString();
 		const schemaName = req.query.resource_name?.toString();
@@ -22,6 +24,8 @@ router.get('/file', async (req, res, next) =>
 			throw new Error('Missing required parameters');
 		}
 
+		req.query.Key = fileKey;
+
 		const dal = await getDal(req);
 		const downloadFileCommand = new DownloadFileCommand(req, dal, dal);
 		const result = await downloadFileCommand.execute();
@@ -29,6 +33,32 @@ router.get('/file', async (req, res, next) =>
 		res.json(result);
 	}
 	catch (err) 
+	{
+		console.log(err);
+		next(err)
+	}
+});
+
+router.post('/file', async (req, res, next) =>
+{
+	try
+	{
+		debugger;
+		const addonUUID = req.query.addon_uuid?.toString();
+		const schemaName = req.query.resource_name?.toString();
+
+		if(!addonUUID || !schemaName) 
+		{
+			throw new Error('Missing required parameters');
+		}
+		
+		const dal = await getDal(req);
+		const uploadFileCommand = new CpiPostCommand(req, dal, dal);
+		const result = await uploadFileCommand.execute();
+
+		res.json(result);
+	}
+	catch (err)
 	{
 		console.log(err);
 		next(err)
