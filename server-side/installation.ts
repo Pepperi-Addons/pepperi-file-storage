@@ -354,11 +354,11 @@ async function migrateSchemasToNotPushLocalChanges(papiClient: PapiClient, clien
 	const manipulatorFunction = async (schema: AddonDataScheme) : Promise<void> => 
 	{
 		// Set PushLocalChanges to false only if Sync is true
-		if (schema.SyncData?.Sync && !(schema.SyncData as any).PushLocalChanges)
+		if (schema.SyncData?.Sync && !schema.SyncData.PushLocalChanges)
 		{
 
 			console.log(`Setting SyncData.PushLocalChanges=false for schema "${schema.Name}"...`);
-			(schema.SyncData as any)["PushLocalChanges"] = false;
+			schema.SyncData.PushLocalChanges = false;
 
 			await papiClient.addons.data.schemes.post(schema);
 			console.log('Done setting SyncData.PushLocalChanges=false.');
@@ -380,7 +380,7 @@ async function createFilesToUploadSchema(papiClient: PapiClient) {
 		SyncData: {
 			Sync: true,
 			PushLocalChanges: false,
-		} as any,
+		},
 	}
 
 	await papiClient.addons.data.schemes.post(filesToUploadSchema);

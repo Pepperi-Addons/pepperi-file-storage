@@ -55,7 +55,7 @@ export class PfsSchemeService
 		// Set the schemas SyncData.PushLocalChanges to false if SyncData.Sync is true
 		if(pfsMetadataTable.SyncData?.Sync)
 		{
-			(pfsMetadataTable.SyncData as any)["PushLocalChanges"] = false;
+			pfsMetadataTable.SyncData.PushLocalChanges = false;
 		}
 
 		const papiClient: PapiClient = ServerHelper.createPapiClient(this.client, config.AddonUUID, this.client.AddonSecretKey);
