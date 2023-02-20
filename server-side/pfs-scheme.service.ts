@@ -52,10 +52,10 @@ export class PfsSchemeService
 		pfsMetadataTable.Name = this.getPfsSchemaName();
 		pfsMetadataTable.Type = 'data';
 
-		// Set the schemas SyncData.PushLocalChanges to true if SyncData.Sync is true
+		// Set the schemas SyncData.PushLocalChanges to false if SyncData.Sync is true
 		if(pfsMetadataTable.SyncData?.Sync)
 		{
-			(pfsMetadataTable.SyncData as any)["PushLocalChanges"] = true;
+			pfsMetadataTable.SyncData.PushLocalChanges = false;
 		}
 
 		const papiClient: PapiClient = ServerHelper.createPapiClient(this.client, config.AddonUUID, this.client.AddonSecretKey);
