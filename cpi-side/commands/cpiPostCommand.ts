@@ -6,6 +6,8 @@ export class CpiPostCommand extends PfsService implements ICommand
 {
 	public async execute(): Promise<any> 
 	{
+		this.validateNoThumbnailsAreUpserted();
+
 		const postService = await this.getPostService();
 
 		postService.validatePostRequest();
@@ -21,6 +23,17 @@ export class CpiPostCommand extends PfsService implements ICommand
 
 		return res;
 
+	}
+
+	private validateNoThumbnailsAreUpserted(): void 
+	{
+		const thumbnails = this.request.body?.Thumbnails;
+		if(Array.isArray(thumbnails) && thumbnails.length > 0)
+		{
+			const errorMessage = "Thumbnails creation is not supported in offline mode.";
+			console.error(errorMessage);
+			throw new Error(errorMessage);
+		}
 	}
 
 	private async getPostService(): Promise<PostService>
