@@ -5,20 +5,21 @@ import config from '../../addon.config.json';
 
 export default class docDbDal implements IPepperiDal
 {
-    constructor(private papiClient: PapiClient){}
+	constructor(private papiClient: PapiClient)
+	{}
 
-    public async getDataFromTable(tableName: string, findOptions: FindOptions): Promise<AddonData[]>
-    {
-        return await this.papiClient.addons.data.uuid(config.AddonUUID).table(tableName).find(findOptions);
-    }
+	public async getDataFromTable(tableName: string, findOptions: FindOptions): Promise<AddonData[]>
+	{
+		return await this.papiClient.addons.data.uuid(config.AddonUUID).table(tableName).find(findOptions);
+	}
 
-    public async postDocumentToTable(tableName: string, document: any): Promise<AddonData>
-    {
-        return await this.papiClient.addons.data.uuid(config.AddonUUID).table(tableName).upsert(document);
-    }
+	public async postDocumentToTable(tableName: string, document: any): Promise<AddonData>
+	{
+		return await this.papiClient.addons.data.uuid(config.AddonUUID).table(tableName).upsert(document);
+	}
 
-    public async hardDeleteDocumentFromTable(tableName: string, key: any): Promise<any>
-    {
+	public async hardDeleteDocumentFromTable(tableName: string, key: any): Promise<any>
+	{
 		return await this.papiClient.addons.data.uuid(config.AddonUUID).table(tableName).key(key).hardDelete(true);
-    }
+	}
 }

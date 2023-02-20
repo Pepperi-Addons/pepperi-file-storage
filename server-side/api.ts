@@ -3,7 +3,7 @@ import { PostTransactionalCommand } from './PfsCommands/TransactionalCommands/po
 import { RecordRemovedCommand } from './PfsCommands/AtomicCommands/recordRemovedCommand';
 import { InvalidateCommand } from './PfsCommands/AtomicCommands/invalidateCommand';
 import { HideFolderTransactionalCommand } from './PfsCommands/TransactionalCommands/hideFolderTransactionalCommand';
-import { DownloadFileCommand, ICommand, ListFolderContentsCommand, ListObjectsCommand, SharedHelper } from 'pfs-shared';
+import { CreateTempFileCommand, DownloadFileCommand, ICommand, ListFolderContentsCommand, ListObjectsCommand, SharedHelper } from 'pfs-shared';
 import { ServerHelper } from './serverHelper';
 
 export async function file(client: Client, request: Request) 
@@ -110,6 +110,27 @@ export async function invalidate(client: Client, request: Request)
 
 		const dal = ServerHelper.DalFactory(client, request);
 		const pfsCommand = new InvalidateCommand(client, request, dal, dal);
+
+		return await pfsCommand.execute();
+	}
+	default: {
+		throw new Error(`Unsupported method: ${request.method}`);
+	}
+	}
+}
+
+export async function temporary_file(client: Client, request: Request) 
+{
+	console.log(`Request received: ${JSON.stringify(request)}`);
+
+	switch (request.method) 
+	{
+	case "POST": {
+		SharedHelper.validateTemporaryFileParams(request);
+
+
+		const dal = ServerHelper.DalFactory(client, request);
+		const pfsCommand = new CreateTempFileCommand(client.OAuthAccessToken, request, dal, dal);
 
 		return await pfsCommand.execute();
 	}

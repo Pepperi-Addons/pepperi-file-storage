@@ -9,7 +9,7 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 {    
 	constructor(OAuthAccessToken: string, request: Request, maximalLockTime:number, iAws: IAws, protected pepperiDal: IPepperiDal)
 	{
-        super(OAuthAccessToken, request, maximalLockTime, iAws);
+		super(OAuthAccessToken, request, maximalLockTime, iAws);
 	}
 
 	//#region IPfsGetter
@@ -25,7 +25,7 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 			...(this.request.query && this.request.query.order_by && {order_by: this.request.query.order_by}),
 			...(this.request.query && this.request.query.include_count && {include_count: this.request.query.include_count}),
 			...(this.request.query && this.request.query.include_deleted && {include_deleted: this.request.query.include_deleted}),
-		}
+		};
 
 		const getPfsTableName = SharedHelper.getPfsTableName(this.request.query.addon_uuid, this.clientSchemaName);
 		const res =  await this.pepperiDal.getDataFromTable(getPfsTableName, findOptions);
@@ -34,7 +34,8 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 		return res;
 	}
 
-	private async getObjectFromTable(key, tableName, getHidden: boolean = false){
+	private async getObjectFromTable(key, tableName, getHidden = false)
+	{
 		console.log(`Attempting to download the following key from ADAL: ${key}, Table name: ${tableName}`);
 		try 
 		{
@@ -42,7 +43,7 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 			const findOptions: FindOptions = {
 				where: `Key='${key}'`,
 				include_deleted: getHidden
-			}
+			};
 			const downloaded =  await this.pepperiDal.getDataFromTable(tableName, findOptions);
 			if(downloaded.length === 1)
 			{
@@ -80,13 +81,14 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
      * Returns the lock data if the key is locked, null otherwise.
      * @param relativeKey the key to check.
      */
-	async isObjectLocked(key: string){
+	async isObjectLocked(key: string)
+	{
 		let res: any = null;
 		const tableName = LOCK_ADAL_TABLE_NAME;
 		try
 		{
 			const lockAbsoluteKey = this.getAbsolutePath(key).replace(new RegExp("/", 'g'), "~");
-			const getHidden: boolean = true;
+			const getHidden = true;
 			res = await this.getObjectFromTable(lockAbsoluteKey, tableName, getHidden);
 			res.Key = this.getRelativePath(res.Key.replace(new RegExp("~", 'g'), "/"));
 		}
@@ -99,7 +101,8 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 	//#endregion
 
 	//#region IPfsMutator
-	async lock(Key: any, transactionType: TransactionType){
+	async lock(Key: any, transactionType: TransactionType)
+	{
 		console.log(`Attempting to lock key: ${Key}`);
 
 		const item: any = 
@@ -117,7 +120,8 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 		return lockRes;
 	}
 
-	async setRollbackData(item: any) {
+	async setRollbackData(item: any) 
+	{
 		console.log(`Setting rollback data to key: ${item.Key}`);
 		const itemCopy = {...item};
 
@@ -132,15 +136,18 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 		return lockRes;
 	}
 
-	async mutateADAL(newFileFields: any, existingFile: any) {
+	async mutateADAL(newFileFields: any, existingFile: any) 
+	{
 		return await this.uploadFileMetadata(newFileFields, existingFile);
 	}
 
-	async notify(newFileFields: any, existingFile: any){
+	async notify(newFileFields: any, existingFile: any)
+	{
 		//TODO implement.
 	}
 	
-	async unlock(key: string){
+	async unlock(key: string)
+	{
 		const lockKey = this.getAbsolutePath(key).replace(new RegExp("/", 'g'), "~");
 
 		console.log(`Attempting to unlock object: ${key}`);
@@ -165,21 +172,20 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 		return res;
 	}
 
-	private async uploadFileMetadata(newFileFields: any, existingFile: any): Promise<any> 
+	private async uploadFileMetadata(newFileFields: any, existingFile: any): Promise<AddonData> 
 	{
-		let res: any;
 		newFileFields.Key = this.removeSlashPrefix(newFileFields.Key);
 		newFileFields.Folder = this.removeSlashPrefix(newFileFields.Folder);
 		// Set Urls
 		this.setUrls(newFileFields, existingFile);
 		
 		const presignedURL = newFileFields.PresignedURL;
-		delete newFileFields.PresignedURL //Don't store PresignedURL in ADAL
+		delete newFileFields.PresignedURL; //Don't store PresignedURL in ADAL
 
 
 		const tableName = SharedHelper.getPfsTableName(this.request.query.addon_uuid, this.clientSchemaName);
 
-		res = await this.pepperiDal.postDocumentToTable(tableName, newFileFields)
+		const res = await this.pepperiDal.postDocumentToTable(tableName, newFileFields);
 		
 		// Add back the PresignedURL
 		res.PresignedURL = presignedURL;
@@ -201,8 +207,10 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 				newFileFields.URL = ``;
 			}
 		}
-		if(newFileFields.Thumbnails){
-			newFileFields.Thumbnails.forEach(thumbnail => {
+		if(newFileFields.Thumbnails)
+		{
+			newFileFields.Thumbnails.forEach(thumbnail => 
+			{
 				thumbnail.URL = `${CdnServers[this.environment]}/thumbnails/${this.getAbsolutePath(newFileFields.Key)}_${thumbnail.Size}`;
 			});
 		}

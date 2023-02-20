@@ -1,4 +1,4 @@
-import { TransactionType } from "./constants";
+import { TempFile, TransactionType } from "./constants";
 
 export interface IPfsMutator
 {
@@ -41,6 +41,15 @@ export interface IPfsMutator
      * @param existingFile 
      */
     mutateADAL(newFileFields: any, existingFile: any);
+
+    /**
+     * 
+     * @param {string} tempFileName - The temporaryFileName
+       @param {string} MIME - The temp file's MIME type
+
+       @returns {Promise} - A promise that resolves to the a PUT URL link to the temp file.
+     */
+    createTempFile(tempFileName: string, MIME: string): Promise<string>;
 
     /**
      * Notify subscribers of changes in file data or metadata.

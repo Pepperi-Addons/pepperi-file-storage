@@ -5,7 +5,8 @@ import PfsService from '../pfs.service';
 export class ListObjectsCommand extends PfsService implements ICommand 
 {
 
-	public async execute(): Promise<AddonData[]>{
+	public async execute(): Promise<AddonData[]>
+	{
 		return await this.listObjects();
 	}
 

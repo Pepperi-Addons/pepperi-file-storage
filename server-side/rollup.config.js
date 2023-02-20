@@ -13,8 +13,7 @@ export default config.Endpoints.map(endpoint => {
           format: 'cjs'
          }
         ],
-        external: [
-        ],
+        external: ["aws-sdk"],
         plugins: [
          typescript({
              tsconfigOverride: {
@@ -25,7 +24,9 @@ export default config.Endpoints.map(endpoint => {
              }
           }),
           resolve(),
-          commonjs(),
+          commonjs({
+            ignore: ["aws-sdk"]
+          }),
           json()
         ]
        }

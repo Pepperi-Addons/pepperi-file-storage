@@ -29,7 +29,7 @@ export abstract class BaseRollbackAlgorithm extends PfsService implements IRollb
 
 			else 
 			{
-				const err: any = new Error(`The requested key ${this.request.body.Key} is currently locked for ${timePassedSinceLock} ms, which is less then the maixmal ${this.pfsMutator.getMaximalLockTime()} ms. To allow the current transaction to finish executing, please try again later.`);
+				const err: any = new Error(`The requested key ${this.request.body.Key} is currently locked for ${timePassedSinceLock} ms, which is less then the maximal ${this.pfsMutator.getMaximalLockTime()} ms. To allow the current transaction to finish executing, please try again later.`);
 				err.code = 409; // Conflict code. This response is sent when a request conflicts with the current state of the server.
 				throw err;
 			}

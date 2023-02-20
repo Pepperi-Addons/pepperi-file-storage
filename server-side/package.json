@@ -37,7 +37,7 @@
     },
     "dependencies": {
         "@pepperi-addons/debug-server": "*",
-        "@pepperi-addons/papi-sdk": "^1.39.6",
+        "@pepperi-addons/papi-sdk": "^1.47.1",
         "@types/node-fetch": "^2.5.7",
         "aws-sdk": "^2.1045.0",
         "encoding": "^0.1.13",
@@ -45,7 +45,7 @@
         "lodash.clonedeep": "^4.5.0",
         "lodash.isequal": "^4.5.0",
         "node-fetch": "^2.6.0",
-        "semver": "^7.3.5",
-        "pfs-shared": "file:../shared"
+        "pfs-shared": "file:../shared",
+        "semver": "^7.3.5"
     }
 }

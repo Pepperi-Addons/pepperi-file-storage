@@ -44,6 +44,20 @@ export class SharedHelper
 		}
 	}
 
+	/**
+	 * Validates the request's body contains the necessary parameters for temporary file creation.
+	 * @param request The request object.
+	 * @throws Error if the request's body is missing the necessary parameters.
+	 */
+	public static validateTemporaryFileParams(request: Request)
+	{
+		// Validate MIME param is sent on request's body
+		if (!request.body?.MIME)
+		{
+			throw new Error(`Missing necessary parameter: MIME`);
+		}
+	}
+
 	public static getPfsTableName(clientAddonUUID: string, schemaName: string)
 	{
 		// DI-21812: Migrate internal 'data' schema to names without '-' char

@@ -5,13 +5,21 @@ import { ImageResizer } from "../../imageResizer";
 import { PapiClient } from "@pepperi-addons/papi-sdk";
 import { ABaseTransactionalCommand } from "./aBaseTransactionalCommand";
 import { ServerHelper } from '../../serverHelper';
-import { CACHE_DEFAULT_VALUE, dataURLRegex, DESCRIPTION_DEFAULT_VALUE, EXTENSIONS_WHITELIST, HIDDEN_DEFAULT_VALUE, MAXIMAL_TREE_DEPTH, SECRETKEY_HEADER, SYNC_DEFAULT_VALUE, TransactionType } from 'pfs-shared';
+import { CACHE_DEFAULT_VALUE, dataURLRegex, DESCRIPTION_DEFAULT_VALUE, EXTENSIONS_WHITELIST, HIDDEN_DEFAULT_VALUE, IPfsGetter, IPfsMutator, MAXIMAL_TREE_DEPTH, SECRETKEY_HEADER, SYNC_DEFAULT_VALUE, TransactionType } from 'pfs-shared';
+import TempFileService from 'pfs-shared/lib/tempFileService';
+import { Client, Request } from '@pepperi-addons/debug-server/dist';
 
 export class PostTransactionalCommand extends ABaseTransactionalCommand{
 	readonly MIME_FIELD_IS_MISSING = "Missing mandatory field 'MIME'";
 	readonly TRANSACTION_TYPE: TransactionType = 'post' ;
 
+	protected tempFileService: TempFileService;
 
+	constructor(client: Client, request: Request, pfsMutator: IPfsMutator, pfsGetter: IPfsGetter) {
+		super(client, request, pfsMutator, pfsGetter);
+
+		this.tempFileService = new TempFileService(this.client.OAuthAccessToken);
+	}
 	async preLockLogic() 
 	{
 		await ServerHelper.validateAddonSecretKey(this.request.header, this.client, this.AddonUUID);
@@ -199,8 +207,7 @@ export class PostTransactionalCommand extends ABaseTransactionalCommand{
     private async createFile() 
 	{
 		let res: any = {};
-
-		if(this.request.body.URI)
+		if(this.request.body.URI && (!this.tempFileService.isTempFile(this.request.body.URI) || this.request.body.Thumbnails))
 		{
 			this.newFileFields.buffer = await this.getFileDataBuffer(this.request.body.URI);
 		}
@@ -224,7 +231,7 @@ export class PostTransactionalCommand extends ABaseTransactionalCommand{
 		await this.pfsMutator.mutateS3(this.newFileFields, this.existingFile)
 		res = await this.pfsMutator.mutateADAL(this.newFileFields, this.existingFile);
 
-		console.log(`Successfuly created a file.`);
+		console.log(`Successfully created a file.`);
 
 		return res;
 	}
@@ -250,6 +257,7 @@ export class PostTransactionalCommand extends ABaseTransactionalCommand{
 		newFileFields.Key = data.Key;
 		newFileFields.ExpirationDateTime = data.ExpirationDateTime;
 		newFileFields.DeletedBy = data.DeletedBy;
+		newFileFields.IsTempFile = this.tempFileService.isTempFile(data.URI);
 
 		if(!existingFile.doesFileExist)
 		{
@@ -361,7 +369,7 @@ export class PostTransactionalCommand extends ABaseTransactionalCommand{
 		{ 
 			buf = Buffer.from(url.match(dataURLRegex)[4], 'base64');
 		}
-		else //the URI is URL - downalod the data
+		else //the URI is URL - download the data
 		{
 			buf = await this.downloadFileBufferFromURL(url);
 		}
@@ -376,8 +384,8 @@ export class PostTransactionalCommand extends ABaseTransactionalCommand{
 
     private async downloadFileBufferFromURL(url) 
 	{
-		const respons = await fetch(url, { method: `GET` });
-		const arrayData = await respons.arrayBuffer();
+		const response = await fetch(url, { method: `GET` });
+		const arrayData = await response.arrayBuffer();
 		const buf = Buffer.from(arrayData);
 
 		return buf;
@@ -435,7 +443,7 @@ export class PostTransactionalCommand extends ABaseTransactionalCommand{
 		const whereClause = `Folder='${this.request.body.Key}'`;
 		const folderContents = await this.pfsGetter.getObjects(whereClause);
 
-		if (folderContents.length > 0) // Deleting a folder that has exisitng content is not currently supported.
+		if (folderContents.length > 0) // Deleting a folder that has existing content is not currently supported.
 		{
 			const err: any = new Error(`Bad request. Folder content must be deleted before the deletion of the folder.`);
 			err.code = 400;

@@ -106,6 +106,7 @@ export const dataURLRegex = /^\s*data:([a-z]+\/[\w-+\d.]+(;[a-z\-]+\=[a-z\-]+)?)
 
 export const METADATA_ADAL_TABLE_NAME = "S3ObjectsMetadata";
 export const LOCK_ADAL_TABLE_NAME = "PfsLockTable";
+export const FILES_TO_UPLOAD_TABLE_NAME = "filesToUpload";
 
 export const SECRETKEY_HEADER = 'x-pepperi-secretkey';
 
@@ -136,3 +137,13 @@ export const EXTENSIONS_WHITELIST: Array<string> = [
 export const DIMX_ADDON_UUID = '44c97115-6d14-4626-91dc-83f176e9a0fc';
 
 export const PFS_TABLE_PREFIX = "pfs";
+
+export type TempFile = {
+	PutURL: string,
+	DownloadURL: string
+}
+
+export type TempFileRequest = {
+	FileName?: string,
+	MIME: string
+}
