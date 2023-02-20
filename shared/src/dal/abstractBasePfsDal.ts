@@ -12,7 +12,7 @@ export abstract class AbstractBasePfsDal implements IPfsGetter, IPfsMutator
 	protected readonly MAXIMAL_LOCK_TIME; 
 	protected clientSchemaName: string;
     
-	constructor(protected OAuthAccessToken: string, protected request: Request, maximalLockTime:number)
+	constructor(protected OAuthAccessToken: string, public request: Request, maximalLockTime:number)
 	{
 		this.environment = jwtDecode(OAuthAccessToken)['pepperi.datacenter'];
 		this.DistributorUUID = jwtDecode(OAuthAccessToken)['pepperi.distributoruuid'];
@@ -59,21 +59,25 @@ export abstract class AbstractBasePfsDal implements IPfsGetter, IPfsMutator
 	//#endregion
 	
 
-	//#region protected methods
+	//#region public methods
+
 	/**
-	 * Each distributor is given its own folder, and each addon has its own folder within the distributor's folder.
-	 * Addons place objects in their folder. An absolute path is a path that includes the Distributor's UUID, 
-	 * the Addon's UUID and the trailing requested path.
-	 * @param relativePath the path relative to the addon's folder
-	 * @returns a string in the format ${this.DistributorUUID}/${this.AddonUUID}/${relativePath}
-	 */
-	protected getAbsolutePath(relativePath: string): string 
+	* Each distributor is given its own folder, and each addon has its own folder within the distributor's folder.
+	* Addons place objects in their folder. An absolute path is a path that includes the Distributor's UUID, 
+	* the Addon's UUID and the trailing requested path.
+	* @param relativePath the path relative to the addon's folder
+	* @returns a string in the format ${this.DistributorUUID}/${this.AddonUUID}/${relativePath}
+	*/
+	public getAbsolutePath(relativePath: string): string 
 	{
 		relativePath = this.removeSlashPrefix(relativePath);
 
 		const absolutePrefix = `${this.DistributorUUID}/${this.clientAddonUUID}/${this.clientSchemaName}/`;
 		return relativePath.startsWith(absolutePrefix) ? relativePath : `${absolutePrefix}${relativePath}`;
 	}
+	//#endregion
+	
+	//#region protected methods
 
 	protected removeSlashPrefix(path: string)
 	{

@@ -1,103 +1,45 @@
 import { Request } from '@pepperi-addons/debug-server';
 import { CACHE_DEFAULT_VALUE, dataURLRegex, TransactionType } from '../';
+import TempFileService from '../tempFileService';
 import { AbstractBasePfsDal } from './abstractBasePfsDal';
 import { IAws } from './iAws';
+import { MutateS3HandlerFactory, MutateS3HandleType } from './mutateS3Handlers/mutateS3HandlerFactory';
 
 export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 {
     
-	constructor(OAuthAccessToken: string, request: Request, maximalLockTime: number, private awsDal: IAws)
+	constructor(OAuthAccessToken: string, request: Request, maximalLockTime: number, public awsDal: IAws)
 	{
 		super(OAuthAccessToken, request, maximalLockTime);
 	}
-
+	
 	//#region IPfsMutator
 	public async mutateS3(newFileFields: any, existingFile: any)
 	{
+		let mutateS3HandlerType: MutateS3HandleType;
 		if(existingFile.isFileExpired)
 		{
-			return await this.deleteFileData(existingFile.Key);
+			mutateS3HandlerType = "expiredFile";
 		}
-		const isCache = this.shouldUseCache(newFileFields, existingFile);
-		if(!this.request.body.URI && !existingFile.doesFileExist) // The file does not yet exist, and no data was provided. Assign a presigned URL for data upload.
+		else if(!this.request.body.URI && !existingFile.doesFileExist) // The file does not yet exist, and no data was provided. Assign a presigned URL for data upload.
 		{ 
-			const presignedUrlKey = this.getAbsolutePath(newFileFields.Key);
-			const presignedUrlMimeType = this.getMimeType();
-			newFileFields.PresignedURL = await this.generatePreSignedURL(presignedUrlKey, presignedUrlMimeType);
+			mutateS3HandlerType = 'presignedUrl';
 		}
-		else if(newFileFields.IsTempFile)
+		else if(new TempFileService(this.OAuthAccessToken).isTempFile(this.request.body.URI))
 		{
-			// Copy the file's data from the temp location to the final location.
-			const absolutePath = this.getAbsolutePath(newFileFields.Key);
-			const res = await this.awsDal.copyS3Object(this.request.body.URI, absolutePath, isCache);
-			newFileFields.FileVersion = res.$response.data?.VersionId;
-			newFileFields.FileSize = await this.awsDal.getFileSize(absolutePath);
+			mutateS3HandlerType = 'tempFile';
 		}
 		else if (this.request.body.URI) // The file already has data, or data was provided.
 		{ 
-			const uploadRes = await this.uploadFileData(newFileFields, isCache);
-			newFileFields.FileVersion = uploadRes.VersionId;
-			
-			delete newFileFields.buffer;
+			mutateS3HandlerType = 'fileUpload';
 		}
-
-		delete newFileFields.IsTempFile;
-
-		if(Array.isArray(newFileFields.Thumbnails))
+		else
 		{
-			for (const thumbnail of newFileFields.Thumbnails) 
-			{
-				await this.uploadThumbnail(newFileFields.Key, thumbnail.Size, thumbnail.buffer, isCache);
-				delete thumbnail.buffer;
-			}
-			if (Array.isArray(existingFile.Thumbnails)) 
-			{ //delete unnecessary thumbnails from S3.
-				const deletedThumbnails = existingFile.Thumbnails.filter(existingThumbnail => 
-				{
-					return !newFileFields.Thumbnails.find(newThumbnail => 
-					{
-						return existingThumbnail.Size == newThumbnail.Size;
-					});
-				});
-				for (const thumbnail of deletedThumbnails) 
-				{
-					await this.deleteThumbnail(newFileFields.Key, thumbnail.Size);
-				}
-			}
+			throw new Error('Invalid request');
 		}
 
-		// Hiding the file is done last, to provide a user who, for some reason,
-		// decided to both update the file content and delete it in a single call
-		// a consistent behavior.
-		
-		// In the future, when unhide will be developed, upon unhiding the file
-		// the user will get their latest data.
-		if(newFileFields.Hidden)
-		{
-			await this.deleteFileData(newFileFields.Key);
-			if (Array.isArray(existingFile.Thumbnails)) 
-			{ //delete thumbnails from S3.
-				for (const thumbnail of existingFile.Thumbnails) 
-				{
-					await this.deleteThumbnail(newFileFields.Key, thumbnail.Size);
-				}
-			}
-		}
-	}
-
-	private shouldUseCache(newFileFields: any, existingFile: any) 
-	{
-		let isCache = CACHE_DEFAULT_VALUE;
-
-		if (newFileFields.hasOwnProperty('Cache')) 
-		{
-			isCache = newFileFields.Cache;
-		}
-		else if (existingFile.hasOwnProperty('Cache')) 
-		{
-			isCache = existingFile.Cache;
-		}
-		return isCache;
+		const mutateS3Handler = MutateS3HandlerFactory.getHandler(mutateS3HandlerType, newFileFields, existingFile, this);
+		await mutateS3Handler.execute();
 	}
 
 	public async createTempFile(tempFileName: string, MIME: string): Promise<string>
@@ -230,14 +172,8 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 	
 	//#endregion
 
-	//#region private methods
-	private async uploadFileData(file: any, isCache = CACHE_DEFAULT_VALUE): Promise<any> 
-	{
-		const key = this.getAbsolutePath(file.Key);
-		return this.uploadToS3(key, file.buffer, isCache);
-	}
-
-	private async uploadToS3(key, buffer, isCache = CACHE_DEFAULT_VALUE)
+	//#region public methods
+	public async uploadToS3(key, buffer, isCache = CACHE_DEFAULT_VALUE)
 	{
 		const params: any = {};
 
@@ -256,38 +192,7 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		return uploaded;
 	}
 
-	private async deleteFileData(removedKey: string): Promise<any> 
-	{
-		console.log(`Trying to delete Key: ${removedKey}`);
-
-		const keyToDelete = this.getAbsolutePath(removedKey);
-		
-		// Delete from S3 bucket.
-		const deletedFile = await this.awsDal.s3DeleteObject(keyToDelete);
-		console.log(`Successfully deleted Key ${removedKey}: ${JSON.stringify(deletedFile)}`);
-
-		return deletedFile;
-	}
-
-	private async uploadThumbnail(Key: string, size: string, Body: Buffer, isCache = CACHE_DEFAULT_VALUE): Promise<any> 
-	{
-		const key = `thumbnails/${this.getAbsolutePath(Key)}_${size}`;
-		return this.uploadToS3(key, Body, isCache);
-	}
-
-	private async deleteThumbnail(key: any, size: any) 
-	{
-
-		const keyToDelete = `thumbnails/${this.getAbsolutePath(key)}_${size}`;
-		
-		// delete thumbnail from S3 bucket.
-		const deleted = await this.awsDal.s3DeleteObject(keyToDelete);
-		console.log(`Thumbnail successfully deleted:  ${deleted}`);
-
-		return deleted;
-	}
-
-	private getMimeType(): string 
+	public getMimeType(): string 
 	{
 		let MIME = this.request.body.MIME;
 		if(this.request.body.URI && this.isDataURL(this.request.body.URI))
@@ -299,12 +204,7 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		return MIME;
 	}
 
-	private isDataURL(s): boolean
-	{
-		return !!s.match(dataURLRegex);
-	}
-
-	private async generatePreSignedURL(key: string, contentType: string): Promise<string>
+	public async generatePreSignedURL(key: string, contentType: string): Promise<string>
 	{
 		const params =  {
 			Key: key,
@@ -313,6 +213,15 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 			
 		const urlString = await this.awsDal.s3GetSignedUrl(params);
 		return urlString;
+	}
+
+	//#endregion
+
+	//#region private methods
+
+	private isDataURL(s): boolean
+	{
+		return !!s.match(dataURLRegex);
 	}
 
 	private async batchDeleteThumbnails(keys: string[])
