@@ -1,10 +1,12 @@
-import { IndexedDataS3PfsDal, SharedHelper } from 'pfs-shared';
-import { AddonData, FindOptions } from '@pepperi-addons/papi-sdk';
+import { FILES_TO_UPLOAD_TABLE_NAME, IndexedDataS3PfsDal, SharedHelper } from 'pfs-shared';
+import { AddonData, FindOptions, PapiClient } from '@pepperi-addons/papi-sdk';
+import {AddonUUID} from '../../addon.config.json';
 import lodashPick from 'lodash.pick';
 import { URL } from 'url';
 import { PfsService } from '../cpiPfs.service';
 import fs from 'fs';
 import path from 'path';
+import fetch, { RequestInit } from 'node-fetch';
 
 export class CpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal 
 {    
@@ -133,10 +135,16 @@ export class CpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal
 
 	protected override async uploadFileMetadata(newFileFields: any, existingFile: any): Promise<AddonData> 
 	{
+		// Save the file to the PFS table.
 		const superRes = await super.uploadFileMetadata(newFileFields, existingFile);
 
+		// Cache the result, so we won't have to download the file again.
 		PfsService.downloadedFileKeysToLocalUrl.set(`${superRes.Key!}${superRes.ModificationDateTime!}`, superRes.URL!);
 		delete superRes.PresignedURL; 
+
+		// Save the file to the FilesToUpload table.
+		await pepperi.addons.data.uuid(AddonUUID).table(FILES_TO_UPLOAD_TABLE_NAME).upsert({Key :superRes.Key});
+
 		return superRes;
 	}
 
@@ -157,8 +165,13 @@ export class CpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal
 		const localFilePath = `${await pepperi.files.rootDir()}/${this.getAbsolutePath(canonizedKey)}`;
 		await this.locallySaveBase64ToFile(newFileFields.buffer, localFilePath);
 
+
+		const papiClient = await pepperi.papiClient;
+		this.uploadToTempFile(newFileFields, papiClient);
+
 		delete newFileFields.buffer;
 		delete newFileFields.IsTempFile;
+
 	}
 
 	public async locallySaveBase64ToFile(buffer: Buffer, filePath: string): Promise<void> 
@@ -170,5 +183,58 @@ export class CpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal
 
 		// Write the file to the path
 		await fs.promises.writeFile(filePath, buffer);
+	}
+
+	private uploadToTempFile(file: any, papiClient: PapiClient): void
+	{
+		let downloadUrl: string;
+
+		// Create a temporary file in the PFS.
+		papiClient.post(`/addons/api/${AddonUUID}/api/temporary_file`)
+			.then(res => 
+			{
+				// Upload the file to the temporary file.
+				downloadUrl = res.DownloadURL;
+				return this.uploadFileToTempUrl(file, res.PutURL);
+			})
+			.then(response => 
+			{
+				if (response.status === 200)
+					// Remove the file from the FilesToUpload table.
+					return pepperi.addons.data.uuid(AddonUUID).table(FILES_TO_UPLOAD_TABLE_NAME).upsert({Key :file.Key, Hidden: true}) as AddonData;
+				else 
+				{
+					throw new Error(`Failed to upload file ${file.Key} to S3. Status: ${response.status} ${response.statusText}`);
+				}
+			})
+			.then(res => 
+			{
+				// Update the file's URL on the schema to point to the temporary file.
+				file.URL = downloadUrl;
+				const tableName = SharedHelper.getPfsTableName(this.request.query.addon_uuid, this.clientSchemaName);
+				return this.pepperiDal.postDocumentToTable(tableName, file);
+			})
+			.then(res => 
+			{
+				console.log(`File ${file.Key} was successfully uploaded to a temp file on S3.`);
+			})
+			.catch(err => 
+			{
+				console.error(err);
+			});
+	}
+
+	private uploadFileToTempUrl(file: any, putURL: string) 
+	{
+		const requestOptions: RequestInit = {
+			method: 'PUT',
+			body: file.buffer,
+			headers: {
+				"Content-Type": file.MIME,
+				"Content-Length": file.buffer.length.toString()
+			}
+		};
+
+		return fetch(putURL, requestOptions);
 	}
 }
