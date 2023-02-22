@@ -17,7 +17,7 @@
                 "${workspaceFolder}/server-side/build/*/*.js"
             ],
             "preLaunchTask": {
-                "label": "Build API",
+                "label": "Build All",
                 "type": "typescript",
                 "tsconfig": "server-side/tsconfig.json",
                 "option": "watch",
