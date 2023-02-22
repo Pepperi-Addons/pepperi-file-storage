@@ -18,6 +18,7 @@
 		"@pepperi-addons/debug-server": "*",
 		"@pepperi-addons/papi-sdk": "^1.47.1",
 		"jimp": "^0.10.3",
+		"node-fetch": "^2.6.9",
 		"uuid": "^9.0.0"
 	},
 	"devDependencies": {

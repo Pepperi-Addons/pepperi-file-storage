@@ -7,6 +7,7 @@ import { IPfsGetter } from './iPfsGetter';
 import { IPfsMutator } from './iPfsMutator';
 import PfsService from "./pfs.service";
 import TempFileService from './tempFileService';
+import fetch from 'node-fetch';
 
 
 export abstract class PostService extends PfsService 
