@@ -16,7 +16,7 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 	//#region IPfsMutator
 	public async mutateS3(newFileFields: any, existingFile: any)
 	{
-		let mutateS3HandlerType: MutateS3HandleType;
+		let mutateS3HandlerType: MutateS3HandleType = "";
 		if(existingFile.isFileExpired)
 		{
 			mutateS3HandlerType = "expiredFile";
@@ -32,10 +32,6 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		else if (this.request.body.URI) // The file already has data, or data was provided.
 		{ 
 			mutateS3HandlerType = 'fileUpload';
-		}
-		else
-		{
-			throw new Error('Invalid request');
 		}
 
 		const mutateS3Handler = MutateS3HandlerFactory.getHandler(mutateS3HandlerType, newFileFields, existingFile, this);
