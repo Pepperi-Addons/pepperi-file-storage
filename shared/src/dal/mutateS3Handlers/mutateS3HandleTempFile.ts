@@ -1,8 +1,8 @@
-import { AMutateS3HandlePostBase } from "./aMutateS3HandlePostBase";
+import { MutateS3HandlePostBase } from "./mutateS3HandlePostBase";
 
-export class MutateS3HandleTempFile extends AMutateS3HandlePostBase
+export class MutateS3HandleTempFile extends MutateS3HandlePostBase
 {
-	protected async specificHandle(): Promise<any> 
+	protected override async specificHandle(): Promise<any> 
 	{
 		// Copy the file's data from the temp location to the final location.
 		const absolutePath = this.s3PfsDal.getAbsolutePath(this.newFileFields.Key);

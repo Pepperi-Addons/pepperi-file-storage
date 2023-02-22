@@ -1,8 +1,8 @@
-import { AMutateS3HandlePostBase } from "./aMutateS3HandlePostBase";
+import { MutateS3HandlePostBase } from "./mutateS3HandlePostBase";
 
-export class MutateS3HandleFileUpload extends AMutateS3HandlePostBase
+export class MutateS3HandleFileUpload extends MutateS3HandlePostBase
 {
-	protected async specificHandle(): Promise<any> 
+	protected override async  specificHandle(): Promise<any> 
 	{
 		const uploadRes = await this.uploadFileData();
 			this.newFileFields.FileVersion = uploadRes.VersionId;

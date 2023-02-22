@@ -1,8 +1,8 @@
-import { AMutateS3HandlePostBase } from "./aMutateS3HandlePostBase";
+import { MutateS3HandlePostBase } from "./mutateS3HandlePostBase";
 
-export class MutateS3HandlePresignedUrl extends AMutateS3HandlePostBase
+export class MutateS3HandlePresignedUrl extends MutateS3HandlePostBase
 {
-	protected async specificHandle(): Promise<any> 
+	protected override async specificHandle(): Promise<any> 
 	{
 		const presignedUrlKey = this.s3PfsDal.getAbsolutePath(this.newFileFields.Key);
 		const presignedUrlMimeType = this.s3PfsDal.getMimeType();

@@ -16,7 +16,7 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 	//#region IPfsMutator
 	public async mutateS3(newFileFields: any, existingFile: any)
 	{
-		let mutateS3HandlerType: MutateS3HandleType;
+		let mutateS3HandlerType: MutateS3HandleType = "";
 		if(existingFile.isFileExpired)
 		{
 			mutateS3HandlerType = "expiredFile";
@@ -33,10 +33,6 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		{ 
 			mutateS3HandlerType = 'fileUpload';
 		}
-		else
-		{
-			throw new Error('Invalid request');
-		}
 
 		const mutateS3Handler = MutateS3HandlerFactory.getHandler(mutateS3HandlerType, newFileFields, existingFile, this);
 		await mutateS3Handler.execute();
@@ -49,13 +45,13 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		return presignedUrl;
 	}
 
-	abstract lock(item: any, transactionType: TransactionType);
+	abstract override lock(item: any, transactionType: TransactionType);
 
-	abstract mutateADAL(newFileFields: any, existingFile: any);
+	abstract override mutateADAL(newFileFields: any, existingFile: any);
 
-	abstract notify(newFileFields: any, existingFile: any);
+	abstract override notify(newFileFields: any, existingFile: any);
 	
-	abstract unlock(key: string);
+	abstract override unlock(key: string);
 
 	async invalidateCDN(file: any)
 	{
