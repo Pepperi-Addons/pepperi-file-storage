@@ -6,6 +6,6 @@ export class OfflinePostService extends PostService
 {
 	protected getUploadedByUUID(): Promise<any> 
 	{
-		return Promise.resolve(jwtDecode(this.OAuthAccessToken)["pepperi.id"]);
+		return Promise.resolve(jwtDecode(this.OAuthAccessToken)['pepperi.useruuid']);
 	}
 }
