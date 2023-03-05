@@ -128,8 +128,6 @@ export async function temporary_file(client: Client, request: Request)
 	switch (request.method) 
 	{
 	case "POST": {
-		SharedHelper.validateTemporaryFileParams(request);
-
 
 		const dal = ServerHelper.DalFactory(client, request);
 		const pfsCommand = new CreateTempFileCommand(client.OAuthAccessToken, request, dal, dal);

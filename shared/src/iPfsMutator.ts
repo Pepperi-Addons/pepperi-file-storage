@@ -45,11 +45,10 @@ export interface IPfsMutator
     /**
      * 
      * @param {string} tempFileName - The temporaryFileName
-       @param {string} MIME - The temp file's MIME type
 
        @returns {Promise} - A promise that resolves to the a PUT URL link to the temp file.
      */
-    createTempFile(tempFileName: string, MIME: string): Promise<string>;
+    createTempFile(tempFileName: string): Promise<string>;
 
     /**
      * Notify subscribers of changes in file data or metadata.

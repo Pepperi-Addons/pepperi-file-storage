@@ -38,9 +38,9 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		await mutateS3Handler.execute();
 	}
 
-	public async createTempFile(tempFileName: string, MIME: string): Promise<string>
+	public async createTempFile(tempFileName: string): Promise<string>
 	{
-		const presignedUrl = await this.generatePreSignedURL(tempFileName, MIME);
+		const presignedUrl = await this.generatePreSignedURL(tempFileName);
 
 		return presignedUrl;
 	}
@@ -200,11 +200,11 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		return MIME;
 	}
 
-	public async generatePreSignedURL(key: string, contentType: string): Promise<string>
+	public async generatePreSignedURL(key: string, contentType?: string): Promise<string>
 	{
 		const params =  {
 			Key: key,
-			ContentType: contentType
+			...(contentType && { ContentType: contentType })
 		};
 			
 		const urlString = await this.awsDal.s3GetSignedUrl(params);

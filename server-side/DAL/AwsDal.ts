@@ -35,12 +35,14 @@ export default class AwsDal implements IAws
         Bucket?: string,
         Key: string,
         Expires?: number, //PUT presigned URL will expire after 24 hours = 60 sec * 60 min * 24 hrs
-        ContentType: string
+        ContentType?: string
     }): Promise<string>
 	{			
 		params.Bucket = params.Bucket ?? this.S3Bucket;
 		params.Expires = params.Expires ?? 24 * 60 * 60; //PUT presigned URL will expire after 24 hours = 60 sec * 60 min * 24 hrs
-		const urlString: string = await this.s3.getSignedUrl('putObject',params);
+
+		const urlString: string = await this.s3.getSignedUrl('putObject', params);
+		
 		return urlString;
 	}
 

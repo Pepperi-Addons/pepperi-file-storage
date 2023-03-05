@@ -140,10 +140,9 @@ export const PFS_TABLE_PREFIX = "pfs";
 
 export type TempFile = {
 	PutURL: string,
-	DownloadURL: string
+	TemporaryFileURL: string
 }
 
 export type TempFileRequest = {
 	FileName?: string,
-	MIME: string
 }
