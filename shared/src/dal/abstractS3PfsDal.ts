@@ -21,13 +21,20 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		{
 			mutateS3HandlerType = "expiredFile";
 		}
-		else if(!this.request.body.URI && !existingFile.doesFileExist) // The file does not yet exist, and no data was provided. Assign a presigned URL for data upload.
+		else if(!this.request.body.URI && !existingFile.doesFileExist && !this.request.body.TemporaryFileURLs) // The file does not yet exist, and no data was provided. Assign a presigned URL for data upload.
 		{ 
 			mutateS3HandlerType = 'presignedUrl';
 		}
-		else if(new TempFileService(this.OAuthAccessToken).isTempFile(this.request.body.URI))
+		else if(Array.isArray(this.request.body.TemporaryFileURLs) && this.request.body.TemporaryFileURLs.length > 0)
 		{
-			mutateS3HandlerType = 'tempFile';
+			if(this.request.body.TemporaryFileURLs.length === 1)
+			{
+				mutateS3HandlerType = 'tempFile';
+			}
+			else
+			{
+				mutateS3HandlerType = 'multipartUpload';
+			}
 		}
 		else if (this.request.body.URI) // The file already has data, or data was provided.
 		{ 
@@ -38,9 +45,9 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		await mutateS3Handler.execute();
 	}
 
-	public async createTempFile(tempFileName: string, MIME: string): Promise<string>
+	public async createTempFile(tempFileName: string): Promise<string>
 	{
-		const presignedUrl = await this.generatePreSignedURL(tempFileName, MIME);
+		const presignedUrl = await this.generatePreSignedURL(tempFileName);
 
 		return presignedUrl;
 	}
@@ -200,11 +207,11 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		return MIME;
 	}
 
-	public async generatePreSignedURL(key: string, contentType: string): Promise<string>
+	public async generatePreSignedURL(key: string, contentType?: string): Promise<string>
 	{
 		const params =  {
 			Key: key,
-			ContentType: contentType
+			...(contentType && { ContentType: contentType })
 		};
 			
 		const urlString = await this.awsDal.s3GetSignedUrl(params);
