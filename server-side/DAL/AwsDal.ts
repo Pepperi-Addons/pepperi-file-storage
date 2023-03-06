@@ -155,4 +155,74 @@ export default class AwsDal implements IAws
 
 		return headRes.ContentLength ?? 0;
 	}
+
+	public async createMultipartUpload(key: string): Promise<PromiseResult<AWS.S3.CreateMultipartUploadOutput, AWS.AWSError>>
+	{
+		const params: AWS.S3.CreateMultipartUploadRequest = {
+			Bucket: this.S3Bucket,
+			Key: key
+		};
+		let createRes: PromiseResult<AWS.S3.CreateMultipartUploadOutput, AWS.AWSError>;
+		try
+		{
+			createRes = await this.s3.createMultipartUpload(params).promise();
+		}
+		catch (err)
+		{
+			console.error(`Error creating multipart upload of ${key}: ${err instanceof Error ? err.message : 'An unknown error occurred'}`);
+			throw err;
+		}
+
+		console.log(`Created multipart upload of ${key}`);
+		return createRes;
+	}
+
+	public async copyUploadPart(key: string, uploadId: string, partNumber: number, copySource: string): Promise<PromiseResult<AWS.S3.UploadPartCopyOutput, AWS.AWSError>>
+	{
+		const params: AWS.S3.UploadPartCopyRequest = {
+			Bucket: this.S3Bucket,
+			Key: key,
+			UploadId: uploadId,
+			PartNumber: partNumber,
+			CopySource: encodeURI(`/${this.S3Bucket}${new URL(copySource).pathname}`),
+		};
+		let copyRes: PromiseResult<AWS.S3.UploadPartCopyOutput, AWS.AWSError>;
+		try
+		{
+			copyRes = await this.s3.uploadPartCopy(params).promise();
+		}
+		catch (err)
+		{
+			console.error(`Error copying upload part number ${partNumber} of "${key}" from "${copySource}": ${err instanceof Error ? err.message : 'An unknown error occurred'}`);
+			throw err;
+		}
+
+		console.log(`Copied upload part #${partNumber} of "${key}" from "${copySource}".`);
+		return copyRes;
+	}
+
+	public async completeMultipartUpload(key: string, uploadId: string, parts: AWS.S3.CompletedPart[]): Promise<PromiseResult<AWS.S3.CompleteMultipartUploadOutput, AWS.AWSError>>
+	{
+		const params: AWS.S3.CompleteMultipartUploadRequest = {
+			Bucket: this.S3Bucket,
+			Key: key,
+			UploadId: uploadId,
+			MultipartUpload: {
+				Parts: parts
+			}
+		};
+		let completeRes: PromiseResult<AWS.S3.CompleteMultipartUploadOutput, AWS.AWSError>;
+		try
+		{
+			completeRes = await this.s3.completeMultipartUpload(params).promise();
+		}
+		catch (err)
+		{
+			console.error(`Error completing multipart upload of ${key}: ${err instanceof Error ? err.message : 'An unknown error occurred'}`);
+			throw err;
+		}
+
+		console.log(`Completed multipart upload of ${key}`);
+		return completeRes;
+	}
 }

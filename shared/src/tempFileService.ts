@@ -1,5 +1,6 @@
 import { v4 as createUUID } from 'uuid';
 import jwtDecode from 'jwt-decode';
+import { URL } from 'url';
 
 export default class TempFileService {
     protected distributorUUID: string;
@@ -28,7 +29,7 @@ export default class TempFileService {
 	 {
 		 let res = true;
  
-		 const tempFilePrefix = `${this.distributorUUID}/temp/`;
+		 const tempFilePrefix = `/${this.distributorUUID}/temp/`;
 		 let urlObject: URL;
 		 try
 		 {

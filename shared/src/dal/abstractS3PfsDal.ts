@@ -21,13 +21,20 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		{
 			mutateS3HandlerType = "expiredFile";
 		}
-		else if(!this.request.body.URI && !existingFile.doesFileExist) // The file does not yet exist, and no data was provided. Assign a presigned URL for data upload.
+		else if(!this.request.body.URI && !existingFile.doesFileExist && !this.request.body.TemporaryFileURLs) // The file does not yet exist, and no data was provided. Assign a presigned URL for data upload.
 		{ 
 			mutateS3HandlerType = 'presignedUrl';
 		}
-		else if(new TempFileService(this.OAuthAccessToken).isTempFile(this.request.body.URI))
+		else if(Array.isArray(this.request.body.TemporaryFileURLs) && this.request.body.TemporaryFileURLs.length > 0)
 		{
-			mutateS3HandlerType = 'tempFile';
+			if(this.request.body.TemporaryFileURLs.length === 1)
+			{
+				mutateS3HandlerType = 'tempFile';
+			}
+			else
+			{
+				mutateS3HandlerType = 'multipartUpload';
+			}
 		}
 		else if (this.request.body.URI) // The file already has data, or data was provided.
 		{ 

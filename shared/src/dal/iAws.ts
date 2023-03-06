@@ -38,6 +38,38 @@ export interface IAws
 
     copyS3Object(originURL: string, destinationKey: string, shouldCache: boolean | undefined): Promise<PromiseResult<AWS.S3.CopyObjectOutput, AWS.AWSError>>;
 
-    getFileSize(key: string): Promise<number>
+    getFileSize(key: string): Promise<number>;
+
+    /**
+    Creates a new S3 multipart upload with the specified key in the S3 bucket associated with this instance of the S3Service.
+    @param key - The key of the object being uploaded.
+    @returns A Promise that resolves with the result of the createMultipartUpload() method from the AWS.S3 SDK.
+    If an error occurs, the Promise will be rejected with an AWS.AWSError object.
+    @throws If the createMultipartUpload() method from the AWS.S3 SDK throws an error, it will be rethrown by this method.
+    */
+    createMultipartUpload(key: string): Promise<PromiseResult<AWS.S3.CreateMultipartUploadOutput, AWS.AWSError>>;
+
+    /**
+    Copies a part of a multipart upload of a file from a given source to a given destination.
+    @param key - The destination key of the file.
+    @param uploadId - The ID of the multipart upload.
+    @param partNumber - The part number of the part to be copied.
+    @param copySource - The source of the part to be copied in the form of "bucket/object".
+    @returns A Promise that resolves to the result of the uploadPartCopy API call.
+    @throws An error if there was an issue copying the upload part.
+    */
+    copyUploadPart(key: string, uploadId: string, partNumber: number, copySource: string): Promise<PromiseResult<AWS.S3.UploadPartCopyOutput, AWS.AWSError>>;
+
+    /**
+    Completes a multipart upload by assembling previously uploaded parts into a single object and creates the object in Amazon S3.
+    @param {string} key - The key under which the multipart upload was initiated.
+    @param {string} uploadId - The ID of the multipart upload.
+    @param {AWS.S3.CompletedPart[]} parts - An array of CompletedPart data types that identifies the individual parts that were uploaded.
+    @return {Promise<PromiseResult<AWS.S3.CompleteMultipartUploadOutput, AWS.AWSError>>} - A Promise that returns a PromiseResult object containing the response data from Amazon S3 or an error.
+    @throws {AWS.AWSError} - Throws an error if the completion of multipart upload fails.
+    */
+    completeMultipartUpload(key: string, uploadId: string, parts: AWS.S3.CompletedPart[]): Promise<PromiseResult<AWS.S3.CompleteMultipartUploadOutput, AWS.AWSError>>;
+
+
 
 }

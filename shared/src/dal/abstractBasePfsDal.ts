@@ -11,11 +11,16 @@ export abstract class AbstractBasePfsDal implements IPfsGetter, IPfsMutator
 	protected clientAddonUUID: string;
 	protected readonly MAXIMAL_LOCK_TIME; 
 	protected clientSchemaName: string;
-    
-	constructor(protected OAuthAccessToken: string, public request: Request, maximalLockTime:number)
+
+	public get OAuthAccessToken(): string
 	{
-		this.environment = jwtDecode(OAuthAccessToken)['pepperi.datacenter'];
-		this.DistributorUUID = jwtDecode(OAuthAccessToken)['pepperi.distributoruuid'];
+		return this._OAuthAccessToken;
+	}
+    
+	constructor(protected _OAuthAccessToken: string, public request: Request, maximalLockTime:number)
+	{
+		this.environment = jwtDecode(_OAuthAccessToken)['pepperi.datacenter'];
+		this.DistributorUUID = jwtDecode(_OAuthAccessToken)['pepperi.distributoruuid'];
 		this.clientAddonUUID = this.request.query.addon_uuid;
 		this.clientSchemaName = this.request.query.resource_name;
 		this.MAXIMAL_LOCK_TIME = maximalLockTime;

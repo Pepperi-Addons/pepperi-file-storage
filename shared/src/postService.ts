@@ -7,6 +7,7 @@ import { IPfsGetter } from './iPfsGetter';
 import { IPfsMutator } from './iPfsMutator';
 import PfsService from "./pfs.service";
 import TempFileService from './tempFileService';
+import fetch from 'node-fetch';
 
 
 export abstract class PostService extends PfsService 
@@ -27,6 +28,12 @@ export abstract class PostService extends PfsService
         if (!this.request.body.Key) 
 		{
 			throw new Error("Missing mandatory field 'Key'");
+		}
+
+		//URI and TemporaryFileURLs are mutually exclusive
+		if (this.request.body.URI && this.request.body.TemporaryFileURLs)
+		{
+			throw new Error("Fields 'URI' and 'TemporaryFileURLs' are mutually exclusive.");
 		}
 
         this.validateExtension();
@@ -226,7 +233,7 @@ export abstract class PostService extends PfsService
     private async createFile(): Promise<any>
 	{
 		let res: any = {};
-		if(this.request.body.URI && (!this.tempFileService.isTempFile(this.request.body.URI) || this.request.body.Thumbnails))
+		if(this.request.body.URI && this.request.body.Thumbnails)
 		{
 			this.newFileFields.buffer = await this.getFileDataBuffer(this.request.body.URI);
 		}
@@ -276,7 +283,7 @@ export abstract class PostService extends PfsService
 		newFileFields.Key = data.Key;
 		newFileFields.ExpirationDateTime = data.ExpirationDateTime;
 		newFileFields.DeletedBy = data.DeletedBy;
-		newFileFields.IsTempFile = this.tempFileService.isTempFile(data.URI);
+		newFileFields.TemporaryFileURLs = data.TemporaryFileURLs;
 
 		if(!existingFile.doesFileExist)
 		{
@@ -320,9 +327,9 @@ export abstract class PostService extends PfsService
         if (newFileFields.buffer) newFileFields.FileSize = Buffer.byteLength(newFileFields.buffer);
 
         let uploadedBy = '';
-        if ((data.URI || (data.hasOwnProperty('Hidden') && data.Hidden != existingFile.Hidden)) && (uploadedBy = await this.getUploadedByUUID()) !== existingFile.UploadedBy)
+        if ((data.URI || data.TemporaryFileURLs || (data.hasOwnProperty('Hidden') && data.Hidden != existingFile.Hidden)) && (uploadedBy = await this.getUploadedByUUID()) !== existingFile.UploadedBy)
         // Assignment to uploadedBy var inside the if-statement is intentional.
-        // Check if URI was passed, or the Hidden property is changed to avoid calling async getUploadedByUUID() unnecessarily.
+        // Check if URI or TemporaryFileURLs was passed, or the Hidden property is changed to avoid calling async getUploadedByUUID() unnecessarily.
         // Check if there's a discrepancy between current uploader and pervious to avoid updating the file's UploadedBy field unnecessarily.
         {
             newFileFields.UploadedBy = uploadedBy;
