@@ -23,6 +23,8 @@
           "@typescript-eslint/explicit-module-boundary-types": "off",
         "indent": ["error", "tab"],
         "brace-style": ["error", "allman"],
-        "semi": ["error", "always"]
+        "semi": ["error", "always"],
+        "no-debugger": "error",
+        "eol-last": ["error", "always"]
     }
 }
