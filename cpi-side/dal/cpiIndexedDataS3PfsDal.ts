@@ -1,13 +1,11 @@
 import { FILES_TO_UPLOAD_TABLE_NAME, IndexedDataS3PfsDal, SharedHelper } from 'pfs-shared';
-import { AddonData, FindOptions, PapiClient } from '@pepperi-addons/papi-sdk';
+import { AddonData, FindOptions } from '@pepperi-addons/papi-sdk';
 import {AddonUUID} from '../../addon.config.json';
 import lodashPick from 'lodash.pick';
 import { URL } from 'url';
 import { PfsService } from '../cpiPfs.service';
 import fs from 'fs';
 import path from 'path';
-import fetch, { RequestInit } from 'node-fetch';
-import pick from 'lodash.pick';
 
 export class CpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal 
 {    
@@ -29,7 +27,7 @@ export class CpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal
 		};
 
 		const getPfsTableName = SharedHelper.getPfsTableName(this.request.query.addon_uuid, this.clientSchemaName);
-		let resultObjects =  await this.pepperiDal.getDataFromTable(getPfsTableName, findOptions);
+		let resultObjects = await this.pepperiDal.getDataFromTable(getPfsTableName, findOptions);
 
 		// Set v={{modificationDateTime}} on each URL to avoid browser cache.
 		resultObjects = this.addVersionToObjectsUrl(resultObjects);
@@ -42,6 +40,12 @@ export class CpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal
 		// Setting the version requires the ModificationDateTime field, and downloading the files
 		// is based on the Sync field.
 		resultObjects = this.pickRequestedFields(resultObjects, this.request.query?.fields);
+
+		resultObjects.map(object =>
+		{
+			// Delete the TemporaryFileURLs field, since it's not needed in the response.
+			delete object.TemporaryFileURLs;
+		});
 
 		console.log(`Files listing done successfully.`);
 		return resultObjects;

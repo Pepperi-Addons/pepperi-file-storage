@@ -58,13 +58,13 @@ export class FileUploadService {
 
         this.fileUploadLog(`File ${absolutePath} was successfully upserted to the FilesToUpload table.`);
 
-        // Update the file's URL on the schema to point to the temporary file.
-        this.fileUploadLog(`Updating file ${absolutePath} URL to point to the temporary file...`);
-        file.URL = tempFile.TemporaryFileURL;
+        // Update the file's TemporaryFileURLs array to point to the temporary file.
+        this.fileUploadLog(`Updating file ${absolutePath} TemporaryFileURLs to point to the temporary file...`);
+        file["TemporaryFileURLs"] = [tempFile.TemporaryFileURL];
         const tableName = SharedHelper.getPfsTableName(this.clientAddonUUID, this.clientAddonSchemaName);
 
         await this.pepperiDal.postDocumentToTable(tableName, file);
-        this.fileUploadLog(`File ${absolutePath} URL was successfully updated to point to the temporary file.`);
+        this.fileUploadLog(`File ${absolutePath} TemporaryFileURLs was successfully updated to point to the temporary file.`);
     }
 
     /**
