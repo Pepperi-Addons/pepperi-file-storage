@@ -7,6 +7,7 @@ import { PfsService } from '../cpiPfs.service';
 import fs from 'fs';
 import path from 'path';
 import fetch, { RequestInit } from 'node-fetch';
+import pick from 'lodash.pick';
 
 export class CpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal 
 {    
@@ -143,7 +144,7 @@ export class CpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal
 		delete superRes.PresignedURL; 
 
 		// Save the file to the FilesToUpload table.
-		await pepperi.addons.data.uuid(AddonUUID).table(FILES_TO_UPLOAD_TABLE_NAME).upsert({Key :superRes.Key});
+		await pepperi.addons.data.uuid(AddonUUID).table(FILES_TO_UPLOAD_TABLE_NAME).upsert({Key :this.relativeAbsoluteKeyService.getAbsolutePath(superRes.Key!)});
 
 		return superRes;
 	}
@@ -153,25 +154,21 @@ export class CpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal
 		// If it's a file - set URL to to point to the local file.
 		if(!newFileFields.Key.endsWith('/'))
 		{
-			newFileFields.URL = `${await pepperi.files.baseURL()}/${this.getAbsolutePath(newFileFields.Key)}`;
+			newFileFields.URL = `${await pepperi.files.baseURL()}/${this.relativeAbsoluteKeyService.getAbsolutePath(newFileFields.Key)}`;
 		}
 	}
 
 	public override async mutateS3(newFileFields: any, existingFile: any): Promise<void> 
 	{
-		const canonizedKey = this.removeSlashPrefix(newFileFields.Key);
+		const canonizedKey = this.relativeAbsoluteKeyService.removeSlashPrefix(newFileFields.Key);
 
 		// Save dataUri to local file
-		const localFilePath = `${await pepperi.files.rootDir()}/${this.getAbsolutePath(canonizedKey)}`;
+		const localFilePath = `${await pepperi.files.rootDir()}/${this.relativeAbsoluteKeyService.getAbsolutePath(canonizedKey)}`;
 		await this.locallySaveBase64ToFile(newFileFields.buffer, localFilePath);
 
-
-		const papiClient = await pepperi.papiClient;
-		this.uploadToTempFile(newFileFields, papiClient);
-
 		delete newFileFields.buffer;
-		delete newFileFields.IsTempFile;
-
+		
+		console.log(`mutateS3: Successfully saved file "${canonizedKey}" to the device.`);
 	}
 
 	public async locallySaveBase64ToFile(buffer: Buffer, filePath: string): Promise<void> 
@@ -183,58 +180,5 @@ export class CpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal
 
 		// Write the file to the path
 		await fs.promises.writeFile(filePath, buffer);
-	}
-
-	private uploadToTempFile(file: any, papiClient: PapiClient): void
-	{
-		let downloadUrl: string;
-
-		// Create a temporary file in the PFS.
-		papiClient.post(`/addons/api/${AddonUUID}/api/temporary_file`)
-			.then(res => 
-			{
-				// Upload the file to the temporary file.
-				downloadUrl = res.DownloadURL;
-				return this.uploadFileToTempUrl(file, res.PutURL);
-			})
-			.then(response => 
-			{
-				if (response.status === 200)
-					// Remove the file from the FilesToUpload table.
-					return pepperi.addons.data.uuid(AddonUUID).table(FILES_TO_UPLOAD_TABLE_NAME).upsert({Key :file.Key, Hidden: true}) as AddonData;
-				else 
-				{
-					throw new Error(`Failed to upload file ${file.Key} to S3. Status: ${response.status} ${response.statusText}`);
-				}
-			})
-			.then(res => 
-			{
-				// Update the file's URL on the schema to point to the temporary file.
-				file.URL = downloadUrl;
-				const tableName = SharedHelper.getPfsTableName(this.request.query.addon_uuid, this.clientSchemaName);
-				return this.pepperiDal.postDocumentToTable(tableName, file);
-			})
-			.then(res => 
-			{
-				console.log(`File ${file.Key} was successfully uploaded to a temp file on S3.`);
-			})
-			.catch(err => 
-			{
-				console.error(err);
-			});
-	}
-
-	private uploadFileToTempUrl(file: any, putURL: string) 
-	{
-		const requestOptions: RequestInit = {
-			method: 'PUT',
-			body: file.buffer,
-			headers: {
-				"Content-Type": file.MIME,
-				"Content-Length": file.buffer.length.toString()
-			}
-		};
-
-		return fetch(putURL, requestOptions);
 	}
 }

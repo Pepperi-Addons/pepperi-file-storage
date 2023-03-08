@@ -1,7 +1,7 @@
 import { Request } from '@pepperi-addons/debug-server';
 import { AddonData } from '@pepperi-addons/papi-sdk';
 import jwtDecode from 'jwt-decode';
-import { IPfsGetter, IPfsMutator, TransactionType } from '..';
+import { IPfsGetter, IPfsMutator, RelativeAbsoluteKeyService, TransactionType } from '..';
 
 
 export abstract class AbstractBasePfsDal implements IPfsGetter, IPfsMutator
@@ -11,10 +11,16 @@ export abstract class AbstractBasePfsDal implements IPfsGetter, IPfsMutator
 	protected clientAddonUUID: string;
 	protected readonly MAXIMAL_LOCK_TIME; 
 	protected clientSchemaName: string;
+	protected _relativeAbsoluteKeyService: RelativeAbsoluteKeyService;
 
 	public get OAuthAccessToken(): string
 	{
 		return this._OAuthAccessToken;
+	}
+
+	public get relativeAbsoluteKeyService(): RelativeAbsoluteKeyService
+	{
+		return this._relativeAbsoluteKeyService;
 	}
     
 	constructor(protected _OAuthAccessToken: string, public request: Request, maximalLockTime:number)
@@ -24,6 +30,7 @@ export abstract class AbstractBasePfsDal implements IPfsGetter, IPfsMutator
 		this.clientAddonUUID = this.request.query.addon_uuid;
 		this.clientSchemaName = this.request.query.resource_name;
 		this.MAXIMAL_LOCK_TIME = maximalLockTime;
+		this._relativeAbsoluteKeyService = new RelativeAbsoluteKeyService(this.DistributorUUID, this.clientAddonUUID, this.clientSchemaName);
 	}
 
 	getMaximalLockTime() 
@@ -61,49 +68,5 @@ export abstract class AbstractBasePfsDal implements IPfsGetter, IPfsMutator
 	abstract getObjectS3FileVersion(Key: any);
 
 	abstract getObjects(whereClause?: string): Promise<AddonData[]>;
-	//#endregion
-	
-
-	//#region public methods
-
-	/**
-	* Each distributor is given its own folder, and each addon has its own folder within the distributor's folder.
-	* Addons place objects in their folder. An absolute path is a path that includes the Distributor's UUID, 
-	* the Addon's UUID and the trailing requested path.
-	* @param relativePath the path relative to the addon's folder
-	* @returns a string in the format ${this.DistributorUUID}/${this.AddonUUID}/${relativePath}
-	*/
-	public getAbsolutePath(relativePath: string): string 
-	{
-		relativePath = this.removeSlashPrefix(relativePath);
-
-		const absolutePrefix = `${this.DistributorUUID}/${this.clientAddonUUID}/${this.clientSchemaName}/`;
-		return relativePath.startsWith(absolutePrefix) ? relativePath : `${absolutePrefix}${relativePath}`;
-	}
-	//#endregion
-	
-	//#region protected methods
-
-	protected removeSlashPrefix(path: string)
-	{
-		if (path != '/' && path?.startsWith('/')) 
-		{
-			path = path.slice(1);
-		}
-		return path;
-	}
-
-	/**
-	 * Each distributor is given its own folder, and each addon has its own folder within the distributor's folder.
-	 * Addons place objects in their folder. A relative path is a path that's relative to the addon's folder.
-	 * @param absolutePath the original path the addon requested
-	 * @returns a relative path string
-	 */
-	protected getRelativePath(absolutePath: string): string 
-	{
-		const relativePath = absolutePath.split(`${this.DistributorUUID}/${this.clientAddonUUID}/${this.clientSchemaName}/`)[1];
-		const res = relativePath === '' ? '/' : relativePath; // Handle root folder case
-		return res;
-	}
 	//#endregion
 }

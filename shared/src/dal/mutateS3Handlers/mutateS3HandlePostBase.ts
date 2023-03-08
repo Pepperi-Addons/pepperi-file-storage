@@ -48,14 +48,14 @@ export class MutateS3HandlePostBase extends AMutateS3Handler
 
     protected async uploadThumbnail(size: string, Body: Buffer): Promise<any> 
 	{
-		const key = `thumbnails/${this.s3PfsDal.getAbsolutePath(this.newFileFields.Key)}_${size}`;
+		const key = `thumbnails/${this.s3PfsDal.relativeAbsoluteKeyService.getAbsolutePath(this.newFileFields.Key)}_${size}`;
 		return this.s3PfsDal.uploadToS3(key, Body, this.shouldUseCache);
 	}
 
 	private async deleteThumbnail(size: any) 
 	{
 
-		const keyToDelete = `thumbnails/${this.s3PfsDal.getAbsolutePath(this.newFileFields.Key)}_${size}`;
+		const keyToDelete = `thumbnails/${this.s3PfsDal.relativeAbsoluteKeyService.getAbsolutePath(this.newFileFields.Key)}_${size}`;
 		
 		// delete thumbnail from S3 bucket.
 		const deleted = await this.s3PfsDal.awsDal.s3DeleteObject(keyToDelete);

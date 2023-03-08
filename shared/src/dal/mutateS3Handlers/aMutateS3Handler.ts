@@ -21,7 +21,7 @@ export abstract class AMutateS3Handler// extends AbstractS3PfsDal
 	{
 		console.log(`Trying to delete Key: ${removedKey}`);
 
-		const keyToDelete = this.s3PfsDal.getAbsolutePath(removedKey);
+		const keyToDelete = this.s3PfsDal.relativeAbsoluteKeyService.getAbsolutePath(removedKey);
 		
 		// Delete from S3 bucket.
 		const deletedFile = await this.s3PfsDal.awsDal.s3DeleteObject(keyToDelete);
