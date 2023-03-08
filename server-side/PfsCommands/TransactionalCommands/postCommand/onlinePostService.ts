@@ -1,6 +1,7 @@
 import { PostService } from "pfs-shared";
 import jwtDecode from 'jwt-decode';
 
+
 export class OnlinePostService extends PostService
 {
     protected async getUploadedByUUID(): Promise<any> 
@@ -11,5 +12,4 @@ export class OnlinePostService extends PostService
 		//Leave files uploaded by support admin user (i.e. uploading using integration) with a blank 
 		return isSupportAdminUser ? '' : jwtDecode(this.OAuthAccessToken)['pepperi.useruuid'];
 	}
-    
 }

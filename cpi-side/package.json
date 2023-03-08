@@ -22,9 +22,12 @@
         "@types/node-fetch": "^2.6.0",
         "aws-sdk": "^2.1328.0",
         "encoding": "^0.1.13",
+        "jwt-decode": "^2.2.0",
         "lodash.pick": "^4.4.0",
         "node-fetch": "^2.6.0",
-        "pfs-shared": "file:../shared"
+        "pfs-shared": "file:../shared",
+        "rollup-plugin-typescript2": "^0.30.0"
+        
     },
     "devDependencies": {
         "@rollup/plugin-commonjs": "^24.0.1",
