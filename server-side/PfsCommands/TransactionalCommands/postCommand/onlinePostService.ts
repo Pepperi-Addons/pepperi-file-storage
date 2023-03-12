@@ -11,5 +11,4 @@ export class OnlinePostService extends PostService
 		//Leave files uploaded by support admin user (i.e. uploading using integration) with a blank 
 		return isSupportAdminUser ? '' : jwtDecode(this.OAuthAccessToken)['pepperi.useruuid'];
 	}
-    
 }
