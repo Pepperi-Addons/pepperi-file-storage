@@ -15,7 +15,7 @@ export class MutateS3HandlePostBase extends AMutateS3Handler
 		await this.handleDeletion();
 	}
 
-	protected async specificHandle(): Promise<any>
+	protected async specificHandle(): Promise<void>
 	{
 		Promise.resolve();
 	}

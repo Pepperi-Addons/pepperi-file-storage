@@ -6,7 +6,7 @@ import { MutateS3HandleFileCopy } from "./mutateS3HandleFileCopy";
 export class MutateS3HandleMultipartUpload extends MutateS3HandleFileCopy {
 	protected readonly BATCH_SIZE = 5;
 
-	protected override async specificHandle(): Promise<any> {
+	protected override async specificHandle(): Promise<void> {
 		// Copy the file's data from the temp location to the final location.
 		const absolutePath = this.s3PfsDal.getAbsolutePath(this.newFileFields.Key);
 		const tempFileURLs: Array<string> = this.s3PfsDal.request.body.TemporaryFileURLs;
@@ -19,7 +19,7 @@ export class MutateS3HandleMultipartUpload extends MutateS3HandleFileCopy {
 		{
 			// Copy upload parts in batches of size BATCH_SIZE
 			const uploadedParts = await this.copyUploadParts(tempFileURLs, absolutePath, UploadId);
-			
+
 			// Complete multipart upload
 			completeMultipartUploadResult = await this.s3PfsDal.awsDal.completeMultipartUpload(absolutePath, UploadId!, uploadedParts);
 
