@@ -2,7 +2,7 @@ import { MutateS3HandleFileCopy } from "./mutateS3HandleFileCopy";
 
 export class MutateS3HandleTempFile extends MutateS3HandleFileCopy
 {
-	protected override async specificHandle(): Promise<any> 
+	protected override async specificHandle(): Promise<void> 
 	{
 		// Copy the file's data from the temp location to the final location.
 		const absolutePath = this.s3PfsDal.relativeAbsoluteKeyService.getAbsolutePath(this.newFileFields.Key);

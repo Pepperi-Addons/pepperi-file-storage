@@ -2,7 +2,7 @@ import { AMutateS3Handler } from "./aMutateS3Handler";
 
 export class MutateS3HandlePostBase extends AMutateS3Handler
 {
-    public async execute(): Promise<any>
+    public async execute(): Promise<void>
 	{
 		await this.specificHandle();
 		await this.handleThumbnails();
@@ -15,7 +15,7 @@ export class MutateS3HandlePostBase extends AMutateS3Handler
 		await this.handleDeletion();
 	}
 
-	protected async specificHandle(): Promise<any>
+	protected async specificHandle(): Promise<void>
 	{
 		Promise.resolve();
 	}
