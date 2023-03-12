@@ -1,3 +1,5 @@
+import { AWSError, S3 } from "aws-sdk";
+import { PromiseResult } from "aws-sdk/lib/request";
 import { MutateS3HandleFileCopy } from "./mutateS3HandleFileCopy";
 
 
@@ -8,15 +10,19 @@ export class MutateS3HandleMultipartUpload extends MutateS3HandleFileCopy {
 		// Copy the file's data from the temp location to the final location.
 		const absolutePath = this.s3PfsDal.getAbsolutePath(this.newFileFields.Key);
 		const tempFileURLs: Array<string> = this.s3PfsDal.request.body.TemporaryFileURLs;
+		let completeMultipartUploadResult: PromiseResult<S3.CompleteMultipartUploadOutput, AWSError>;
 
 		// Create multipart upload
 		const { UploadId } = await this.s3PfsDal.awsDal.createMultipartUpload(absolutePath);
 
-		let uploadedParts: AWS.S3.CompletedPart[];
-		// Copy upload parts in batches of size BATCH_SIZE
 		try
 		{
-			uploadedParts = await this.copyUploadParts(tempFileURLs, absolutePath, UploadId);
+			// Copy upload parts in batches of size BATCH_SIZE
+			const uploadedParts = await this.copyUploadParts(tempFileURLs, absolutePath, UploadId);
+			
+			// Complete multipart upload
+			completeMultipartUploadResult = await this.s3PfsDal.awsDal.completeMultipartUpload(absolutePath, UploadId!, uploadedParts);
+
 		}
 		catch(err)
 		{
@@ -25,11 +31,9 @@ export class MutateS3HandleMultipartUpload extends MutateS3HandleFileCopy {
 			// Throw the error, so the transaction will be rolled back
 			throw err;
 		}
-		// Complete multipart upload
-		const res = await this.s3PfsDal.awsDal.completeMultipartUpload(absolutePath, UploadId!, uploadedParts);
 
 		// Set the file version and size
-		this.newFileFields.FileVersion = res.$response.data?.VersionId;
+		this.newFileFields.FileVersion = completeMultipartUploadResult.$response.data?.VersionId;
 		this.newFileFields.FileSize = await this.s3PfsDal.awsDal.getFileSize(absolutePath);
 
 		// Delete the TemporaryFileURLs
