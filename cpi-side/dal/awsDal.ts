@@ -1,4 +1,6 @@
 import { IAws } from "pfs-shared";
+import { PromiseResult } from "aws-sdk/lib/request";
+
 
 export default class CpiAwsDal implements IAws
 {
@@ -36,4 +38,25 @@ export default class CpiAwsDal implements IAws
 	{
 		throw new Error("Method not implemented.");
 	}
+
+	createMultipartUpload(key: string): Promise<PromiseResult<AWS.S3.CreateMultipartUploadOutput, AWS.AWSError>>
+	{
+		throw new Error("Method not implemented.");
+	}
+
+	copyUploadPart(key: string, uploadId: string, partNumber: number, copySource: string): Promise<PromiseResult<AWS.S3.UploadPartCopyOutput, AWS.AWSError>>
+	{
+		throw new Error("Method not implemented.");
+	}
+
+	completeMultipartUpload(key: string, uploadId: string, parts: AWS.S3.CompletedPart[]): Promise<PromiseResult<AWS.S3.CompleteMultipartUploadOutput, AWS.AWSError>>
+	{
+		throw new Error("Method not implemented.");
+	}
+
+	abortMultipartUpload(key: string, uploadId: string): Promise<PromiseResult<AWS.S3.AbortMultipartUploadOutput, AWS.AWSError>>
+	{
+		throw new Error("Method not implemented.");
+	}
 }
+

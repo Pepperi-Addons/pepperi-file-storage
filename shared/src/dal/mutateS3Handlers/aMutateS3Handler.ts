@@ -15,7 +15,7 @@ export abstract class AMutateS3Handler// extends AbstractS3PfsDal
 		this.shouldUseCache = newFileFields?.Cache ?? existingFile?.Cache ?? CACHE_DEFAULT_VALUE;
     }
 
-	abstract execute(): Promise<any>;
+	abstract execute(): Promise<void>;
 
     protected async deleteFileData(removedKey: string): Promise<any> 
 	{

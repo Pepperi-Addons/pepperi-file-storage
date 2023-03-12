@@ -1,7 +1,6 @@
 import { PostService } from "pfs-shared";
 import jwtDecode from 'jwt-decode';
 
-
 export class OnlinePostService extends PostService
 {
     protected async getUploadedByUUID(): Promise<any> 

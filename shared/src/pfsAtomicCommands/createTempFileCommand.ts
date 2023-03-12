@@ -27,15 +27,15 @@ export class CreateTempFileCommand extends PfsService implements ICommand
 	{
 		const tempFileService = new TempFileService(this.OAuthAccessToken);
 		const tempFileKey = tempFileService.createTempFileFullPath(this.request.body.FileName);
-		const putURL = await this.pfsMutator.createTempFile(tempFileKey, this.request.body.MIME);
+		const putURL = await this.pfsMutator.createTempFile(tempFileKey);
 
 		// Create a GET url for the temp file
-		const downloadURL =  `${CdnServers[this.environment]}/${tempFileKey}`;
+		const temporaryFileURL =  `${CdnServers[this.environment]}/${tempFileKey}`;
 
 		// Create a TempFile object
 		const res: TempFile = {
 			PutURL: putURL,
-			DownloadURL: downloadURL,
+			TemporaryFileURL: temporaryFileURL,
 		};
 		
 		return res;

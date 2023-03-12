@@ -35,12 +35,14 @@ export default class AwsDal implements IAws
         Bucket?: string,
         Key: string,
         Expires?: number, //PUT presigned URL will expire after 24 hours = 60 sec * 60 min * 24 hrs
-        ContentType: string
+        ContentType?: string
     }): Promise<string>
 	{			
 		params.Bucket = params.Bucket ?? this.S3Bucket;
 		params.Expires = params.Expires ?? 24 * 60 * 60; //PUT presigned URL will expire after 24 hours = 60 sec * 60 min * 24 hrs
-		const urlString: string = await this.s3.getSignedUrl('putObject',params);
+
+		const urlString: string = await this.s3.getSignedUrl('putObject', params);
+		
 		return urlString;
 	}
 
@@ -152,5 +154,105 @@ export default class AwsDal implements IAws
 		console.log(`Got file size of ${key}`);
 
 		return headRes.ContentLength ?? 0;
+	}
+
+	public async createMultipartUpload(key: string): Promise<PromiseResult<AWS.S3.CreateMultipartUploadOutput, AWS.AWSError>>
+	{
+		console.log(`Trying to create multipart upload of ${key}...`);
+		const params: AWS.S3.CreateMultipartUploadRequest = {
+			Bucket: this.S3Bucket,
+			Key: key
+		};
+		let createRes: PromiseResult<AWS.S3.CreateMultipartUploadOutput, AWS.AWSError>;
+		try
+		{
+			createRes = await this.s3.createMultipartUpload(params).promise();
+		}
+		catch (err)
+		{
+			console.error(`Error creating multipart upload of ${key}: ${err instanceof Error ? err.message : 'An unknown error occurred'}`);
+			throw err;
+		}
+
+		console.log(`Created multipart upload of ${key}`);
+		return createRes;
+	}
+
+	public async copyUploadPart(key: string, uploadId: string, partNumber: number, copySource: string): Promise<PromiseResult<AWS.S3.UploadPartCopyOutput, AWS.AWSError>>
+	{
+		const params: AWS.S3.UploadPartCopyRequest = {
+			Bucket: this.S3Bucket,
+			Key: key,
+			UploadId: uploadId,
+			PartNumber: partNumber,
+			CopySource: encodeURI(`/${this.S3Bucket}${new URL(copySource).pathname}`),
+		};
+		let copyRes: PromiseResult<AWS.S3.UploadPartCopyOutput, AWS.AWSError>;
+
+		console.log(`Trying to copy upload part number ${partNumber} of "${key}" from "${copySource}"...`);
+		try
+		{
+			copyRes = await this.s3.uploadPartCopy(params).promise();
+		}
+		catch (err)
+		{
+			console.error(`Error copying upload part number ${partNumber} of "${key}" from "${copySource}": ${err instanceof Error ? err.message : 'An unknown error occurred'}`);
+			throw err;
+		}
+
+		console.log(`Copied upload part #${partNumber} of "${key}" from "${copySource}".`);
+		return copyRes;
+	}
+
+	public async completeMultipartUpload(key: string, uploadId: string, parts: AWS.S3.CompletedPart[]): Promise<PromiseResult<AWS.S3.CompleteMultipartUploadOutput, AWS.AWSError>>
+	{
+		const params: AWS.S3.CompleteMultipartUploadRequest = {
+			Bucket: this.S3Bucket,
+			Key: key,
+			UploadId: uploadId,
+			MultipartUpload: {
+				Parts: parts
+			}
+		};
+		let completeRes: PromiseResult<AWS.S3.CompleteMultipartUploadOutput, AWS.AWSError>;
+
+		console.log(`Trying to complete multipart upload of ${key}...`);
+		try
+		{
+			completeRes = await this.s3.completeMultipartUpload(params).promise();
+		}
+		catch (err)
+		{
+			console.error(`Error completing multipart upload of ${key}: ${err instanceof Error ? err.message : 'An unknown error occurred'}`);
+			throw err;
+		}
+
+		console.log(`Completed multipart upload of ${key}`);
+		return completeRes;
+	}
+
+	public async abortMultipartUpload(key: string, uploadId: string): Promise<PromiseResult<AWS.S3.AbortMultipartUploadOutput, AWS.AWSError>>
+	{
+		const params: AWS.S3.AbortMultipartUploadRequest = {
+			Bucket: this.S3Bucket,
+			Key: key,
+			UploadId: uploadId
+		};
+		let abortRes: PromiseResult<AWS.S3.AbortMultipartUploadOutput, AWS.AWSError>;
+
+		console.log(`Trying to abort multipart upload of ${key}...`);
+		try
+		{
+			abortRes = await this.s3.abortMultipartUpload(params).promise();
+		}
+		catch (err)
+		{
+			console.error(`Error aborting multipart upload of ${key}: ${err instanceof Error ? err.message : 'An unknown error occurred'}`);
+			throw err;
+		}
+
+		console.log(`Aborted multipart upload of ${key}`);
+		return abortRes;
+	
 	}
 }

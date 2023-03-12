@@ -16,6 +16,10 @@
             "outFiles": [
                 "${workspaceFolder}/server-side/build/*/*.js"
             ],
+            "resolveSourceMapLocations": [
+                "${workspaceFolder}/**",
+                "!**/node_modules/**"
+            ],
             "preLaunchTask": {
                 "label": "Build All",
                 "type": "typescript",
