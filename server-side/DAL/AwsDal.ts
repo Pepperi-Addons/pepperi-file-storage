@@ -158,6 +158,7 @@ export default class AwsDal implements IAws
 
 	public async createMultipartUpload(key: string): Promise<PromiseResult<AWS.S3.CreateMultipartUploadOutput, AWS.AWSError>>
 	{
+		console.log(`Trying to create multipart upload of ${key}...`);
 		const params: AWS.S3.CreateMultipartUploadRequest = {
 			Bucket: this.S3Bucket,
 			Key: key
@@ -187,6 +188,8 @@ export default class AwsDal implements IAws
 			CopySource: encodeURI(`/${this.S3Bucket}${new URL(copySource).pathname}`),
 		};
 		let copyRes: PromiseResult<AWS.S3.UploadPartCopyOutput, AWS.AWSError>;
+
+		console.log(`Trying to copy upload part number ${partNumber} of "${key}" from "${copySource}"...`);
 		try
 		{
 			copyRes = await this.s3.uploadPartCopy(params).promise();
@@ -212,6 +215,8 @@ export default class AwsDal implements IAws
 			}
 		};
 		let completeRes: PromiseResult<AWS.S3.CompleteMultipartUploadOutput, AWS.AWSError>;
+
+		console.log(`Trying to complete multipart upload of ${key}...`);
 		try
 		{
 			completeRes = await this.s3.completeMultipartUpload(params).promise();
@@ -224,5 +229,30 @@ export default class AwsDal implements IAws
 
 		console.log(`Completed multipart upload of ${key}`);
 		return completeRes;
+	}
+
+	public async abortMultipartUpload(key: string, uploadId: string): Promise<PromiseResult<AWS.S3.AbortMultipartUploadOutput, AWS.AWSError>>
+	{
+		const params: AWS.S3.AbortMultipartUploadRequest = {
+			Bucket: this.S3Bucket,
+			Key: key,
+			UploadId: uploadId
+		};
+		let abortRes: PromiseResult<AWS.S3.AbortMultipartUploadOutput, AWS.AWSError>;
+
+		console.log(`Trying to abort multipart upload of ${key}...`);
+		try
+		{
+			abortRes = await this.s3.abortMultipartUpload(params).promise();
+		}
+		catch (err)
+		{
+			console.error(`Error aborting multipart upload of ${key}: ${err instanceof Error ? err.message : 'An unknown error occurred'}`);
+			throw err;
+		}
+
+		console.log(`Aborted multipart upload of ${key}`);
+		return abortRes;
+	
 	}
 }

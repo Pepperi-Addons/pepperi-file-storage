@@ -12,7 +12,39 @@ export class MutateS3HandleMultipartUpload extends MutateS3HandleFileCopy {
 		// Create multipart upload
 		const { UploadId } = await this.s3PfsDal.awsDal.createMultipartUpload(absolutePath);
 
+		let uploadedParts: AWS.S3.CompletedPart[];
 		// Copy upload parts in batches of size BATCH_SIZE
+		try
+		{
+			uploadedParts = await this.copyUploadParts(tempFileURLs, absolutePath, UploadId);
+		}
+		catch(err)
+		{
+			// Abort multipart upload
+			await this.s3PfsDal.awsDal.abortMultipartUpload(absolutePath, UploadId!);
+			// Throw the error, so the transaction will be rolled back
+			throw err;
+		}
+		// Complete multipart upload
+		const res = await this.s3PfsDal.awsDal.completeMultipartUpload(absolutePath, UploadId!, uploadedParts);
+
+		// Set the file version and size
+		this.newFileFields.FileVersion = res.$response.data?.VersionId;
+		this.newFileFields.FileSize = await this.s3PfsDal.awsDal.getFileSize(absolutePath);
+
+		// Delete the TemporaryFileURLs
+		delete this.newFileFields.TemporaryFileURLs;
+	}
+
+	/*
+	* Copy upload parts in batches of size BATCH_SIZE
+	* @param tempFileURLs - The temporary file URLs
+	* @param absolutePath - The absolute path of the file
+	* @param UploadId - The upload ID
+	* @returns The uploaded parts
+	*/
+	private async copyUploadParts(tempFileURLs: string[], absolutePath: string, UploadId: string | undefined): Promise<AWS.S3.CompletedPart[]>
+	{
 		const uploadedParts: AWS.S3.CompletedPart[] = [];
 		for (let i = 0; i < tempFileURLs.length; i += this.BATCH_SIZE) {
 			const end = Math.min(i + this.BATCH_SIZE, tempFileURLs.length);
@@ -34,15 +66,6 @@ export class MutateS3HandleMultipartUpload extends MutateS3HandleFileCopy {
 				}
 			});
 		}
-
-		// Complete multipart upload
-		const res = await this.s3PfsDal.awsDal.completeMultipartUpload(absolutePath, UploadId!, uploadedParts);
-
-		// Set the file version and size
-		this.newFileFields.FileVersion = res.$response.data?.VersionId;
-		this.newFileFields.FileSize = await this.s3PfsDal.awsDal.getFileSize(absolutePath);
-
-		// Delete the TemporaryFileURLs
-		delete this.newFileFields.TemporaryFileURLs;
+		return uploadedParts;
 	}
 }
