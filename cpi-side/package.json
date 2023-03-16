@@ -25,9 +25,10 @@
         "jwt-decode": "^2.2.0",
         "lodash.pick": "^4.4.0",
         "node-fetch": "^2.6.0",
+        "p-queue": "^6.6.2",
         "pfs-shared": "file:../shared",
-        "rollup-plugin-typescript2": "^0.30.0"
-        
+        "rollup-plugin-typescript2": "^0.30.0",
+        "uuid": "^9.0.0"
     },
     "devDependencies": {
         "@rollup/plugin-commonjs": "^24.0.1",

@@ -1,6 +1,43 @@
 export class RelativeAbsoluteKeyService
 {
-    constructor(protected distributorUUID: string, protected clientAddonUUID: string, protected clientSchemaName: string) {}
+	protected _distributorUUID: string;
+	protected _clientAddonUUID: string;
+	protected _clientSchemaName: string;
+
+    constructor(absolutePath: string);
+	constructor(distributorUUID: string, clientAddonUUID: string, clientSchemaName: string);
+
+	constructor(arg0: string, clientAddonUUID?: string, clientSchemaName?: string) {
+		if(!(clientAddonUUID && clientSchemaName))
+		{
+			const splitAbsolutePath = arg0.split('/');
+			arg0 = splitAbsolutePath[0];
+			clientAddonUUID = splitAbsolutePath[1];
+			clientSchemaName = splitAbsolutePath[2];
+
+		}
+		
+		this._distributorUUID = arg0;
+		this._clientAddonUUID = clientAddonUUID;
+		this._clientSchemaName = clientSchemaName;
+		
+	}
+
+	public get distributorUUID(): string
+	{
+		return this._distributorUUID;
+	}
+
+	public get clientAddonUUID(): string
+	{
+		return this._clientAddonUUID;
+	}
+
+	public get clientSchemaName(): string
+	{
+		return this._clientSchemaName;
+	}
+
     //#region public methods
 
 	/**
@@ -14,7 +51,7 @@ export class RelativeAbsoluteKeyService
 	{
 		relativePath = this.removeSlashPrefix(relativePath);
 
-		const absolutePrefix = `${this.distributorUUID}/${this.clientAddonUUID}/${this.clientSchemaName}/`;
+		const absolutePrefix = `${this._distributorUUID}/${this._clientAddonUUID}/${this._clientSchemaName}/`;
 		return relativePath.startsWith(absolutePrefix) ? relativePath : `${absolutePrefix}${relativePath}`;
 	}
 
@@ -35,7 +72,7 @@ export class RelativeAbsoluteKeyService
 	 */
 	public getRelativePath(absolutePath: string): string 
 	{
-		const relativePath = absolutePath.split(`${this.distributorUUID}/${this.clientAddonUUID}/${this.clientSchemaName}/`)[1];
+		const relativePath = absolutePath.split(`${this._distributorUUID}/${this._clientAddonUUID}/${this._clientSchemaName}/`)[1];
 		const res = relativePath === '' ? '/' : relativePath; // Handle root folder case
 		return res;
 	}

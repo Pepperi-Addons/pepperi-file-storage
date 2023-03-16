@@ -1,3 +1,5 @@
+import { AddonData } from "@pepperi-addons/papi-sdk"
+
 export const S3Buckets = {
 	"prod": "pepperi-file-storage",
 	"sandbox": "staging-pepperi-file-storage",
@@ -146,3 +148,5 @@ export type TempFile = {
 export type TempFileRequest = {
 	FileName?: string,
 }
+
+export type FileToUpload = AddonData & { AbsolutePath: string };

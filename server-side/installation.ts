@@ -375,6 +375,9 @@ async function createFilesToUploadSchema(papiClient: PapiClient) {
 		Fields: {
 			Key: {
 				Type: 'String',
+			},
+			AbsolutePath: {
+				Type: 'String',
 			}
 		},
 		SyncData: {
