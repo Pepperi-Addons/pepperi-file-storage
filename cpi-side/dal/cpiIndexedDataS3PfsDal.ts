@@ -155,7 +155,7 @@ export class CpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal
 		// If it's a file - set URL to to point to the local file.
 		if(!newFileFields.Key.endsWith('/'))
 		{
-			newFileFields.URL = `${await pepperi.files.baseURL()}/${this.relativeAbsoluteKeyService.getAbsolutePath(newFileFields.Key)}`;
+			newFileFields.URL = encodeURI(`${await pepperi.files.baseURL()}/${this.relativeAbsoluteKeyService.getAbsolutePath(newFileFields.Key)}`);
 		}
 	}
 
