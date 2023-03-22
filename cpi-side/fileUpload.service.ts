@@ -37,7 +37,7 @@ export class FileUploadService {
      */
     public async asyncUploadFile(): Promise<void>
     {
-        FileUploadService.filesUploadQueue.add(() => this.uploadLocalFileToTempFile());
+        await FileUploadService.filesUploadQueue.add(() => this.uploadLocalFileToTempFile());
     }
 
     /**
@@ -50,7 +50,7 @@ export class FileUploadService {
         const pepperiDal = new CpiPepperiDal();
         const papiClient = pepperi.papiClient;
 
-        FileUploadService.filesUploadQueue.addAll(filesToUpload.map(fileToUpload => () => 
+        await FileUploadService.filesUploadQueue.addAll(filesToUpload.map(fileToUpload => () => 
         {
             const fileUploadService = new FileUploadService(pepperiDal, papiClient, fileToUpload);
             return fileUploadService.uploadLocalFileToTempFile();
