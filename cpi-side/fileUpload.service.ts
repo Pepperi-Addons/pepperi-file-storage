@@ -74,6 +74,7 @@ export class FileUploadService {
         try
         {
             tempFileUrls = (await this.papiClient.post(`/addons/api/${AddonUUID}/api/temporary_file`, {})) as TempFile;
+            this.fileUploadLog(`Successfully created a temp file on S3.`);
         }
         catch (err)
         {
@@ -81,13 +82,8 @@ export class FileUploadService {
             return;
         }
 
-        this.fileUploadLog(`Successfully created a temp file on S3.`);
-
-        // Get the file's data from the device's storage.
         // This is an offline call.
-        this.fileUploadLog(`Getting file's data from the device's storage...`);
-        const fileDataBuffer: Buffer = await this.getFileDataBuffer();
-        this.fileUploadLog(`Successfully got file data from the device's storage.`);
+        const fileDataBuffer: Buffer = await this.getFileDataBufferFromDisk();
 
         // Upload the file to the temporary file.
         // This is an online call.
@@ -101,13 +97,19 @@ export class FileUploadService {
         this.fileUploadLog(`File successfully uploaded to a temp file on S3.`);
 
         // Remove the file from the FilesToUpload table.
-        this.fileUploadLog(`Removing file from the FilesToUpload table...`);
-        const hiddenFileToUpload: FileToUpload = { ...this.fileToUpload, Hidden: true };
-        await pepperi.addons.data.uuid(AddonUUID).table(FILES_TO_UPLOAD_TABLE_NAME).upsert(hiddenFileToUpload);
-
-        this.fileUploadLog(`File successfully removed from the FilesToUpload table.`);
+        await this.removeFromFilesToUpload();
 
         // Update the file's TemporaryFileURLs array to point to the temporary file.
+        await this.setTemporaryFileURLs(fileMetadata, tempFileUrls);
+    }
+
+    /**
+     * Sets the file's TemporaryFileURLs property to point to the temporary file's CDN URL.
+     * @param fileMetadata 
+     * @param tempFileUrls 
+     */
+    private async setTemporaryFileURLs(fileMetadata: { Key: string; MIME: string; URL: string; }, tempFileUrls: TempFile): Promise<void>
+    {
         this.fileUploadLog(`Updating file TemporaryFileURLs to point to the temporary file...`);
         fileMetadata["TemporaryFileURLs"] = [tempFileUrls.TemporaryFileURL];
         const tableName = SharedHelper.getPfsTableName(this.clientAddonUUID, this.clientAddonSchemaName);
@@ -147,10 +149,15 @@ export class FileUploadService {
      * @throws An error if the file data could not be retrieved.
      * @throws An error if the file data could not be converted to a buffer.
      */
-     protected async getFileDataBuffer(): Promise<Buffer>
+     protected async getFileDataBufferFromDisk(): Promise<Buffer>
     {
+        this.fileUploadLog(`Getting file's data from the device's storage...`);
+
         const absolutePath = `${await pepperi.files.rootDir()}/${this.fileToUpload.AbsolutePath}`;
         const buffer: Buffer = await fs.promises.readFile(absolutePath);
+
+        this.fileUploadLog(`Successfully got file data from the device's storage.`);
+
         return buffer;
     }
 
@@ -171,6 +178,19 @@ export class FileUploadService {
         };
 
         return await fetch(putURL, requestOptions);
+    }
+
+    /**
+     * Removes the file from the FilesToUpload table.
+     */
+    protected async removeFromFilesToUpload(): Promise<void>
+    {
+        this.fileUploadLog(`Removing file from the FilesToUpload table...`);
+
+        const hiddenFileToUpload: FileToUpload = { ...this.fileToUpload, Hidden: true };
+        await pepperi.addons.data.uuid(AddonUUID).table(FILES_TO_UPLOAD_TABLE_NAME).upsert(hiddenFileToUpload);
+
+        this.fileUploadLog(`File successfully removed from the FilesToUpload table.`);
     }
 
     /**
