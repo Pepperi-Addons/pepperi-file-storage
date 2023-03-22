@@ -34,8 +34,6 @@ export class FileUploadService {
         
     /**
      * Add a promise to the queue that will upload a single file.
-     * @param file The file to upload.
-     * @param fileUploadService The FileUploadService instance to use.
      */
     public async asyncUploadFile(): Promise<void>
     {
@@ -145,7 +143,6 @@ export class FileUploadService {
 
     /**
      * Gets the file data as a buffer.
-     * @param absoluteKey The file's absolute key.
      * @returns The file data as a buffer.
      * @throws An error if the file data could not be retrieved.
      * @throws An error if the file data could not be converted to a buffer.
