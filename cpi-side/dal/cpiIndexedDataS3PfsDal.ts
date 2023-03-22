@@ -1,5 +1,6 @@
-import { IndexedDataS3PfsDal, SharedHelper } from 'pfs-shared';
+import { FILES_TO_UPLOAD_TABLE_NAME, IndexedDataS3PfsDal, SharedHelper } from 'pfs-shared';
 import { AddonData, FindOptions } from '@pepperi-addons/papi-sdk';
+import {AddonUUID} from '../../addon.config.json';
 import lodashPick from 'lodash.pick';
 import { URL } from 'url';
 import { PfsService } from '../cpiPfs.service';
@@ -26,7 +27,7 @@ export class CpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal
 		};
 
 		const getPfsTableName = SharedHelper.getPfsTableName(this.request.query.addon_uuid, this.clientSchemaName);
-		let resultObjects =  await this.pepperiDal.getDataFromTable(getPfsTableName, findOptions);
+		let resultObjects = await this.pepperiDal.getDataFromTable(getPfsTableName, findOptions);
 
 		// Set v={{modificationDateTime}} on each URL to avoid browser cache.
 		resultObjects = this.addVersionToObjectsUrl(resultObjects);
@@ -39,6 +40,12 @@ export class CpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal
 		// Setting the version requires the ModificationDateTime field, and downloading the files
 		// is based on the Sync field.
 		resultObjects = this.pickRequestedFields(resultObjects, this.request.query?.fields);
+
+		resultObjects.map(object =>
+		{
+			// Delete the TemporaryFileURLs field, since it's not needed in the response.
+			delete object.TemporaryFileURLs;
+		});
 
 		console.log(`Files listing done successfully.`);
 		return resultObjects;
@@ -133,10 +140,16 @@ export class CpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal
 
 	protected override async uploadFileMetadata(newFileFields: any, existingFile: any): Promise<AddonData> 
 	{
+		// Save the file to the PFS table.
 		const superRes = await super.uploadFileMetadata(newFileFields, existingFile);
 
+		// Cache the result, so we won't have to download the file again.
 		PfsService.downloadedFileKeysToLocalUrl.set(`${superRes.Key!}${superRes.ModificationDateTime!}`, superRes.URL!);
 		delete superRes.PresignedURL; 
+
+		// Save the file to the FilesToUpload table.
+		await pepperi.addons.data.uuid(AddonUUID).table(FILES_TO_UPLOAD_TABLE_NAME).upsert({Key :this.relativeAbsoluteKeyService.getAbsolutePath(superRes.Key!)});
+
 		return superRes;
 	}
 
@@ -145,20 +158,21 @@ export class CpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal
 		// If it's a file - set URL to to point to the local file.
 		if(!newFileFields.Key.endsWith('/'))
 		{
-			newFileFields.URL = `${await pepperi.files.baseURL()}/${this.getAbsolutePath(newFileFields.Key)}`;
+			newFileFields.URL = `${await pepperi.files.baseURL()}/${this.relativeAbsoluteKeyService.getAbsolutePath(newFileFields.Key)}`;
 		}
 	}
 
 	public override async mutateS3(newFileFields: any, existingFile: any): Promise<void> 
 	{
-		const canonizedKey = this.removeSlashPrefix(newFileFields.Key);
+		const canonizedKey = this.relativeAbsoluteKeyService.removeSlashPrefix(newFileFields.Key);
 
 		// Save dataUri to local file
-		const localFilePath = `${await pepperi.files.rootDir()}/${this.getAbsolutePath(canonizedKey)}`;
+		const localFilePath = `${await pepperi.files.rootDir()}/${this.relativeAbsoluteKeyService.getAbsolutePath(canonizedKey)}`;
 		await this.locallySaveBase64ToFile(newFileFields.buffer, localFilePath);
 
 		delete newFileFields.buffer;
-		delete newFileFields.IsTempFile;
+		
+		console.log(`mutateS3: Successfully saved file "${canonizedKey}" to the device.`);
 	}
 
 	public async locallySaveBase64ToFile(buffer: Buffer, filePath: string): Promise<void> 

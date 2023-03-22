@@ -233,7 +233,7 @@ export abstract class PostService extends PfsService
     private async createFile(): Promise<any>
 	{
 		let res: any = {};
-		if(this.request.body.URI && this.request.body.Thumbnails)
+		if(this.request.body.URI || this.request.body.Thumbnails)
 		{
 			this.newFileFields.buffer = await this.getFileDataBuffer(this.request.body.URI);
 		}

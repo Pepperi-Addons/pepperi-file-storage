@@ -8,7 +8,7 @@ export class MutateS3HandleMultipartUpload extends MutateS3HandleFileCopy {
 
 	protected override async specificHandle(): Promise<void> {
 		// Copy the file's data from the temp location to the final location.
-		const absolutePath = this.s3PfsDal.getAbsolutePath(this.newFileFields.Key);
+		const absolutePath = this.s3PfsDal.relativeAbsoluteKeyService.getAbsolutePath(this.newFileFields.Key);
 		const tempFileURLs: Array<string> = this.s3PfsDal.request.body.TemporaryFileURLs;
 		let completeMultipartUploadResult: PromiseResult<S3.CompleteMultipartUploadOutput, AWSError>;
 

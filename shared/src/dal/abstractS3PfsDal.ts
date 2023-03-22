@@ -62,7 +62,7 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 
 	async invalidateCDN(file: any)
 	{
-		const keyInvalidationPath = `/${this.getAbsolutePath(file.Key)}`; //Invalidation path must start with a '/'.
+		const keyInvalidationPath = `/${this.relativeAbsoluteKeyService.getAbsolutePath(file.Key)}`; //Invalidation path must start with a '/'.
 
 		this.validateInvalidationRequest(keyInvalidationPath/*, file*/);
 
@@ -105,7 +105,7 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 	{
 		console.log(`Trying to delete version: ${s3FileVersion} of key: ${Key}`);
 
-		const deletedVersionRes = await this.awsDal.s3DeleteObject(this.getAbsolutePath(Key));
+		const deletedVersionRes = await this.awsDal.s3DeleteObject(this.relativeAbsoluteKeyService.getAbsolutePath(Key));
 
 		console.log(`Successfully deleted version: ${s3FileVersion} of key: ${Key}`);
 
@@ -118,7 +118,7 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		keys = keys.filter(key => !key.endsWith('/'));
 		
 		// Call DeleteObjects
-		const deleteObjectsRes = await this.deleteObjects(keys.map(key => this.getAbsolutePath(key)));
+		const deleteObjectsRes = await this.deleteObjects(keys.map(key => this.relativeAbsoluteKeyService.getAbsolutePath(key)));
 		
 		// Delete all thumbnails for the deleted files
 		await this.batchDeleteThumbnails(keys);
@@ -150,7 +150,7 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		else
 		{
 			// Retrieve the list of versions.
-			const allVersions = await this.awsDal.s3ListObjectVersions(this.getAbsolutePath(Key));
+			const allVersions = await this.awsDal.s3ListObjectVersions(this.relativeAbsoluteKeyService.getAbsolutePath(Key));
 
 			// listObjectVersions GETs all file versions, in two arrays: 
 			// 1. Versions, used for all available versions.
@@ -238,7 +238,7 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		keys = keys.filter(key => !key.endsWith('/'));
 
 		// Create a list of thumbnails to delete
-		keys = keys.map(key => `thumbnails/${this.getAbsolutePath(key)}_200x200`);
+		keys = keys.map(key => `thumbnails/${this.relativeAbsoluteKeyService.getAbsolutePath(key)}_200x200`);
 
 		// Call DeleteObjects
 		const deleteObjectsRes = await this.deleteObjects(keys);

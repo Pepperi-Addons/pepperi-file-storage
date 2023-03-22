@@ -25,8 +25,8 @@ router.get('/file', async (req, res, next) =>
 
 		req.query.Key = fileKey;
 
-		const dal = await getDal(req);
-		const downloadFileCommand = new DownloadFileCommand(req, dal, dal);
+		const {PfsDal} = await getDal(req);
+		const downloadFileCommand = new DownloadFileCommand(req, PfsDal, PfsDal);
 		const result = await downloadFileCommand.execute();
 
 		res.json(result);
@@ -50,8 +50,8 @@ router.post('/file', async (req, res, next) =>
 			throw new Error('Missing required parameters');
 		}
 		
-		const dal = await getDal(req);
-		const uploadFileCommand = new CpiPostCommand(req, dal, dal);
+		const {PfsDal, PepperiDal} = await getDal(req);
+		const uploadFileCommand = new CpiPostCommand(req, PfsDal, PfsDal, PepperiDal);
 		const result = await uploadFileCommand.execute();
 
 		res.json(result);
@@ -75,19 +75,19 @@ router.get('/files/find', async (req, res, next) =>
 			throw new Error('Missing required parameters');
 		}
 
-		const dal = await getDal(req);
+		const {PfsDal} = await getDal(req);
 
 		let result: any;
 
 		if(req.query.folder)
 		{
-			const listFolderContentsCommand = new ListFolderContentsCommand(req, dal, dal);
+			const listFolderContentsCommand = new ListFolderContentsCommand(req, PfsDal, PfsDal);
 			result = await listFolderContentsCommand.execute();
 
 		}
 		else
 		{
-			const listObjectsCommand = new ListObjectsCommand(req, dal, dal);
+			const listObjectsCommand = new ListObjectsCommand(req, PfsDal, PfsDal);
 			result = await listObjectsCommand.execute();
 		}
 
@@ -109,6 +109,5 @@ async function getDal(req)
 
 	const dal = new CpiIndexedDataS3PfsDal(OAuthAccessToken, req, MAXIMAL_LOCK_TIME, awsDal, pepperiDal);
 
-	return dal ;
+	return {PfsDal: dal, PepperiDal: pepperiDal} ;
 }
-
