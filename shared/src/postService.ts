@@ -91,6 +91,15 @@ export abstract class PostService extends PfsService
 	{
 		this.validateMIMEtype();
 
+		// If file does not exist, validate that either URI or TemporaryFileURLs are provided.
+		if (!this.existingFile.doesFileExist && !this.request.body.URI && !this.request.body.TemporaryFileURLs)
+		{
+			// The user might have wanted to use the deprecated presigned URL functionality.
+			// (This is when you don't provide a URI nor TemporaryFileURLs at all)
+			// If so, throw a more descriptive error message.
+			throw new Error("Missing mandatory field 'URI' or 'TemporaryFileURLs'. PresignedURL functionality has been deprecated. Please use the TemporaryFileURLs field instead.\n For more information, see https://apidesign.pepperi.com/pfs-pepperi-file-service/get-files");
+		}
+
 		if(this.request.body.Key.endsWith('/') && this.request.body.Hidden) // If trying to delete a folder
 		{
 			await this.validateNoContentsBeforeFolderDeletion();
