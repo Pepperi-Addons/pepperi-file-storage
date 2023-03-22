@@ -1,11 +1,11 @@
-import { FILES_TO_UPLOAD_TABLE_NAME, IndexedDataS3PfsDal, SharedHelper } from 'pfs-shared';
+import { IndexedDataS3PfsDal, SharedHelper } from 'pfs-shared';
 import { AddonData, FindOptions } from '@pepperi-addons/papi-sdk';
-import {AddonUUID} from '../../addon.config.json';
 import lodashPick from 'lodash.pick';
 import { URL } from 'url';
 import { PfsService } from '../cpiPfs.service';
 import fs from 'fs';
 import path from 'path';
+
 
 export class CpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal 
 {    
@@ -146,9 +146,6 @@ export class CpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal
 		// Cache the result, so we won't have to download the file again.
 		PfsService.downloadedFileKeysToLocalUrl.set(`${superRes.Key!}${superRes.ModificationDateTime!}`, superRes.URL!);
 		delete superRes.PresignedURL; 
-
-		// Save the file to the FilesToUpload table.
-		await pepperi.addons.data.uuid(AddonUUID).table(FILES_TO_UPLOAD_TABLE_NAME).upsert({Key :this.relativeAbsoluteKeyService.getAbsolutePath(superRes.Key!)});
 
 		return superRes;
 	}
