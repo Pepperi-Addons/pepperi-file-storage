@@ -8,21 +8,24 @@ import resize from "@jimp/plugin-resize";
 
 export class ImageResizer 
 {	
-	protected supportedMimeTypes;
+	protected supportedTypes: any[];
 	protected jimp: any;
 	constructor(private readonly mimeType: string,
         private readonly imageBuffer: Buffer) 
 	{
 
-		this.supportedMimeTypes = [bmp, jpeg, png, tiff];
+		this.supportedTypes = [bmp, jpeg, png, tiff];
 
-		if (!this.supportedMimeTypes.includes(mimeType)) 
+		if (!this.supportedTypes.map(type => Object.keys(type().mime)[0]).includes(mimeType)) 
 		{
 			throw new Error(`Bad Request. Creating a thumbnail for MIME type ${mimeType} is not supported.`)
 		}
 
+		// Create a Jimp instance, that supports only resizing the supported types
+		// For more information see: https://www.npmjs.com/package/@jimp/custom
+		// This is done (instead of the generic package here https://www.npmjs.com/package/jimp) in order to keep imports size down.
 		this.jimp = configure({
-			types: this.supportedMimeTypes,
+			types: this.supportedTypes,
 			plugins: [resize],
 		  });
 	}
