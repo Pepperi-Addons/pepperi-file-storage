@@ -13,7 +13,7 @@ export default config.Endpoints.map(endpoint => {
           format: 'cjs'
          }
         ],
-        external: ["aws-sdk"],
+        external: ["aws-sdk", "node-fetch"],
         plugins: [
          typescript({
              tsconfigOverride: {
