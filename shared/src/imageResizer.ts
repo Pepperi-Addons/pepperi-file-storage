@@ -15,8 +15,8 @@ export class ImageResizer
 	{
 
 		this.supportedTypes = [bmp, jpeg, png, tiff];
-
-		if (!this.supportedTypes.map(type => Object.keys(type().mime)[0]).includes(mimeType)) 
+		const supportedMimeTypes: Array<string> = this.supportedTypes.map(type => Object.keys(type().mime)[0]);
+		if (!supportedMimeTypes.includes(mimeType)) 
 		{
 			throw new Error(`Bad Request. Creating a thumbnail for MIME type ${mimeType} is not supported.`)
 		}
