@@ -35,6 +35,7 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 			...(this.request.query?.include_count && {IncludeCount: this.request.query.include_count}),
 			...(this.request.query?.include_deleted && {IncludeDeleted: this.request.query.include_deleted}),
 			...(this.request.query?.order_by && {OrderBy: this.request.query.order_by}),
+			...(this.request.query?.key_list && {KeyList: this.request.query.key_list}),
 		};
 
 		return searchBody;
