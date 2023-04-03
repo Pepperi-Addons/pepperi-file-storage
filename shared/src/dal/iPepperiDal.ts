@@ -1,7 +1,8 @@
-import { AddonData, FindOptions } from "@pepperi-addons/papi-sdk";
+import { AddonData, SearchBody, SearchData } from "@pepperi-addons/papi-sdk";
 
-export interface IPepperiDal {
-    getDataFromTable(tableName: string, findOptions: FindOptions): Promise<AddonData[]>;
+export interface IPepperiDal
+{
+    searchDataInTable(tableName: string, searchBody: SearchBody): Promise<SearchData<AddonData>>;
 
     postDocumentToTable(tableName: string, document: any): Promise<AddonData>;
     

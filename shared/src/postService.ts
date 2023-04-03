@@ -1,5 +1,5 @@
 import { Request } from '@pepperi-addons/debug-server/dist';
-import { PapiClient } from '@pepperi-addons/papi-sdk';
+import { PapiClient, SearchBody } from '@pepperi-addons/papi-sdk';
 import path from 'path'
 import { CACHE_DEFAULT_VALUE, dataURLRegex, DESCRIPTION_DEFAULT_VALUE, EXTENSIONS_WHITELIST, HIDDEN_DEFAULT_VALUE, MAXIMAL_TREE_DEPTH, SYNC_DEFAULT_VALUE } from "./constants";
 import { ImageResizer } from './imageResizer';
@@ -132,8 +132,10 @@ export abstract class PostService extends PfsService
 
     private async validateNoContentsBeforeFolderDeletion() 
 	{
-		const whereClause = `Folder='${this.request.body.Key}'`;
-		const folderContents = await this.pfsGetter.getObjects(whereClause);
+		const searchBody: SearchBody = {
+			Where: `Folder='${this.request.body.Key}'`,
+		}
+		const folderContents = await this.pfsGetter.getObjects(searchBody);
 
 		if (folderContents.length > 0) // Deleting a folder that has existing content is not currently supported.
 		{

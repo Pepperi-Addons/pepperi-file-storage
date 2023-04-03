@@ -1,6 +1,5 @@
 import { Request } from '@pepperi-addons/debug-server';
 import { CACHE_DEFAULT_VALUE, dataURLRegex, TransactionType } from '../';
-import TempFileService from '../tempFileService';
 import { AbstractBasePfsDal } from './abstractBasePfsDal';
 import { IAws } from './iAws';
 import { MutateS3HandlerFactory, MutateS3HandleType } from './mutateS3Handlers/mutateS3HandlerFactory';

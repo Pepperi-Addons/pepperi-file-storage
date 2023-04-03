@@ -10,9 +10,8 @@ export class ListObjectsCommand extends PfsService implements ICommand
 		return await this.listObjects();
 	}
 
-	private async listObjects(whereClause?:string)
+	private async listObjects()
 	{
-		//TODO order by creation date, to support DIMX export.
-		return this.pfsGetter.getObjects(whereClause);
+		return this.pfsGetter.getObjects();
 	}
 }
