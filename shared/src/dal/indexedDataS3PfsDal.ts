@@ -1,5 +1,5 @@
 import { Request } from '@pepperi-addons/debug-server';
-import { AddonData, FindOptions } from '@pepperi-addons/papi-sdk';
+import { AddonData, SearchBody } from '@pepperi-addons/papi-sdk';
 import { AbstractS3PfsDal } from './abstractS3PfsDal';
 import { CdnServers, LOCK_ADAL_TABLE_NAME, SharedHelper, TransactionType } from '../';
 import { IAws } from './iAws';
@@ -14,55 +14,54 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 
 	//#region IPfsGetter
 
-	async getObjects(whereClause?: string): Promise<AddonData[]>
+	async getObjects(searchBody?: SearchBody): Promise<AddonData[]>
 	{
-		const findOptions: FindOptions = {
-			...(this.request.query && this.request.query.where && {where: this.request.query.where}),
-			...(whereClause && {where: whereClause}), // If there's a where clause, use it instead 
-			...(this.request.query && this.request.query.page_size && {page_size: parseInt(this.request.query.page_size)}),
-			...(this.request.query && this.request.query.page && {page: this.getRequestedPageNumber()}),
-			...(this.request.query && this.request.query.fields && {fields: this.request.query.fields}),
-			...(this.request.query && this.request.query.order_by && {order_by: this.request.query.order_by}),
-			...(this.request.query && this.request.query.include_count && {include_count: this.request.query.include_count}),
-			...(this.request.query && this.request.query.include_deleted && {include_deleted: this.request.query.include_deleted}),
-		};
+		searchBody = searchBody ?? this.constructSearchBodyFromRequest();
 
 		const getPfsTableName = SharedHelper.getPfsTableName(this.request.query.addon_uuid, this.clientSchemaName);
-		const res =  await this.pepperiDal.getDataFromTable(getPfsTableName, findOptions);
+		const res = await this.pepperiDal.searchDataInTable(getPfsTableName, searchBody!);
 
 		console.log(`Files listing done successfully.`);
-		return res;
+		return res.Objects;
 	}
 
-	private async getObjectFromTable(key, tableName, getHidden = false)
+	protected constructSearchBodyFromRequest(): SearchBody
+	{
+		const searchBody: SearchBody = {
+			...(this.request.query?.where && {Where: this.request.query.where}),
+			...(this.request.query?.page_size && {PageSize: parseInt(this.request.query.page_size)}),
+			...(this.request.query?.page && {Page: this.getRequestedPageNumber()}),
+			...(this.request.query?.fields && {Fields: this.request.query.fields.split(',')}),
+			...(this.request.query?.include_count && {IncludeCount: this.request.query.include_count}),
+			...(this.request.query?.include_deleted && {IncludeDeleted: this.request.query.include_deleted}),
+			...(this.request.query?.order_by && {OrderBy: this.request.query.order_by}),
+			...(this.request.query?.key_list && {KeyList: this.request.query.key_list}),
+		};
+
+		return searchBody;
+	}
+
+	private async getObjectFromTable(key: string, tableName: string, getHidden = false)
 	{
 		console.log(`Attempting to download the following key from ADAL: ${key}, Table name: ${tableName}`);
 		try 
 		{
 			// Use where clause, since the Keys include '/'s.
-			const findOptions: FindOptions = {
-				where: `Key='${key}'`,
-				include_deleted: getHidden
+			const searchBody: SearchBody = {
+				KeyList: [key],
+				IncludeDeleted: getHidden
 			};
-			const downloaded =  await this.pepperiDal.getDataFromTable(tableName, findOptions);
+			const downloaded =  (await this.pepperiDal.searchDataInTable(tableName, searchBody)).Objects;
 			if(downloaded.length === 1)
 			{
 				console.log(`File Downloaded`);
 				return downloaded[0];
 			}
-			else if(downloaded.length > 1)
-			{
-				console.error(`Internal error. Found more than one file with the given key. Where clause: ${findOptions.where}`);
-				
-				const err: any = new Error(`Internal error.`);
-				err.code = 500;
-				throw err;
-			}
 			else 
 			{ //Couldn't find results
 				console.error(`Could not find requested item: '${key}'`);
 
-				const err: any = new Error(`Could not find requested item: '${this._relativeAbsoluteKeyService.getRelativePath(key)}'`);
+				const err: any = new Error(`Could not find requested item: '${this.relativeAbsoluteKeyService.getRelativePath(key)}'`);
 				err.code = 404;
 				throw err;
 			}

@@ -1,6 +1,5 @@
 import { Request } from '@pepperi-addons/debug-server';
-import { AddonData } from '@pepperi-addons/papi-sdk';
-import jwtDecode from 'jwt-decode';
+import { AddonData, SearchBody } from '@pepperi-addons/papi-sdk';
 import { IPfsGetter } from './iPfsGetter';
 import { IPfsMutator } from './iPfsMutator';
 
@@ -69,8 +68,13 @@ export abstract class PfsService
 	{
 		const downloadKeyRes: string = downloadKey ?? ((this.request.body && this.request.body.Key) ? this.request.body.Key : this.request.query.Key); 
 		const canonizedPath = downloadKeyRes.startsWith('/') ? downloadKeyRes.slice(1) : downloadKeyRes;
-		const whereClause = `Key='${canonizedPath}'`;
-		const res = await this.pfsGetter.getObjects(whereClause);
+
+		const searchBody: SearchBody = {
+			KeyList: [
+				canonizedPath
+			]
+		}
+		const res = await this.pfsGetter.getObjects(searchBody);
 		if (res.length === 1) 
 		{
 			console.log(`File Downloaded`);

@@ -1,4 +1,4 @@
-import { AddonData, FindOptions, PapiClient } from "@pepperi-addons/papi-sdk";
+import { AddonData, PapiClient, SearchBody, SearchData } from "@pepperi-addons/papi-sdk";
 import { IPepperiDal } from "pfs-shared";
 import config from '../../addon.config.json';
 
@@ -8,9 +8,9 @@ export default class docDbDal implements IPepperiDal
 	constructor(private papiClient: PapiClient)
 	{}
 
-	public async getDataFromTable(tableName: string, findOptions: FindOptions): Promise<AddonData[]>
+	public async searchDataInTable(tableName: string, searchBody: SearchBody): Promise<SearchData<AddonData>>
 	{
-		return await this.papiClient.addons.data.uuid(config.AddonUUID).table(tableName).find(findOptions);
+		return await this.papiClient.addons.data.search.uuid(config.AddonUUID).table(tableName).post(searchBody);
 	}
 
 	public async postDocumentToTable(tableName: string, document: any): Promise<AddonData>

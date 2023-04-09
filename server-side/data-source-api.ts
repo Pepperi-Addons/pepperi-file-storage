@@ -89,6 +89,7 @@ export async function pfs_export(client: Client, request: Request)
 	request.query['include_deleted'] = request.body["IncludeDeleted"];
 	request.query['resource_name'] = request.body["Resource"];
 	request.query['addon_uuid'] = request.body["AddonUUID"];
+	request.query['key_list'] = request.body["KeyList"];
 
 	request.method = 'GET';
 

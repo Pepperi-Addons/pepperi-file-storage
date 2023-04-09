@@ -1,3 +1,4 @@
+import { SearchBody } from '@pepperi-addons/papi-sdk';
 import { ICommand } from '../iCommand';
 import PfsService from '../pfs.service';
 
@@ -25,7 +26,10 @@ export class ListFolderContentsCommand extends PfsService implements ICommand
 			}
 
 			const whereClause = `Folder='${requestedFolder}'${(this.request.query && this.request.query.where) ? " AND (" + this.request.query.where + ")" :""}`;
-			return this.pfsGetter.getObjects(whereClause);
+			const searchBody: SearchBody = {
+				Where: whereClause
+			};
+			return this.pfsGetter.getObjects(searchBody);
 
 		}
 		catch (err) 

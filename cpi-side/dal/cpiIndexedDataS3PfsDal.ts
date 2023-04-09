@@ -1,5 +1,5 @@
 import { IndexedDataS3PfsDal, SharedHelper } from 'pfs-shared';
-import { AddonData, FindOptions } from '@pepperi-addons/papi-sdk';
+import { AddonData, SearchBody } from '@pepperi-addons/papi-sdk';
 import lodashPick from 'lodash.pick';
 import { URL } from 'url';
 import { PfsService } from '../cpiPfs.service';
@@ -12,22 +12,14 @@ export class CpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal
 
 	//#region IPfsGetter
 
-	override async getObjects(whereClause?: string): Promise<AddonData[]>
+	override async getObjects(searchBody?: SearchBody): Promise<AddonData[]>
 	{
 		// ModificationDateTime is always needed so we could add the version later on in the function.
 		// The Fields filter will be enforced after the GET from the schema.
-		const findOptions: FindOptions = {
-			...(this.request.query && this.request.query.where && {where: this.request.query.where}),
-			...(whereClause && {where: whereClause}), // If there's a where clause, use it instead 
-			...(this.request.query && this.request.query.page_size && {page_size: parseInt(this.request.query.page_size)}),
-			...(this.request.query && this.request.query.page && {page: this.getRequestedPageNumber()}),
-			...(this.request.query && this.request.query.order_by && {order_by: this.request.query.order_by}),
-			...(this.request.query && this.request.query.include_count && {include_count: this.request.query.include_count}),
-			...(this.request.query && this.request.query.include_deleted && {include_deleted: this.request.query.include_deleted}),
-		};
+		searchBody = searchBody ?? this.constructSearchBodyFromRequest();
 
 		const getPfsTableName = SharedHelper.getPfsTableName(this.request.query.addon_uuid, this.clientSchemaName);
-		let resultObjects = await this.pepperiDal.getDataFromTable(getPfsTableName, findOptions);
+		let resultObjects = (await this.pepperiDal.searchDataInTable(getPfsTableName, searchBody!)).Objects;
 
 		// Set v={{modificationDateTime}} on each URL to avoid browser cache.
 		resultObjects = this.addVersionToObjectsUrl(resultObjects);
