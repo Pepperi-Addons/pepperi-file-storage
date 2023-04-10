@@ -1,4 +1,5 @@
 import { Request } from '@pepperi-addons/debug-server';
+import { String } from 'aws-sdk/clients/cloudhsm';
 import { CACHE_DEFAULT_VALUE, dataURLRegex, TransactionType } from '../';
 import TempFileService from '../tempFileService';
 import { AbstractBasePfsDal } from './abstractBasePfsDal';
@@ -64,7 +65,7 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 	{
 		const keyInvalidationPath = `/${this.relativeAbsoluteKeyService.getAbsolutePath(file.Key)}`; //Invalidation path must start with a '/'.
 
-		this.validateInvalidationRequest(keyInvalidationPath/*, file*/);
+		this.validateInvalidationRequest(keyInvalidationPath);
 
 		// Collect all invalidation paths - The requested path, and its thumbnails
 		const invalidationPaths: string[] = [];
@@ -84,14 +85,12 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		return invalidation;
 	}
 
-	private validateInvalidationRequest(keyInvalidationPath: string/*, file: any*/) 
+	private validateInvalidationRequest(keyInvalidationPath: string) 
 	{
 		let skipReason = '';
 
 		if (keyInvalidationPath.endsWith('/'))
 			skipReason = 'Requested path is a folder.'; // If this is a folder or if this file doesn't exist, it has no CDN representation, and there's no need to invalidate it.
-		// else if (!file.Cache)
-		// 	skipReason = "The file doesn't use cache."; // If Cache=false, there's no need to invalidate.
 
 		if(skipReason)
 		{
