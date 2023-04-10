@@ -200,11 +200,7 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 		{
 			if (!newFileFields.Key.endsWith('/')) //Add URL if this isn't a folder and this file doesn't exist.
 			{
-<<<<<<< HEAD
 				newFileFields.URL = encodeURI(`${CdnServers[this.environment]}/${this._relativeAbsoluteKeyService.getAbsolutePath(newFileFields.Key)}`);
-=======
-				newFileFields.URL = `${CdnServers[this.environment]}/${this.relativeAbsoluteKeyService.getAbsolutePath(newFileFields.Key)}`;
->>>>>>> origin/releases/1.2
 			}
 			else
 			{
@@ -215,11 +211,7 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 		{
 			newFileFields.Thumbnails.forEach(thumbnail => 
 			{
-<<<<<<< HEAD
 				thumbnail.URL = encodeURI(`${CdnServers[this.environment]}/thumbnails/${this._relativeAbsoluteKeyService.getAbsolutePath(newFileFields.Key)}_${thumbnail.Size}`);
-=======
-				thumbnail.URL = `${CdnServers[this.environment]}/thumbnails/${this.relativeAbsoluteKeyService.getAbsolutePath(newFileFields.Key)}_${thumbnail.Size}`;
->>>>>>> origin/releases/1.2
 			});
 		}
 	}
