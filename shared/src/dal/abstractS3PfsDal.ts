@@ -63,7 +63,7 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 
 	async invalidateCDN(file: any)
 	{
-		const keyInvalidationPath = `/${this._relativeAbsoluteKeyService.getAbsolutePath(file.Key)}`; //Invalidation path must start with a '/'.
+		const keyInvalidationPath = `/${this.relativeAbsoluteKeyService.getAbsolutePath(file.Key)}`; //Invalidation path must start with a '/'.
 
 		this.validateInvalidationRequest(keyInvalidationPath);
 
@@ -104,7 +104,7 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 	{
 		console.log(`Trying to delete version: ${s3FileVersion} of key: ${Key}`);
 
-		const deletedVersionRes = await this.awsDal.s3DeleteObject(this._relativeAbsoluteKeyService.getAbsolutePath(Key));
+		const deletedVersionRes = await this.awsDal.s3DeleteObject(this.relativeAbsoluteKeyService.getAbsolutePath(Key));
 
 		console.log(`Successfully deleted version: ${s3FileVersion} of key: ${Key}`);
 
@@ -117,7 +117,7 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		keys = keys.filter(key => !key.endsWith('/'));
 		
 		// Call DeleteObjects
-		const deleteObjectsRes = await this.deleteObjects(keys.map(key => this._relativeAbsoluteKeyService.getAbsolutePath(key)));
+		const deleteObjectsRes = await this.deleteObjects(keys.map(key => this.relativeAbsoluteKeyService.getAbsolutePath(key)));
 		
 		// Delete all thumbnails for the deleted files
 		await this.batchDeleteThumbnails(keys);
