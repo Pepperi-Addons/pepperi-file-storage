@@ -1,7 +1,7 @@
 import { IAws } from "pfs-shared";
 import AWS from 'aws-sdk';
 import { PromiseResult } from "aws-sdk/lib/request";
-import { URL } from "url";
+import URL from "url-parse";
 
 
 export default class AwsDal implements IAws
