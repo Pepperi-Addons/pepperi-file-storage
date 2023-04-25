@@ -1,7 +1,7 @@
 import { IAws } from "pfs-shared";
 import AWS from 'aws-sdk';
-import { URL } from "url";
 import { PromiseResult } from "aws-sdk/lib/request";
+import URL from "url";
 
 
 export default class AwsDal implements IAws
@@ -110,7 +110,7 @@ export default class AwsDal implements IAws
 	{
 		const copyParams: AWS.S3.CopyObjectRequest = {
 			Bucket: this.S3Bucket,
-			CopySource: encodeURI(`/${this.S3Bucket}${new URL(originURL).pathname}`),
+			CopySource: encodeURI(`/${this.S3Bucket}${new URL.URL(originURL).pathname}`),
 			Key: destinationKey,
 			...(!cacheControl && {CacheControl: 'no-cache'}),
 		};
@@ -185,7 +185,7 @@ export default class AwsDal implements IAws
 			Key: key,
 			UploadId: uploadId,
 			PartNumber: partNumber,
-			CopySource: encodeURI(`/${this.S3Bucket}${new URL(copySource).pathname}`),
+			CopySource: encodeURI(`/${this.S3Bucket}${new URL.URL(copySource).pathname}`),
 		};
 		let copyRes: PromiseResult<AWS.S3.UploadPartCopyOutput, AWS.AWSError>;
 

@@ -24,7 +24,7 @@
         "@types/chai-as-promised": "^7.1.5",
         "@types/dotenv": "^8.2.0",
         "@types/mocha": "^9.1.1",
-        "@types/node": "^10.17.24",
+        "@types/node": "^10.17.60",
         "chai": "^4.3.6",
         "chai-as-promised": "^7.1.1",
         "mocha": "^10.0.0",
@@ -47,7 +47,6 @@
         "lodash.isequal": "^4.5.0",
         "node-fetch": "^2.6.0",
         "pfs-shared": "file:../shared",
-        "semver": "^7.3.5",
-        "url": "^0.11.0"
+        "semver": "^7.3.5"
     }
 }
