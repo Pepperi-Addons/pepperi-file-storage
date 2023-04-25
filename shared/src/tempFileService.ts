@@ -13,11 +13,11 @@ export default class TempFileService {
     /**
 	 * Create a temp file full path by its name
 	 * @param tempFileName the temp file name
-	 * @returns a string in the format ${DistributorUUID}/temp/{{randomUUID}}/${tempFileName}
+	 * @returns a string in the format temp/${DistributorUUID}/{{randomUUID}}/${tempFileName}
 	 */
 	 public createTempFileFullPath(tempFileName: string): string
 	 {
-		 return `${this.distributorUUID}/temp/${createUUID()}/${tempFileName ? tempFileName : createUUID()}`;
+		return `temp/${this.distributorUUID}/${createUUID()}/${tempFileName? tempFileName : createUUID()}`;
 	 }
  
 	 /**
@@ -29,7 +29,7 @@ export default class TempFileService {
 	 {
 		 let res = true;
  
-		 const tempFilePrefix = `/${this.distributorUUID}/temp/`;
+		 const tempFilePrefix = `/temp/${this.distributorUUID}/`;
 		 let urlObject: URL;
 		 try
 		 {

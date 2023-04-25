@@ -11,7 +11,7 @@ import { Client, Request } from '@pepperi-addons/debug-server'
 import { AddonData, AddonDataScheme, FindOptions, PapiClient, Relation } from '@pepperi-addons/papi-sdk';
 import semverLessThan from 'semver/functions/lt';
 import clonedeep from 'lodash.clonedeep';
-import { FILES_TO_UPLOAD_TABLE_NAME, LOCK_ADAL_TABLE_NAME, pfsSchemaData, PFS_TABLE_PREFIX } from 'pfs-shared';
+import { FILES_TO_UPLOAD_TABLE_NAME, LOCK_ADAL_TABLE_NAME, pfsSchemaData, PFS_TABLE_PREFIX } from 'pfs-shared/lib/constants';
 
 export async function install(client: Client, request: Request): Promise<any> 
 {

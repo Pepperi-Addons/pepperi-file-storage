@@ -5,7 +5,7 @@ import config from '../../addon.config.json';
 
 export default class docDbDal implements IPepperiDal
 {
-	constructor(private papiClient: PapiClient)
+	constructor(private papiClient: PapiClient, private waitForIndex: boolean = false)
 	{}
 
 	public async searchDataInTable(tableName: string, searchBody: SearchBody): Promise<SearchData<AddonData>>
@@ -15,7 +15,7 @@ export default class docDbDal implements IPepperiDal
 
 	public async postDocumentToTable(tableName: string, document: any): Promise<AddonData>
 	{
-		return await this.papiClient.addons.data.uuid(config.AddonUUID).table(tableName).upsert(document);
+		return await this.papiClient.addons.data.uuid(config.AddonUUID).table(tableName).upsert(document, this.waitForIndex);
 	}
 
 	public async hardDeleteDocumentFromTable(tableName: string, key: any): Promise<any>
