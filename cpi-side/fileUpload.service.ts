@@ -1,4 +1,4 @@
-import { AddonData, PapiClient } from "@pepperi-addons/papi-sdk";
+import { PapiClient, SearchBody } from "@pepperi-addons/papi-sdk";
 import fetch, { RequestInit, Response } from "node-fetch";
 import fs from 'fs';
 import { FILES_TO_UPLOAD_TABLE_NAME, FileToUpload, IPepperiDal, RelativeAbsoluteKeyService, SharedHelper, TempFile } from "pfs-shared";
@@ -129,7 +129,11 @@ export class FileUploadService {
     protected async getFileMetadata(): Promise<{ Key: string; MIME: string; URL: string; }> {
         const tableName = SharedHelper.getPfsTableName(this.clientAddonUUID, this.clientAddonSchemaName);
         const relativePath = this.relativeAbsoluteKeyService.getRelativePath(this.fileToUpload.AbsolutePath);
-        const fileMetadata = await this.pepperiDal.getDataFromTable(tableName, { where: `Key = '${relativePath}'` })[0];
+        const searchBody: SearchBody = {
+            KeyList: [relativePath],
+            Fields: ["Key", "MIME", "URL"],
+        }
+        const fileMetadata = await this.pepperiDal.searchDataInTable(tableName, searchBody)[0];
 
         if (!this.varHasKeyMimeTypeAndUrl(fileMetadata)) {
             throw new Error(`Failed to get file metadata for file "${this.fileToUpload.AbsolutePath}".`);
