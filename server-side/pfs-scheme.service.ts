@@ -123,56 +123,6 @@ export class PfsSchemeService
 	{
 		this.validateSchemaType();
 		this.validateSchemaName();
-		await this.validateNoCustomFields();
-	}
-
-	/**
-	 * Validate the the passed schema does not have any custom fields.
-	 */
-	private async validateNoCustomFields()
-	{
-		let isValid = true;
-		let existingSchema: undefined | AddonDataScheme = undefined;
-
-		console.log(`Trying to get schema '${this.schema.Name}'...`);
-
-		try
-		{
-			const papiClient = ServerHelper.createPapiClient(this.client, this.request.query.addon_uuid);
-			existingSchema = await papiClient.addons.data.schemes.name(this.schema.Name).get();
-			console.log(`Successfully downloaded a schema called '${this.schema.Name}'.`);
-		}
-		catch(error)
-		{
-			console.log(`Could not find a schema called '${this.schema.Name}'.`);
-		}
-
-		if(existingSchema)
-		{
-			
-			console.log(`Since there's an existing schema, validating it's properties are not changed (besides SyncData that can be changed)...`);
-			// Validate that no changes are made to the schema, other then changing the SyncData property.
-			const newSchemaCopy = { ...this.schema};
-
-			delete newSchemaCopy.SyncData;
-			delete existingSchema.SyncData;
-
-			isValid = isEqual(newSchemaCopy, existingSchema);
-			console.log(`Is schema being changed: ${!isValid}`);
-		}
-		else 
-		{
-			console.log(`No existing schema. Validating no Fields property is passed...`);
-			// The schema does not already exists, ensure no Fields are passed.
-			isValid = !this.schema.Fields;
-
-			console.log(`Is a field property passed: ${!isValid}`);
-		}
-
-		if(!isValid)
-		{
-			throw new Error("Schema of type 'pfs' cannot have custom fields.");
-		}
 	}
 
 	/**
