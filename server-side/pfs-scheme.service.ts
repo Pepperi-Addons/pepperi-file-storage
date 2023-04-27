@@ -72,9 +72,20 @@ export class PfsSchemeService
 	 */
 	private getMergedSchema(): AddonDataScheme
 	{
+		const schemaCopy = JSON.parse(JSON.stringify(this.schema));
+
+		// Remove any Index property from the schemaCopy Fields object
+		// This is for DI-23567. For more info, see https://pepperi.atlassian.net/browse/DI-23567
+		if(schemaCopy.Fields)
+		{
+			Object.keys(schemaCopy.Fields).forEach(key => {
+				delete schemaCopy.Fields[key].Index;
+			});
+		}
+
 		return {
 			...pfsSchemaData,
-			...this.schema
+			...schemaCopy
 		}
 	}
 
