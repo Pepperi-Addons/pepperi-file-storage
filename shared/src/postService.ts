@@ -1,7 +1,7 @@
 import { Request } from '@pepperi-addons/debug-server/dist';
 import { PapiClient, SearchBody } from '@pepperi-addons/papi-sdk';
 import path from 'path'
-import { CACHE_DEFAULT_VALUE, dataURLRegex, DESCRIPTION_DEFAULT_VALUE, EXTENSIONS_WHITELIST, HIDDEN_DEFAULT_VALUE, MAXIMAL_TREE_DEPTH, SYNC_DEFAULT_VALUE } from "./constants";
+import { CACHE_DEFAULT_VALUE, dataURLRegex, DESCRIPTION_DEFAULT_VALUE, EXTENSIONS_WHITELIST, HIDDEN_DEFAULT_VALUE, MAXIMAL_TREE_DEPTH, SYNC_DEFAULT_VALUE, pfsSchemaData } from "./constants";
 import { ImageResizer } from './imageResizer';
 import { IPfsGetter } from './iPfsGetter';
 import { IPfsMutator } from './iPfsMutator';
@@ -306,6 +306,17 @@ export abstract class PostService extends PfsService
 		}
 
 		this.getThumbnailsMetadata(data, newFileFields, existingFile);
+
+		// Copy any other metadata fields from the request body to the newFileFields object.
+		// This is done after the above calls, so that the above calls can override any of these fields if needed.
+		// This implementation will let us keep the read-only nature of some of the fields, while still allowing the user to update others.
+		const pfsSchemaFields = new Set(Object.keys(pfsSchemaData.Fields));
+		Object.keys(data).forEach(key => {
+
+			if (!pfsSchemaFields.has(key) && !newFileFields[key]) {
+				newFileFields[key] = data[key];
+			}
+		});
 	}
 
     private async getThumbnailsMetadata(data: any, newFileFields: any, existingFile: any) {
