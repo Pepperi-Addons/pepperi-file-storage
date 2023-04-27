@@ -12,7 +12,10 @@
     "allowJs": true,
     "noImplicitOverride": true,
     "resolveJsonModule": true,
-    "lib": ["ES2020.Promise"]
+    "lib": ["ES2020"],
+    "types": [
+      "node"
+    ],
   },
   "exclude": [
     "./build/**",

@@ -1,4 +1,4 @@
-import { AddonData, PapiClient } from "@pepperi-addons/papi-sdk";
+import { PapiClient, SearchBody } from "@pepperi-addons/papi-sdk";
 import fetch, { RequestInit, Response } from "node-fetch";
 import fs from 'fs';
 import { FILES_TO_UPLOAD_TABLE_NAME, FileToUpload, IPepperiDal, RelativeAbsoluteKeyService, SharedHelper, TempFile } from "pfs-shared";
@@ -34,12 +34,10 @@ export class FileUploadService {
         
     /**
      * Add a promise to the queue that will upload a single file.
-     * @param file The file to upload.
-     * @param fileUploadService The FileUploadService instance to use.
      */
     public async asyncUploadFile(): Promise<void>
     {
-        FileUploadService.filesUploadQueue.add(() => this.uploadLocalFileToTempFile());
+        await FileUploadService.filesUploadQueue.add(() => this.uploadLocalFileToTempFile());
     }
 
     /**
@@ -52,7 +50,7 @@ export class FileUploadService {
         const pepperiDal = new CpiPepperiDal();
         const papiClient = pepperi.papiClient;
 
-        FileUploadService.filesUploadQueue.addAll(filesToUpload.map(fileToUpload => () => 
+        await FileUploadService.filesUploadQueue.addAll(filesToUpload.map(fileToUpload => () => 
         {
             const fileUploadService = new FileUploadService(pepperiDal, papiClient, fileToUpload);
             return fileUploadService.uploadLocalFileToTempFile();
@@ -76,6 +74,7 @@ export class FileUploadService {
         try
         {
             tempFileUrls = (await this.papiClient.post(`/addons/api/${AddonUUID}/api/temporary_file`, {})) as TempFile;
+            this.fileUploadLog(`Successfully created a temp file on S3.`);
         }
         catch (err)
         {
@@ -83,13 +82,8 @@ export class FileUploadService {
             return;
         }
 
-        this.fileUploadLog(`Successfully created a temp file on S3.`);
-
-        // Get the file's data from the device's storage.
         // This is an offline call.
-        this.fileUploadLog(`Getting file's data from the device's storage...`);
-        const fileDataBuffer: Buffer = await this.getFileDataBuffer();
-        this.fileUploadLog(`Successfully got file data from the device's storage.`);
+        const fileDataBuffer: Buffer = await this.getFileDataBufferFromDisk();
 
         // Upload the file to the temporary file.
         // This is an online call.
@@ -103,13 +97,19 @@ export class FileUploadService {
         this.fileUploadLog(`File successfully uploaded to a temp file on S3.`);
 
         // Remove the file from the FilesToUpload table.
-        this.fileUploadLog(`Removing file from the FilesToUpload table...`);
-        const hiddenFileToUpload: FileToUpload = { ...this.fileToUpload, Hidden: true };
-        await pepperi.addons.data.uuid(AddonUUID).table(FILES_TO_UPLOAD_TABLE_NAME).upsert(hiddenFileToUpload);
-
-        this.fileUploadLog(`File successfully removed from the FilesToUpload table.`);
+        await this.removeFromFilesToUpload();
 
         // Update the file's TemporaryFileURLs array to point to the temporary file.
+        await this.setTemporaryFileURLs(fileMetadata, tempFileUrls);
+    }
+
+    /**
+     * Sets the file's TemporaryFileURLs property to point to the temporary file's CDN URL.
+     * @param fileMetadata 
+     * @param tempFileUrls 
+     */
+    private async setTemporaryFileURLs(fileMetadata: { Key: string; MIME: string; URL: string; }, tempFileUrls: TempFile): Promise<void>
+    {
         this.fileUploadLog(`Updating file TemporaryFileURLs to point to the temporary file...`);
         fileMetadata["TemporaryFileURLs"] = [tempFileUrls.TemporaryFileURL];
         const tableName = SharedHelper.getPfsTableName(this.clientAddonUUID, this.clientAddonSchemaName);
@@ -129,7 +129,11 @@ export class FileUploadService {
     protected async getFileMetadata(): Promise<{ Key: string; MIME: string; URL: string; }> {
         const tableName = SharedHelper.getPfsTableName(this.clientAddonUUID, this.clientAddonSchemaName);
         const relativePath = this.relativeAbsoluteKeyService.getRelativePath(this.fileToUpload.AbsolutePath);
-        const fileMetadata = await this.pepperiDal.getDataFromTable(tableName, { where: `Key = '${relativePath}'` })[0];
+        const searchBody: SearchBody = {
+            KeyList: [relativePath],
+            Fields: ["Key", "MIME", "URL"],
+        }
+        const fileMetadata = await this.pepperiDal.searchDataInTable(tableName, searchBody)[0];
 
         if (!this.varHasKeyMimeTypeAndUrl(fileMetadata)) {
             throw new Error(`Failed to get file metadata for file "${this.fileToUpload.AbsolutePath}".`);
@@ -145,15 +149,19 @@ export class FileUploadService {
 
     /**
      * Gets the file data as a buffer.
-     * @param absoluteKey The file's absolute key.
      * @returns The file data as a buffer.
      * @throws An error if the file data could not be retrieved.
      * @throws An error if the file data could not be converted to a buffer.
      */
-     protected async getFileDataBuffer(): Promise<Buffer>
+     protected async getFileDataBufferFromDisk(): Promise<Buffer>
     {
+        this.fileUploadLog(`Getting file's data from the device's storage...`);
+
         const absolutePath = `${await pepperi.files.rootDir()}/${this.fileToUpload.AbsolutePath}`;
         const buffer: Buffer = await fs.promises.readFile(absolutePath);
+
+        this.fileUploadLog(`Successfully got file data from the device's storage.`);
+
         return buffer;
     }
 
@@ -174,6 +182,19 @@ export class FileUploadService {
         };
 
         return await fetch(putURL, requestOptions);
+    }
+
+    /**
+     * Removes the file from the FilesToUpload table.
+     */
+    protected async removeFromFilesToUpload(): Promise<void>
+    {
+        this.fileUploadLog(`Removing file from the FilesToUpload table...`);
+
+        const hiddenFileToUpload: FileToUpload = { ...this.fileToUpload, Hidden: true };
+        await pepperi.addons.data.uuid(AddonUUID).table(FILES_TO_UPLOAD_TABLE_NAME).upsert(hiddenFileToUpload);
+
+        this.fileUploadLog(`File successfully removed from the FilesToUpload table.`);
     }
 
     /**

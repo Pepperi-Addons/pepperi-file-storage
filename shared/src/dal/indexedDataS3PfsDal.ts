@@ -86,10 +86,10 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 		const tableName = LOCK_ADAL_TABLE_NAME;
 		try
 		{
-			const lockAbsoluteKey = this._relativeAbsoluteKeyService.getAbsolutePath(key).replace(new RegExp("/", 'g'), "~");
+			const lockAbsoluteKey = this.relativeAbsoluteKeyService.getAbsolutePath(key).replace(new RegExp("/", 'g'), "~");
 			const getHidden = true;
 			res = await this.getObjectFromTable(lockAbsoluteKey, tableName, getHidden);
-			res.Key = this._relativeAbsoluteKeyService.getRelativePath(res.Key.replace(new RegExp("~", 'g'), "/"));
+			res.Key = this.relativeAbsoluteKeyService.getRelativePath(res.Key.replace(new RegExp("~", 'g'), "/"));
 		}
 		catch // If the object isn't locked, the getObjectFromTable will throw an "object not found" error. Return null to indicate this object isn't locked.
 		{}
@@ -106,13 +106,13 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 
 		const item: any = 
 						{
-							Key : this._relativeAbsoluteKeyService.getAbsolutePath(Key).replace(new RegExp("/", 'g'), "~"),
+							Key : this.relativeAbsoluteKeyService.getAbsolutePath(Key).replace(new RegExp("/", 'g'), "~"),
 							TransactionType : transactionType
 						};
 
 		const lockRes =  await this.pepperiDal.postDocumentToTable(LOCK_ADAL_TABLE_NAME, item);
 
-		lockRes.Key = this._relativeAbsoluteKeyService.getRelativePath(item.Key.replace(new RegExp("~", 'g'), "/"));
+		lockRes.Key = this.relativeAbsoluteKeyService.getRelativePath(item.Key.replace(new RegExp("~", 'g'), "/"));
 
 		console.log(`Successfully locked key: ${lockRes.Key}`);
 
@@ -124,11 +124,11 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 		console.log(`Setting rollback data to key: ${item.Key}`);
 		const itemCopy = {...item};
 
-		itemCopy.Key = this._relativeAbsoluteKeyService.getAbsolutePath(item.Key).replace(new RegExp("/", 'g'), "~");
+		itemCopy.Key = this.relativeAbsoluteKeyService.getAbsolutePath(item.Key).replace(new RegExp("/", 'g'), "~");
 
 		const lockRes =  await this.pepperiDal.postDocumentToTable(LOCK_ADAL_TABLE_NAME, itemCopy);
 
-		lockRes.Key = this._relativeAbsoluteKeyService.getRelativePath(itemCopy.Key.replace(new RegExp("~", 'g'), "/"));
+		lockRes.Key = this.relativeAbsoluteKeyService.getRelativePath(itemCopy.Key.replace(new RegExp("~", 'g'), "/"));
 
 		console.log(`Successfully set rollback data for key: ${lockRes.Key}`);
 
@@ -147,7 +147,7 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 	
 	async unlock(key: string)
 	{
-		const lockKey = this._relativeAbsoluteKeyService.getAbsolutePath(key).replace(new RegExp("/", 'g'), "~");
+		const lockKey = this.relativeAbsoluteKeyService.getAbsolutePath(key).replace(new RegExp("/", 'g'), "~");
 
 		console.log(`Attempting to unlock object: ${key}`);
 		const res = await this.pepperiDal.hardDeleteDocumentFromTable(LOCK_ADAL_TABLE_NAME, lockKey);
@@ -173,8 +173,8 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 
 	protected async uploadFileMetadata(newFileFields: any, existingFile: any): Promise<AddonData> 
 	{
-		newFileFields.Key = this._relativeAbsoluteKeyService.removeSlashPrefix(newFileFields.Key);
-		newFileFields.Folder = this._relativeAbsoluteKeyService.removeSlashPrefix(newFileFields.Folder);
+		newFileFields.Key = this.relativeAbsoluteKeyService.removeSlashPrefix(newFileFields.Key);
+		newFileFields.Folder = this.relativeAbsoluteKeyService.removeSlashPrefix(newFileFields.Folder);
 		// Set Urls
 		await this.setUrls(newFileFields, existingFile);
 		
@@ -199,7 +199,7 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 		{
 			if (!newFileFields.Key.endsWith('/')) //Add URL if this isn't a folder and this file doesn't exist.
 			{
-				newFileFields.URL = `${CdnServers[this.environment]}/${this._relativeAbsoluteKeyService.getAbsolutePath(newFileFields.Key)}`;
+				newFileFields.URL = encodeURI(`${CdnServers[this.environment]}/${this.relativeAbsoluteKeyService.getAbsolutePath(newFileFields.Key)}`);
 			}
 			else
 			{
@@ -210,7 +210,7 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 		{
 			newFileFields.Thumbnails.forEach(thumbnail => 
 			{
-				thumbnail.URL = `${CdnServers[this.environment]}/thumbnails/${this._relativeAbsoluteKeyService.getAbsolutePath(newFileFields.Key)}_${thumbnail.Size}`;
+				thumbnail.URL = encodeURI(`${CdnServers[this.environment]}/thumbnails/${this.relativeAbsoluteKeyService.getAbsolutePath(newFileFields.Key)}_${thumbnail.Size}`);
 			});
 		}
 	}
