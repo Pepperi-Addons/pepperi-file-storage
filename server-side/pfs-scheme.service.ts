@@ -79,7 +79,7 @@ export class PfsSchemeService
 		if(schemaCopy.Fields)
 		{
 			Object.keys(schemaCopy.Fields).forEach(key => {
-				delete schemaCopy.Fields[key].Index;
+				delete schemaCopy.Fields[key].Indexed;
 			});
 		}
 
