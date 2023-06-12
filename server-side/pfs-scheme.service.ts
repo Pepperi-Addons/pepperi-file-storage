@@ -34,10 +34,6 @@ export class PfsSchemeService
 		// return this.getMergedSchema();
 		const res = this.getMergedSchema();
 
-		// This is just a workaround for Nebula indexing 'pfs' typed schemas.
-		// This shouldn't be published!
-		delete res.SyncData;
-
 		return res;
 	}
 
