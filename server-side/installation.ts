@@ -213,10 +213,11 @@ export async function addTrailingSlashToFolderProperty(papiClient: PapiClient, c
 	// Get all pfs schemas
 	const pfsSchemas: Array<AddonDataScheme> = await papiClient.addons.data.schemes.get({ fields: ["Name"] });
 
-	// Add the new DeletedBy field to every pfs schema
 	for (const pfsSchema of pfsSchemas) 
 	{
-		if (pfsSchema.Name) 
+		// Manipulate client schemas (pfs_{addon_uuid}_{client_addon_schema}) as well as the lock table.
+		// Don't manipulate the FILES_TO_UPLOAD schema or any other that might be invented in the future.
+		if (pfsSchema.Name?.startsWith(PFS_TABLE_PREFIX) || pfsSchema?.Name === LOCK_ADAL_TABLE_NAME) 
 		{
 			let objects: any[] = [];
 			let page = 1;
