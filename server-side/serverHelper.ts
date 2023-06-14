@@ -17,7 +17,8 @@ export class ServerHelper
 			request.query = {};
 		}
 		const lowerCaseHeaders = ServerHelper.getLowerCaseHeaders(request.header);
-		const iPepperiDal: IPepperiDal = new docDbDal(ServerHelper.createPapiClient(client, config.AddonUUID, client.AddonSecretKey), lowerCaseHeaders['x-pepperi-await-indexing']);
+		const awaitIndexing = Object.keys(lowerCaseHeaders).includes('x-pepperi-await-indexing') ? JSON.parse(lowerCaseHeaders['x-pepperi-await-indexing']) : undefined;
+		const iPepperiDal: IPepperiDal = new docDbDal(ServerHelper.createPapiClient(client, config.AddonUUID, client.AddonSecretKey), awaitIndexing);
 
 		const environment = jwtDecode(client.OAuthAccessToken)['pepperi.datacenter'];
 		const s3 = new AWS.S3({apiVersion: '2006-03-01', }); //lock API version
