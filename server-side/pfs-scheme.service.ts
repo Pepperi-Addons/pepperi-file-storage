@@ -130,6 +130,7 @@ export class PfsSchemeService
 	{
 		this.validateSchemaType();
 		this.validateSchemaName();
+		this.validateNoIndexedCustomFields();
 	}
 
 	/**
@@ -148,6 +149,25 @@ export class PfsSchemeService
 		if (!this.schema || !this.schema.Name) 
 		{
 			throw new Error("The schema must have a Name property");
+		}
+	}
+
+	/**
+	 * Validates that no passed fields contain an Indexed property, which is no supported
+	 * For more details see: 
+	 * - https://pepperi.atlassian.net/browse/DI-23567
+	 * - https://pepperi.atlassian.net/browse/DI-23700
+	 */
+	validateNoIndexedCustomFields()
+	{
+		if(this.schema.Fields)
+		{
+			const doesHaveIndexedFields = Object.keys(this.schema.Fields).some(field => Object.keys(field).includes("Indexed"));
+			
+			if(doesHaveIndexedFields)
+			{
+				throw new Error("The use of Indexed fields is not supported. Do not pass an Indexed property for any schema field.");
+			}
 		}
 	}
 
