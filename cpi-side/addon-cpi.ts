@@ -4,11 +4,25 @@ import { CpiPostCommand } from './commands/cpiPostCommand';
 import CpiAwsDal from './dal/awsDal';
 import { CpiIndexedDataS3PfsDal } from './dal/cpiIndexedDataS3PfsDal';
 import CpiPepperiDal from './dal/pepperiDal';
+import { BeforeSyncService } from './beforeSync.service';
+import { BeforeSyncResult } from './entities';
 
 export const router = Router();
 
-export async function load(configuration: any) 
-{ }
+export async function load(configuration: any)
+{
+	const beforeSyncService = new BeforeSyncService();
+	await beforeSyncService.createRelations();
+}
+
+// will be called right before the sync started
+router.post(BeforeSyncService.endpointName, async (req, res) =>
+{
+	const beforeSyncService = new BeforeSyncService();
+	const areAllFilesUploadedResult: BeforeSyncResult = await beforeSyncService.areAllFilesUploaded();
+
+    res.json(areAllFilesUploadedResult)
+});
 
 router.get('/file', async (req, res, next) => 
 {
@@ -103,6 +117,7 @@ router.get('/files/find', async (req, res, next) =>
 		next(err)
 	}
 });
+
 async function getDal(req) 
 {
 	const OAuthAccessToken = await pepperi.auth.getAccessToken();
