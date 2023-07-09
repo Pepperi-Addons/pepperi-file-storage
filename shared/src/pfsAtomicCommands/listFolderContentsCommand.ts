@@ -29,7 +29,7 @@ export class ListFolderContentsCommand extends PfsService implements ICommand
 			const searchBody: SearchBody = {
 				Where: whereClause
 			};
-			return this.pfsGetter.getObjects(searchBody);
+			return await this.pfsGetter.getObjects(searchBody);
 
 		}
 		catch (err) 
