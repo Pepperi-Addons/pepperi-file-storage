@@ -28,6 +28,7 @@
         "p-queue": "^6.6.2",
         "pfs-shared": "file:../shared",
         "rollup-plugin-typescript2": "^0.30.0",
+        "url-parse": "^1.5.10",
         "uuid": "^9.0.0"
     },
     "devDependencies": {
@@ -35,6 +36,7 @@
         "@rollup/plugin-json": "^4.1.0",
         "@rollup/plugin-node-resolve": "^13.0.6",
         "@types/node": "^14.0.13",
+        "@types/url-parse": "^1.4.8",
         "@types/uuid": "^8.0.0",
         "nodemon": "^2.0.6",
         "rollup": "^2.32.0",
