@@ -1,8 +1,8 @@
-import { Client, Request } from '@pepperi-addons/debug-server';
-import { PfsSchemeService } from './pfs-scheme.service';
-export { files, file } from './api';
-import { files } from './api';
-import { SharedHelper } from 'pfs-shared';
+import { Client, Request } from "@pepperi-addons/debug-server";
+import { PfsSchemeService } from "./pfs-scheme.service";
+export { files, file } from "./api";
+import { files } from "./api";
+import { SharedHelper } from "pfs-shared";
 
 export async function create(client: Client, request: Request) 
 {
@@ -53,20 +53,20 @@ async function naiveBatch(client: Client, request: Request)
 	{
 		const resDimxObj: any = {
 			Key: request.body.Objects[i].Key,
-		}
+		};
 
 		const promiseResult = promiseResults[i];
 
-		if(promiseResult.status === 'fulfilled')
+		if(promiseResult.status === "fulfilled")
 		{
 			// Set status to Update just so we have a value.
 			// Real treatment will be done in the full implementation.
-			resDimxObj.Status = 'Update';
+			resDimxObj.Status = "Update";
 			resDimxObj.PresignedURL = promiseResult.value.PresignedURL;
 		}
 		else
 		{
-			resDimxObj.Status = 'Error';
+			resDimxObj.Status = "Error";
 			resDimxObj.Details = promiseResult.reason.message;
 		}
 
@@ -81,17 +81,17 @@ export async function pfs_export(client: Client, request: Request)
 
 	console.log(`Request received: ${JSON.stringify(request)}`);
 
-	request.query['where'] = request.body['Where'];
-	request.query['fields'] = request.body['Fields'];
-	request.query['page'] = request.body['Page'];
-	request.query['page_size'] = request.body['MaxPageSize'];
-	request.query['order_by'] = request.body['OrderBy'];
-	request.query['include_deleted'] = request.body["IncludeDeleted"];
-	request.query['resource_name'] = request.body["Resource"];
-	request.query['addon_uuid'] = request.body["AddonUUID"];
-	request.query['key_list'] = request.body["KeyList"];
+	request.query["where"] = request.body["Where"];
+	request.query["fields"] = request.body["Fields"];
+	request.query["page"] = request.body["Page"];
+	request.query["page_size"] = request.body["MaxPageSize"];
+	request.query["order_by"] = request.body["OrderBy"];
+	request.query["include_deleted"] = request.body["IncludeDeleted"];
+	request.query["resource_name"] = request.body["Resource"];
+	request.query["addon_uuid"] = request.body["AddonUUID"];
+	request.query["key_list"] = request.body["KeyList"];
 
-	request.method = 'GET';
+	request.method = "GET";
 
 	request.body = {};
 

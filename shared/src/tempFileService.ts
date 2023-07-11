@@ -1,16 +1,17 @@
-import { v4 as createUUID } from 'uuid';
-import jwtDecode from 'jwt-decode';
-import { URL } from 'url';
+import { v4 as createUUID } from "uuid";
+import jwtDecode from "jwt-decode";
+import { URL } from "url";
 
-export default class TempFileService {
-    protected distributorUUID: string;
+export default class TempFileService 
+{
+	protected distributorUUID: string;
 
-    constructor(protected OAuthAccessToken) 
-    {
-        this.distributorUUID = jwtDecode(OAuthAccessToken)['pepperi.distributoruuid'];
-    }
+	constructor(protected OAuthAccessToken) 
+	{
+		this.distributorUUID = jwtDecode(OAuthAccessToken)["pepperi.distributoruuid"];
+	}
 
-    /**
+	/**
 	 * Create a temp file full path by its name
 	 * @param tempFileName the temp file name
 	 * @returns a string in the format temp/${DistributorUUID}/{{randomUUID}}/${tempFileName}

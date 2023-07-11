@@ -1,10 +1,10 @@
-import { IndexedDataS3PfsDal, SharedHelper } from 'pfs-shared';
-import { AddonData, SearchBody } from '@pepperi-addons/papi-sdk';
-import lodashPick from 'lodash.pick';
-import { URL } from 'url';
-import { PfsService } from '../cpiPfs.service';
-import fs from 'fs';
-import path from 'path';
+import { IndexedDataS3PfsDal, SharedHelper } from "pfs-shared";
+import { AddonData, SearchBody } from "@pepperi-addons/papi-sdk";
+import lodashPick from "lodash.pick";
+import URL from "url-parse";
+import { PfsService } from "../cpiPfs.service";
+import fs from "fs";
+import path from "path";
 
 
 export class CpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal 
@@ -77,7 +77,7 @@ export class CpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal
 			return objects;
 		}
 
-		const fieldsArray = fields.split(',');
+		const fieldsArray = fields.split(",");
 
 		// For information about lodash.pick see: https://lodash.com/docs/2.4.2#pick
 		const resObjects: AddonData[] = objects.map(object => lodashPick(object, fieldsArray));
@@ -93,14 +93,14 @@ export class CpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal
 	private async downloadFilesToDevice(objects: AddonData[]): Promise<void> 
 	{
 		// If webapp, no need to download files to device.
-		if(await global['app']['wApp']['isWebApp']())
+		if(await global["app"]["wApp"]["isWebApp"]())
 		{
 			return;
 		}
 
 		// Only download to device files that are supposed to be synced, have a URL, and are not already cached.
-		const downloadRequiringObjects = objects.filter(object => object.Sync !== 'None' &&
-																	object.Sync !== 'DeviceThumbnail' &&
+		const downloadRequiringObjects = objects.filter(object => object.Sync !== "None" &&
+																	object.Sync !== "DeviceThumbnail" &&
 																	object.URL &&
 																	!PfsService.downloadedFileKeysToLocalUrl.has(`${object.Key!}${object.ModificationDateTime!}`));
 
@@ -108,10 +108,10 @@ export class CpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal
 		{
 			// Force a download to the device
 			const objectUrl = new URL(object.URL);
-			await global['app'].getLocalFilePath(objectUrl.pathname, objectUrl.origin);
+			await global["app"].getLocalFilePath(objectUrl.pathname, objectUrl.origin);
 			// Get the new baseURL (local root, instead of cdn), and concat the existing URL's pathname
 			// Use URL.pathname instead of Key, since we now have the ModificationDateTime concatenated as a query param.
-			const objectLocalURL = encodeURI(await pepperi["files"].baseURL() + objectUrl.pathname + objectUrl.search);
+			const objectLocalURL = encodeURI(await pepperi["files"].baseURL() + objectUrl.pathname + objectUrl.query);
 
 			// Cache the result, so we won't have to download the file again.
 			PfsService.downloadedFileKeysToLocalUrl.set(`${object.Key!}${object.ModificationDateTime!}`, objectLocalURL);
@@ -145,7 +145,7 @@ export class CpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal
 	protected override async setUrls(newFileFields: any, existingFile: any): Promise<void>
 	{
 		// If it's a file - set URL to to point to the local file.
-		if(!newFileFields.Key.endsWith('/'))
+		if(!newFileFields.Key.endsWith("/"))
 		{
 			newFileFields.URL = encodeURI(`${await pepperi.files.baseURL()}/${this.relativeAbsoluteKeyService.getAbsolutePath(newFileFields.Key)}`);
 		}

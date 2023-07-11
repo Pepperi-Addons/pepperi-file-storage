@@ -5,9 +5,9 @@ export class MutateS3HandleFileUpload extends MutateS3HandlePostBase
 	protected override async specificHandle(): Promise<void> 
 	{
 		const uploadRes = await this.uploadFileData();
-			this.newFileFields.FileVersion = uploadRes.VersionId;
+		this.newFileFields.FileVersion = uploadRes.VersionId;
 			
-			delete this.newFileFields.buffer;
+		delete this.newFileFields.buffer;
 	}
 
 	protected async uploadFileData(): Promise<any> 

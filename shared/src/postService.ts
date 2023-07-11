@@ -1,31 +1,31 @@
-import { Request } from '@pepperi-addons/debug-server/dist';
-import { PapiClient, SearchBody } from '@pepperi-addons/papi-sdk';
-import path from 'path'
+import { Request } from "@pepperi-addons/debug-server/dist";
+import { PapiClient, SearchBody } from "@pepperi-addons/papi-sdk";
+import path from "path";
 import { CACHE_DEFAULT_VALUE, dataURLRegex, DESCRIPTION_DEFAULT_VALUE, EXTENSIONS_WHITELIST, HIDDEN_DEFAULT_VALUE, MAXIMAL_TREE_DEPTH, SYNC_DEFAULT_VALUE, pfsSchemaData } from "./constants";
-import { ImageResizer } from './imageResizer';
-import { IPfsGetter } from './iPfsGetter';
-import { IPfsMutator } from './iPfsMutator';
+import { ImageResizer } from "./imageResizer";
+import { IPfsGetter } from "./iPfsGetter";
+import { IPfsMutator } from "./iPfsMutator";
 import PfsService from "./pfs.service";
-import TempFileService from './tempFileService';
-import fetch from 'node-fetch';
+import TempFileService from "./tempFileService";
+import fetch from "node-fetch";
 
 
 export abstract class PostService extends PfsService 
 {
 	readonly MIME_FIELD_IS_MISSING = "Missing mandatory field 'MIME'";
 
-    protected tempFileService: TempFileService;
+	protected tempFileService: TempFileService;
 
 	constructor(protected papiClient: PapiClient, protected OAuthAccessToken: string,  request: Request, pfsMutator: IPfsMutator, pfsGetter: IPfsGetter) 
-    {
+	{
 		super(request, pfsMutator, pfsGetter);
 
 		this.tempFileService = new TempFileService(OAuthAccessToken);
 	}
 
-    public validatePostRequest() 
-    {
-        if (!this.request.body.Key) 
+	public validatePostRequest() 
+	{
+		if (!this.request.body.Key) 
 		{
 			throw new Error("Missing mandatory field 'Key'");
 		}
@@ -36,58 +36,65 @@ export abstract class PostService extends PfsService
 			throw new Error("Fields 'URI' and 'TemporaryFileURLs' are mutually exclusive.");
 		}
 
-        this.validateExtension();
+		this.validateExtension();
 
-        if (this.getPathDepth() > MAXIMAL_TREE_DEPTH) {
-            throw new Error(`Requested path is deeper than the maximum allowed depth of ${MAXIMAL_TREE_DEPTH}.`);
-        }
+		if (this.getPathDepth() > MAXIMAL_TREE_DEPTH) 
+		{
+			throw new Error(`Requested path is deeper than the maximum allowed depth of ${MAXIMAL_TREE_DEPTH}.`);
+		}
 
-        if (this.request.body.Thumbnails) {
-            this.validateThumbnailsRequest(this.request.body.Thumbnails);
-        }
-    }
+		if (this.request.body.Thumbnails) 
+		{
+			this.validateThumbnailsRequest(this.request.body.Thumbnails);
+		}
+	}
 
-    private validateThumbnailsRequest(thumbnails: any) {
-        if (thumbnails.length > 1) //Currently, only a single '200x200' thumbnail is supported.
-        {
-            const err: any = new Error(`A maximum of a single thumbnail is supported.`);
-            err.code = 400;
-            throw err;
-        }
+	private validateThumbnailsRequest(thumbnails: any) 
+	{
+		if (thumbnails.length > 1) //Currently, only a single '200x200' thumbnail is supported.
+		{
+			const err: any = new Error(`A maximum of a single thumbnail is supported.`);
+			err.code = 400;
+			throw err;
+		}
 
-        const validThumbnailsSizes = thumbnails.every(thumbnail => thumbnail.Size.toLowerCase() === '200x200');
-        if (!validThumbnailsSizes) //Currently, only a single '200x200' thumbnail is supported.
-        {
-            const err: any = new Error(`Size of thumbnail should be '200x200'.`);
-            err.code = 400;
-            throw err;
-        }
-    }
+		const validThumbnailsSizes = thumbnails.every(thumbnail => thumbnail.Size.toLowerCase() === "200x200");
+		if (!validThumbnailsSizes) //Currently, only a single '200x200' thumbnail is supported.
+		{
+			const err: any = new Error(`Size of thumbnail should be '200x200'.`);
+			err.code = 400;
+			throw err;
+		}
+	}
 
-    private getPathDepth(): number {
-        let requestedPath = this.request.body.Key;
-        if (!requestedPath.startsWith('/')) {
-            requestedPath = `/${requestedPath}`;
-        }
-        const trailingSlashes = 2;
-        return requestedPath.split('/').length - trailingSlashes;
-    }
+	private getPathDepth(): number 
+	{
+		let requestedPath = this.request.body.Key;
+		if (!requestedPath.startsWith("/")) 
+		{
+			requestedPath = `/${requestedPath}`;
+		}
+		const trailingSlashes = 2;
+		return requestedPath.split("/").length - trailingSlashes;
+	}
 
-    /**
+	/**
      * Throw an error if the file's extension is not part of the whitelist.
      */
-    private validateExtension() {
-        if (!this.request.body.Key.endsWith('/')) // Don't validate folders
-        {
-            const extension = path.extname(this.request.body.Key);
+	private validateExtension() 
+	{
+		if (!this.request.body.Key.endsWith("/")) // Don't validate folders
+		{
+			const extension = path.extname(this.request.body.Key);
 
-            if (!EXTENSIONS_WHITELIST.includes(extension)) {
-                throw new Error(extension ? `The requested file extension '${extension}' is not supported.` : 'The requested file does not have an extension.');
-            }
-        }
-    }
+			if (!EXTENSIONS_WHITELIST.includes(extension)) 
+			{
+				throw new Error(extension ? `The requested file extension '${extension}' is not supported.` : "The requested file does not have an extension.");
+			}
+		}
+	}
 
-    public async validateFieldsForUpload() 
+	public async validateFieldsForUpload() 
 	{
 		this.validateMIMEtype();
 
@@ -100,41 +107,41 @@ export abstract class PostService extends PfsService
 			throw new Error("Missing mandatory field 'URI' or 'TemporaryFileURLs'. PresignedURL functionality has been deprecated. Please use the TemporaryFileURLs field instead.\n For more information, see https://apidesign.pepperi.com/pfs-pepperi-file-service/get-files");
 		}
 
-		if(this.request.body.Key.endsWith('/') && this.request.body.Hidden) // If trying to delete a folder
+		if(this.request.body.Key.endsWith("/") && this.request.body.Hidden) // If trying to delete a folder
 		{
 			await this.validateNoContentsBeforeFolderDeletion();
 		}
 	}
 
-    private validateMIMEtype() 
+	private validateMIMEtype() 
 	{
 		if (!this.existingFile.doesFileExist && !this.request.body.MIME && (! this.request.body.URI || !this.isDataURL(this.request.body.URI))) 
 		{
 			 // this is a presigned url request, or a URL link to data, MIME must be sent.
 			throw new Error(this.MIME_FIELD_IS_MISSING);
 		}
-		else if (!this.existingFile.doesFileExist && this.request.body.MIME == 'pepperi/folder' && !this.request.body.Key.endsWith('/')) 
+		else if (!this.existingFile.doesFileExist && this.request.body.MIME == "pepperi/folder" && !this.request.body.Key.endsWith("/")) 
 		{
 			// if 'pepperi/folder' is provided on creation and the key is not ending with '/', the POST should fail
 			throw new Error("On creation of a folder, the key must end with '/'");
 		}
-		else if (this.request.body.MIME && this.request.body.MIME != 'pepperi/folder' && this.request.body.Key.endsWith('/')) 
+		else if (this.request.body.MIME && this.request.body.MIME != "pepperi/folder" && this.request.body.Key.endsWith("/")) 
 		{
 			// a folder's MIME type should always be 'pepperi/folder', otherwise the POST should fail
 			throw new Error("A filename cannot contain a '/'.");
 		}
 	}
 
-    private isDataURL(s) 
+	private isDataURL(s) 
 	{
-        return !!s.match(dataURLRegex);
+		return !!s.match(dataURLRegex);
 	}
 
-    private async validateNoContentsBeforeFolderDeletion() 
+	private async validateNoContentsBeforeFolderDeletion() 
 	{
 		const searchBody: SearchBody = {
 			Where: `Folder='${this.request.body.Key}'`,
-		}
+		};
 		const folderContents = await this.pfsGetter.getObjects(searchBody);
 
 		if (folderContents.length > 0) // Deleting a folder that has existing content is not currently supported.
@@ -147,17 +154,17 @@ export abstract class PostService extends PfsService
 	}
 
 	protected errorLogger(error: Error)
-    {
+	{
 		console.error(`Could not upload file ${this.request.body.Key}. ${error.message}`);
-    }
+	}
 
-    public async mutatePfs() 
+	public async mutatePfs() 
 	{
 		let res: any = {};
 
 		await this.createParentFoldersIfMissing();
 
-		if (this.request.body.Key.endsWith('/')) 
+		if (this.request.body.Key.endsWith("/")) 
 		{ // if the key ends with '/' it means we are creating a folder 
 			res = await this.createFolder();
 		}
@@ -168,7 +175,7 @@ export abstract class PostService extends PfsService
 		return res;
 	}
 
-    private async createParentFoldersIfMissing() 
+	private async createParentFoldersIfMissing() 
 	{
 		const missingFolders: string[] = await this.getMissingParentFolders();
 		// Creating the missing folders from root to leaf allows the recovery in case of a failure.
@@ -181,14 +188,14 @@ export abstract class PostService extends PfsService
 			const newFileFields = {};
 			const data = {
 				Key: missingFolder,
-				MIME: 'pepperi/folder',
-			}
+				MIME: "pepperi/folder",
+			};
 
 			await this.createFolder(data, existingFile, newFileFields);
 		}
 	}
 
-    /**
+	/**
 	 * Assumes that if a folder exists, the entire path to it from root also exists
 	 * @returns a list of missing parent folders, starting (index=0) from the closest to the root, ending closest to the leaf.
 	 */
@@ -198,9 +205,9 @@ export abstract class PostService extends PfsService
 
 		if(!this.existingFile?.doesFileExist) // If the file does exist, there are no missing folders.
 		{
-			let canonizedPath = this.request.body.Key.startsWith('/') ? this.request.body.Key.slice(1) : this.request.body.Key;
+			let canonizedPath = this.request.body.Key.startsWith("/") ? this.request.body.Key.slice(1) : this.request.body.Key;
 
-			while(path.dirname(canonizedPath) !== '.')
+			while(path.dirname(canonizedPath) !== ".")
 			{
 				const parentFolder = `${path.dirname(canonizedPath)}/`;
 				if(!await this.doesParentFolderExist(canonizedPath))
@@ -221,7 +228,7 @@ export abstract class PostService extends PfsService
 		return missingFoldersList;
 	}
 
-    private async doesParentFolderExist(key) 
+	private async doesParentFolderExist(key) 
 	{
 		let doesParentFolderExist = true;
 		try 
@@ -235,13 +242,13 @@ export abstract class PostService extends PfsService
 		return doesParentFolderExist;
 	}
 
-    private async createFolder(data?, existingFile?, newFileFields?): Promise<any>
+	private async createFolder(data?, existingFile?, newFileFields?): Promise<any>
 	{
 		await this.getMetadata(data, existingFile, newFileFields);	
 		return await this.pfsMutator.mutateADAL(newFileFields ?? this.newFileFields, existingFile ?? this.existingFile);
 	}
 
-    private async createFile(): Promise<any>
+	private async createFile(): Promise<any>
 	{
 		let res: any = {};
 		if(this.request.body.URI || this.request.body.Thumbnails)
@@ -265,15 +272,15 @@ export abstract class PostService extends PfsService
 			await this.createThumbnailsBuffers(buffer, MIME);
 		}
 		
-        await this.pfsMutator.mutateS3(this.newFileFields, this.existingFile);
-        res = await this.pfsMutator.mutateADAL(this.newFileFields, this.existingFile);
+		await this.pfsMutator.mutateS3(this.newFileFields, this.existingFile);
+		res = await this.pfsMutator.mutateADAL(this.newFileFields, this.existingFile);
 
 		console.log(`Successfully created a file.`);
 
 		return res;
 	}
 
-    /**
+	/**
 	 * Returns a Metadata object representing the needed metadata.
 	 * @returns a dictionary representation of the metadata.
 	 */
@@ -283,13 +290,13 @@ export abstract class PostService extends PfsService
 		existingFile = existingFile ?? this.existingFile;
 		newFileFields = newFileFields ?? this.newFileFields;
 
-		const pathFoldersList = data.Key.split('/');
-		if (data.Key.endsWith('/'))  //This is a new folder being created. We need to pop the trailing '' after splitting.
+		const pathFoldersList = data.Key.split("/");
+		if (data.Key.endsWith("/"))  //This is a new folder being created. We need to pop the trailing '' after splitting.
 		{
 			pathFoldersList.pop();
 		}
 		const fileName = pathFoldersList.pop();
-		const containingFolder = pathFoldersList.join('/') + '/';
+		const containingFolder = pathFoldersList.join("/") + "/";
 
 		newFileFields.Key = data.Key;
 		newFileFields.ExpirationDateTime = data.ExpirationDateTime;
@@ -311,22 +318,27 @@ export abstract class PostService extends PfsService
 		// This is done after the above calls, so that the above calls can override any of these fields if needed.
 		// This implementation will let us keep the read-only nature of some of the fields, while still allowing the user to update others.
 		const pfsSchemaFields = new Set(Object.keys(pfsSchemaData.Fields));
-		Object.keys(data).forEach(key => {
+		Object.keys(data).forEach(key => 
+		{
 
-			if (!pfsSchemaFields.has(key) && !newFileFields[key]) {
+			if (!pfsSchemaFields.has(key) && !newFileFields[key]) 
+			{
 				newFileFields[key] = data[key];
 			}
 		});
 	}
 
-    private async getThumbnailsMetadata(data: any, newFileFields: any, existingFile: any) {
-        if (data.Thumbnails && Array.isArray(data.Thumbnails)) {
-            newFileFields.Thumbnails = data.Thumbnails.map(thumbnailRequest => {
-                return { Size: thumbnailRequest.Size.toLowerCase() };
-            });
-        }
+	private async getThumbnailsMetadata(data: any, newFileFields: any, existingFile: any) 
+	{
+		if (data.Thumbnails && Array.isArray(data.Thumbnails)) 
+		{
+			newFileFields.Thumbnails = data.Thumbnails.map(thumbnailRequest => 
+			{
+				return { Size: thumbnailRequest.Size.toLowerCase() };
+			});
+		}
 
-        const shouldCreateThumbnails = (data.Thumbnails && data.Thumbnails.length > 0) ||  (existingFile.Thumbnails && data.URI); //The user asked for thumbnails, or the file already has thumbnails, and the file data is updated.
+		const shouldCreateThumbnails = (data.Thumbnails && data.Thumbnails.length > 0) ||  (existingFile.Thumbnails && data.URI); //The user asked for thumbnails, or the file already has thumbnails, and the file data is updated.
 		if (shouldCreateThumbnails)
 		{
 			const buffer = newFileFields.buffer ?? await this.getFileDataBuffer(existingFile.URL);
@@ -339,69 +351,74 @@ export abstract class PostService extends PfsService
 
 			await this.createThumbnailsBuffers(buffer, MIME);
 		}
-    }
+	}
 
-    private async getMetadataForExistingFile(data: any, newFileFields: any, existingFile: any) {
-        if (data.MIME) newFileFields.MIME = this.getMimeType(data);
-        if (data.Sync) newFileFields.Sync = data.Sync;
-        if (data.Description) newFileFields.Description = data.Description;
-        if (data.hasOwnProperty('Cache')) newFileFields.Cache = data.Cache;
-        if (newFileFields.buffer) newFileFields.FileSize = Buffer.byteLength(newFileFields.buffer);
+	private async getMetadataForExistingFile(data: any, newFileFields: any, existingFile: any) 
+	{
+		if (data.MIME) newFileFields.MIME = this.getMimeType(data);
+		if (data.Sync) newFileFields.Sync = data.Sync;
+		if (data.Description) newFileFields.Description = data.Description;
+		if (data.hasOwnProperty("Cache")) newFileFields.Cache = data.Cache;
+		if (newFileFields.buffer) newFileFields.FileSize = Buffer.byteLength(newFileFields.buffer);
 
-        let uploadedBy = '';
-        if ((data.URI || data.TemporaryFileURLs || (data.hasOwnProperty('Hidden') && data.Hidden != existingFile.Hidden)) && (uploadedBy = await this.getUploadedByUUID()) !== existingFile.UploadedBy)
-        // Assignment to uploadedBy var inside the if-statement is intentional.
-        // Check if URI or TemporaryFileURLs was passed, or the Hidden property is changed to avoid calling async getUploadedByUUID() unnecessarily.
-        // Check if there's a discrepancy between current uploader and pervious to avoid updating the file's UploadedBy field unnecessarily.
-        {
-            newFileFields.UploadedBy = uploadedBy;
-        }        
-    }
+		let uploadedBy = "";
+		if ((data.URI || data.TemporaryFileURLs || (data.hasOwnProperty("Hidden") && data.Hidden != existingFile.Hidden)) && (uploadedBy = await this.getUploadedByUUID()) !== existingFile.UploadedBy)
+		// Assignment to uploadedBy var inside the if-statement is intentional.
+		// Check if URI or TemporaryFileURLs was passed, or the Hidden property is changed to avoid calling async getUploadedByUUID() unnecessarily.
+		// Check if there's a discrepancy between current uploader and pervious to avoid updating the file's UploadedBy field unnecessarily.
+		{
+			newFileFields.UploadedBy = uploadedBy;
+		}        
+	}
 
-    private async getMetadataForExistingObject(data: any, newFileFields: any, existingFile: any) {
-        if (!data.Key.endsWith('/')) // This is not a folder
-        {
-            await this.getMetadataForExistingFile(data, newFileFields, existingFile);
-        }
+	private async getMetadataForExistingObject(data: any, newFileFields: any, existingFile: any) 
+	{
+		if (!data.Key.endsWith("/")) // This is not a folder
+		{
+			await this.getMetadataForExistingFile(data, newFileFields, existingFile);
+		}
     
-        if (data.hasOwnProperty('Hidden') && data.Hidden != existingFile.Hidden)
-            newFileFields.Hidden = data.Hidden;
-    }
+		if (data.hasOwnProperty("Hidden") && data.Hidden != existingFile.Hidden)
+			newFileFields.Hidden = data.Hidden;
+	}
     
-    private async getMetadataForNewFile(newFileFields: any, data: any) {
-        newFileFields.Sync = data.Sync ?? SYNC_DEFAULT_VALUE;
-        newFileFields.Description = data.Description ?? DESCRIPTION_DEFAULT_VALUE;
-        newFileFields.Cache = data.Cache ?? CACHE_DEFAULT_VALUE;
-        newFileFields.UploadedBy = await this.getUploadedByUUID();
-        if (newFileFields.buffer) {
-            newFileFields.FileSize = Buffer.byteLength(newFileFields.buffer);
-        }
-    }
+	private async getMetadataForNewFile(newFileFields: any, data: any) 
+	{
+		newFileFields.Sync = data.Sync ?? SYNC_DEFAULT_VALUE;
+		newFileFields.Description = data.Description ?? DESCRIPTION_DEFAULT_VALUE;
+		newFileFields.Cache = data.Cache ?? CACHE_DEFAULT_VALUE;
+		newFileFields.UploadedBy = await this.getUploadedByUUID();
+		if (newFileFields.buffer) 
+		{
+			newFileFields.FileSize = Buffer.byteLength(newFileFields.buffer);
+		}
+	}
 
-    private getMetadataForNewFolder(newFileFields: any) {
-        newFileFields.Sync = SYNC_DEFAULT_VALUE;
-        newFileFields.Description = DESCRIPTION_DEFAULT_VALUE;
-    }
+	private getMetadataForNewFolder(newFileFields: any) 
+	{
+		newFileFields.Sync = SYNC_DEFAULT_VALUE;
+		newFileFields.Description = DESCRIPTION_DEFAULT_VALUE;
+	}
 
-    private async getMetadataForNewObject(newFileFields: any, fileName: any, data: any, containingFolder: string) 
-    {
-        newFileFields.Name = `${fileName}${data.Key.endsWith('/') ? '/' : ''}`; // Add the dropped '/' for folders.
-        newFileFields.Folder = containingFolder ? containingFolder : '/'; // Set '/' for root folder
-        newFileFields.MIME = this.getMimeType(data);
-        newFileFields.Hidden = data.Hidden ?? HIDDEN_DEFAULT_VALUE;
-        newFileFields.ExpirationDateTime = data.ExpirationDateTime;
+	private async getMetadataForNewObject(newFileFields: any, fileName: any, data: any, containingFolder: string) 
+	{
+		newFileFields.Name = `${fileName}${data.Key.endsWith("/") ? "/" : ""}`; // Add the dropped '/' for folders.
+		newFileFields.Folder = containingFolder ? containingFolder : "/"; // Set '/' for root folder
+		newFileFields.MIME = this.getMimeType(data);
+		newFileFields.Hidden = data.Hidden ?? HIDDEN_DEFAULT_VALUE;
+		newFileFields.ExpirationDateTime = data.ExpirationDateTime;
 
-        if (!data.Key.endsWith('/')) // This is not a folder
-            {
-                await this.getMetadataForNewFile(newFileFields, data);
-            }
-            else //this is a folder
-            {
-                this.getMetadataForNewFolder(newFileFields);
-            }
-    }
+		if (!data.Key.endsWith("/")) // This is not a folder
+		{
+			await this.getMetadataForNewFile(newFileFields, data);
+		}
+		else //this is a folder
+		{
+			this.getMetadataForNewFolder(newFileFields);
+		}
+	}
 
-    private getMimeType(data?): string 
+	private getMimeType(data?): string 
 	{
 		data = data ?? this.request.body;
 
@@ -427,19 +444,19 @@ export abstract class PostService extends PfsService
 		return MIME;
 	}
 
-    /**
+	/**
 	 * Return the UUID of the user that uploads the file. Return blank string if it is the support admin user.
 	 * @returns UUID of the user that uploaded the file
 	 */
 	protected abstract getUploadedByUUID(): Promise<string>;
 
-    private async getFileDataBuffer(url) 
+	private async getFileDataBuffer(url) 
 	{
 		let buf: Buffer;
 
 		if (this.isDataURL(url)) // dataURI get the base 64 part
 		{ 
-			buf = Buffer.from(url.match(dataURLRegex)[4], 'base64');
+			buf = Buffer.from(url.match(dataURLRegex)[4], "base64");
 		}
 		else //the URI is URL - download the data
 		{
@@ -449,7 +466,7 @@ export abstract class PostService extends PfsService
 		return buf;
 	}
 
-    private async downloadFileBufferFromURL(url) 
+	private async downloadFileBufferFromURL(url) 
 	{
 		const response = await fetch(url, { method: `GET` });
 		const arrayData = await response.arrayBuffer();
@@ -458,7 +475,7 @@ export abstract class PostService extends PfsService
 		return buf;
 	}
 
-    private async createThumbnailsBuffers(buffer: Buffer, MIME: string) 
+	private async createThumbnailsBuffers(buffer: Buffer, MIME: string) 
 	{
 		const resizer = new ImageResizer(MIME, buffer);
 		const thumbnails = this.newFileFields.Thumbnails ?? this.existingFile.Thumbnails;
@@ -472,7 +489,8 @@ export abstract class PostService extends PfsService
 		}));
 	}
 
-    public override async getCurrentItemData(): Promise<void> {
-        await super.getCurrentItemData();
-    }
+	public override async getCurrentItemData(): Promise<void> 
+	{
+		await super.getCurrentItemData();
+	}
 }

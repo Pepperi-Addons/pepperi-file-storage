@@ -1,23 +1,23 @@
-import 'mocha';
-import chai, { expect } from 'chai';
-import promised from 'chai-as-promised';
-import { mockClient } from './consts';
+import "mocha";
+import chai, { expect } from "chai";
+import promised from "chai-as-promised";
+import { mockClient } from "./consts";
 import { Client, Request } from "@pepperi-addons/debug-server";
-import { PapiClient } from '@pepperi-addons/papi-sdk';
-import { PfsSchemeService } from '../pfs-scheme.service';
-import { ServerHelper } from '../serverHelper';
-import { pfsSchemaData } from 'pfs-shared';
+import { PapiClient } from "@pepperi-addons/papi-sdk";
+import { PfsSchemeService } from "../pfs-scheme.service";
+import { ServerHelper } from "../serverHelper";
+import { pfsSchemaData } from "pfs-shared";
 
 chai.use(promised);
 
-describe('Schema operations', async () => 
+describe("Schema operations", async () => 
 {
 
 	const request: Request = {
-		method: 'GET',
+		method: "GET",
 		body: {},
 		header: {},
-		query: { addon_uuid: '48c41cce-698c-11ed-a1eb-0242ac120002' } // Don't care, meaningless UUID.
+		query: { addon_uuid: "48c41cce-698c-11ed-a1eb-0242ac120002" } // Don't care, meaningless UUID.
 	};
 
 	let papiPostCounter = 0;
@@ -44,19 +44,19 @@ describe('Schema operations', async () =>
 
 		papiClient.get = async (url: string ) => 
 		{
-			throw new Error('Don\'t care...');
+			throw new Error("Don't care...");
 		};
 
 		return papiClient;
 	};
 
-	it('should create a schema (Don\'t pass SyncData.Sync)', async () => 
+	it("should create a schema (Don't pass SyncData.Sync)", async () => 
 	{
 		papiPostCounter = 0;
 		const requestCopy = { ...request };
 		requestCopy.body = {
-			Type: 'pfs',
-			Name: 'pfs_test_schema'
+			Type: "pfs",
+			Name: "pfs_test_schema"
 		};
 		const schemaService = new PfsSchemeService(mockClient, requestCopy);
 		const createdSchema = await schemaService.create();
@@ -67,13 +67,13 @@ describe('Schema operations', async () =>
 		expect(createdSchema.Fields).to.deep.equal(pfsSchemaData.Fields);
 	});
 
-	it('should create a schema with SyncData.Sync = false', async () => 
+	it("should create a schema with SyncData.Sync = false", async () => 
 	{
 		papiPostCounter = 0;
 		const requestCopy = { ...request };
 		requestCopy.body = {
-			Type: 'pfs',
-			Name: 'pfs_test_schema',
+			Type: "pfs",
+			Name: "pfs_test_schema",
 			SyncData : 
                 {
                 	Sync: false
@@ -90,13 +90,13 @@ describe('Schema operations', async () =>
 		expect(createdSchema.SyncData?.Sync).to.be.false;
 	});
 
-	it('should create a schema with SyncData.Sync = true', async () => 
+	it("should create a schema with SyncData.Sync = true", async () => 
 	{
 		papiPostCounter = 0;
 		const requestCopy = { ...request };
 		requestCopy.body = {
-			Type: 'pfs',
-			Name: 'pfs_test_schema',
+			Type: "pfs",
+			Name: "pfs_test_schema",
 			SyncData : 
                 {
                 	Sync: true
@@ -117,10 +117,10 @@ describe('Schema operations', async () =>
 	{
 		const requestCopy = { ...request };
 		requestCopy.body = {
-			Type: 'pfs',
-			Name: 'pfs_test_schema',
+			Type: "pfs",
+			Name: "pfs_test_schema",
 			Fields: {
-				'UnsupportedField': true
+				"UnsupportedField": true
 			}
 		};
 		const schemaService = new PfsSchemeService(mockClient, requestCopy);
@@ -131,10 +131,10 @@ describe('Schema operations', async () =>
 	{
 		const requestCopy = { ...request };
 		requestCopy.body = {
-			Type: 'NOT_PFS',
-			Name: 'pfs_test_schema',
+			Type: "NOT_PFS",
+			Name: "pfs_test_schema",
 			Fields: {
-				'UnsupportedField': true
+				"UnsupportedField": true
 			}
 		};
 		const schemaService = new PfsSchemeService(mockClient, requestCopy);
@@ -145,7 +145,7 @@ describe('Schema operations', async () =>
 	{
 		const requestCopy = { ...request };
 		requestCopy.body = {
-			Type: 'pfs',
+			Type: "pfs",
 		};
 		const schemaService = new PfsSchemeService(mockClient, requestCopy);
 		await expect(schemaService.create()).to.be.rejectedWith("The schema must have a Name property");

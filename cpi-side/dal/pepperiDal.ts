@@ -1,6 +1,6 @@
 import { AddonData, SearchBody, SearchData } from "@pepperi-addons/papi-sdk";
 import { IPepperiDal } from "pfs-shared";
-import config from '../../addon.config.json';
+import config from "../../addon.config.json";
 
 export default class CpiPepperiDal implements IPepperiDal
 {
@@ -16,6 +16,6 @@ export default class CpiPepperiDal implements IPepperiDal
 
 	public async hardDeleteDocumentFromTable(tableName: string, key: any): Promise<any>
 	{
-		throw new Error('Hard delete is not supported in CPI-side.');
+		throw new Error("Hard delete is not supported in CPI-side.");
 	}
 }

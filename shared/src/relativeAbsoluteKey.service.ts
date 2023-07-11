@@ -4,13 +4,14 @@ export class RelativeAbsoluteKeyService
 	protected _clientAddonUUID: string;
 	protected _clientSchemaName: string;
 
-    constructor(absolutePath: string);
+	constructor(absolutePath: string);
 	constructor(distributorUUID: string, clientAddonUUID: string, clientSchemaName: string);
 
-	constructor(arg0: string, clientAddonUUID?: string, clientSchemaName?: string) {
+	constructor(arg0: string, clientAddonUUID?: string, clientSchemaName?: string) 
+	{
 		if(!(clientAddonUUID && clientSchemaName))
 		{
-			const splitAbsolutePath = arg0.split('/');
+			const splitAbsolutePath = arg0.split("/");
 			arg0 = splitAbsolutePath[0];
 			clientAddonUUID = splitAbsolutePath[1];
 			clientSchemaName = splitAbsolutePath[2];
@@ -38,7 +39,7 @@ export class RelativeAbsoluteKeyService
 		return this._clientSchemaName;
 	}
 
-    //#region public methods
+	//#region public methods
 
 	/**
 	* Each distributor is given its own folder, and each addon has its own folder within the distributor's folder.
@@ -57,7 +58,7 @@ export class RelativeAbsoluteKeyService
 
 	public removeSlashPrefix(path: string)
 	{
-		if (path != '/' && path?.startsWith('/')) 
+		if (path != "/" && path?.startsWith("/")) 
 		{
 			path = path.slice(1);
 		}
@@ -73,7 +74,7 @@ export class RelativeAbsoluteKeyService
 	public getRelativePath(absolutePath: string): string 
 	{
 		const relativePath = absolutePath.split(`${this._distributorUUID}/${this._clientAddonUUID}/${this._clientSchemaName}/`)[1];
-		const res = relativePath === '' ? '/' : relativePath; // Handle root folder case
+		const res = relativePath === "" ? "/" : relativePath; // Handle root folder case
 		return res;
 	}
 	//#endregion

@@ -1,17 +1,19 @@
 import { PapiClient } from "@pepperi-addons/papi-sdk";
 import { ABaseTransactionalCommand } from "../aBaseTransactionalCommand";
-import { ServerHelper } from '../../../serverHelper';
-import { IPfsGetter, IPfsMutator, PostService, TransactionType } from 'pfs-shared';
-import { Client, Request } from '@pepperi-addons/debug-server/dist';
+import { ServerHelper } from "../../../serverHelper";
+import { IPfsGetter, IPfsMutator, PostService, TransactionType } from "pfs-shared";
+import { Client, Request } from "@pepperi-addons/debug-server/dist";
 import { OnlinePostService } from "./onlinePostService";
 
-export class PostTransactionalCommand extends ABaseTransactionalCommand{
+export class PostTransactionalCommand extends ABaseTransactionalCommand
+{
 	readonly MIME_FIELD_IS_MISSING = "Missing mandatory field 'MIME'";
-	readonly TRANSACTION_TYPE: TransactionType = 'post' ;
+	readonly TRANSACTION_TYPE: TransactionType = "post" ;
 
 	protected postService: PostService;
 
-	constructor(client: Client, protected papiClient: PapiClient, request: Request, pfsMutator: IPfsMutator, pfsGetter: IPfsGetter) {
+	constructor(client: Client, protected papiClient: PapiClient, request: Request, pfsMutator: IPfsMutator, pfsGetter: IPfsGetter) 
+	{
 		super(client, request, pfsMutator, pfsGetter);
 
 		this.postService = new OnlinePostService(this.papiClient, this.client.OAuthAccessToken, this.request, this.pfsMutator, this.pfsGetter);
@@ -23,16 +25,16 @@ export class PostTransactionalCommand extends ABaseTransactionalCommand{
 		this.postService.validatePostRequest();
 	}
 
-    async lock(): Promise<void>
+	async lock(): Promise<void>
 	{
-        await super.rollback();
+		await super.rollback();
 
 		await this.pfsMutator.lock(this.request.body.Key, this.TRANSACTION_TYPE);
-    }
+	}
 
-    async executeTransaction(): Promise<any>
+	async executeTransaction(): Promise<any>
 	{
-        // Download the current saved metadata, if exists
+		// Download the current saved metadata, if exists
 		await this.postService.getCurrentItemData();
 
 		// Further validation of input
@@ -48,9 +50,10 @@ export class PostTransactionalCommand extends ABaseTransactionalCommand{
 		await this.pfsMutator.notify(this.newFileFields, this.existingFile);
 
 		return res;
-    }
+	}
 
-    async unlock(key: string): Promise<void>{
-        await this.pfsMutator.unlock(key);
-    }
+	async unlock(key: string): Promise<void>
+	{
+		await this.pfsMutator.unlock(key);
+	}
 }

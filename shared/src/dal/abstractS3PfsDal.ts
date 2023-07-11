@@ -1,9 +1,8 @@
-import { Request } from '@pepperi-addons/debug-server';
-import { String } from 'aws-sdk/clients/cloudhsm';
-import { CACHE_DEFAULT_VALUE, dataURLRegex, TransactionType } from '../';
-import { AbstractBasePfsDal } from './abstractBasePfsDal';
-import { IAws } from './iAws';
-import { MutateS3HandlerFactory, MutateS3HandleType } from './mutateS3Handlers/mutateS3HandlerFactory';
+import { Request } from "@pepperi-addons/debug-server";
+import { CACHE_DEFAULT_VALUE, dataURLRegex, TransactionType } from "../";
+import { AbstractBasePfsDal } from "./abstractBasePfsDal";
+import { IAws } from "./iAws";
+import { MutateS3HandlerFactory, MutateS3HandleType } from "./mutateS3Handlers/mutateS3HandlerFactory";
 
 export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 {
@@ -25,16 +24,16 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		{
 			if(this.request.body.TemporaryFileURLs.length === 1)
 			{
-				mutateS3HandlerType = 'tempFile';
+				mutateS3HandlerType = "tempFile";
 			}
 			else
 			{
-				mutateS3HandlerType = 'multipartUpload';
+				mutateS3HandlerType = "multipartUpload";
 			}
 		}
 		else if (this.request.body.URI) // The file already has data, or data was provided.
 		{ 
-			mutateS3HandlerType = 'fileUpload';
+			mutateS3HandlerType = "fileUpload";
 		}
 
 		const mutateS3Handler = MutateS3HandlerFactory.getHandler(mutateS3HandlerType, newFileFields, existingFile, this);
@@ -82,10 +81,10 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 
 	private validateInvalidationRequest(keyInvalidationPath: string) 
 	{
-		let skipReason = '';
+		let skipReason = "";
 
-		if (keyInvalidationPath.endsWith('/'))
-			skipReason = 'Requested path is a folder.'; // If this is a folder or if this file doesn't exist, it has no CDN representation, and there's no need to invalidate it.
+		if (keyInvalidationPath.endsWith("/"))
+			skipReason = "Requested path is a folder."; // If this is a folder or if this file doesn't exist, it has no CDN representation, and there's no need to invalidate it.
 
 		if(skipReason)
 		{
@@ -109,7 +108,7 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 	async batchDeleteS3(keys: string[]) 
 	{
 		// Only files can be deleted from S3, filter out any folder names
-		keys = keys.filter(key => !key.endsWith('/'));
+		keys = keys.filter(key => !key.endsWith("/"));
 		
 		// Call DeleteObjects
 		const deleteObjectsRes = await this.deleteObjects(keys.map(key => this.relativeAbsoluteKeyService.getAbsolutePath(key)));
@@ -179,7 +178,7 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		params.ContentType = this.getMimeType();
 		if(!isCache)
 		{
-			params.CacheControl = 'no-cache';
+			params.CacheControl = "no-cache";
 		}
 
 		// Upload to S3 bucket.
@@ -229,7 +228,7 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		// go for a naive approach.
 
 		// Only files can be deleted from S3, filter out any folder names
-		keys = keys.filter(key => !key.endsWith('/'));
+		keys = keys.filter(key => !key.endsWith("/"));
 
 		// Create a list of thumbnails to delete
 		keys = keys.map(key => `thumbnails/${this.relativeAbsoluteKeyService.getAbsolutePath(key)}_200x200`);

@@ -1,6 +1,6 @@
 import { AddonData, PapiClient, SearchBody, SearchData } from "@pepperi-addons/papi-sdk";
 import { IPepperiDal } from "pfs-shared";
-import config from '../../addon.config.json';
+import config from "../../addon.config.json";
 
 
 export default class docDbDal implements IPepperiDal

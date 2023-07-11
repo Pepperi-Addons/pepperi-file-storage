@@ -1,6 +1,6 @@
-import { SearchBody } from '@pepperi-addons/papi-sdk';
-import { ICommand } from '../iCommand';
-import PfsService from '../pfs.service';
+import { SearchBody } from "@pepperi-addons/papi-sdk";
+import { ICommand } from "../iCommand";
+import PfsService from "../pfs.service";
 
 export class ListFolderContentsCommand extends PfsService implements ICommand 
 {
@@ -14,9 +14,9 @@ export class ListFolderContentsCommand extends PfsService implements ICommand
 	{
 		try 
 		{
-			const requestedFolder = this.request.query.folder.endsWith('/') ? this.request.query.folder : this.request.query.folder + '/'; //handle trailing '/'
+			const requestedFolder = this.request.query.folder.endsWith("/") ? this.request.query.folder : this.request.query.folder + "/"; //handle trailing '/'
 
-			if(this.request.query.folder != '/' && !(await this.getDoesFileExist(requestedFolder))) // The root folder is not created, and therefore isn't listed in the adal table. It is there by default.
+			if(this.request.query.folder != "/" && !(await this.getDoesFileExist(requestedFolder))) // The root folder is not created, and therefore isn't listed in the adal table. It is there by default.
 			{
 				console.error(`Could not find requested folder: '${this.request.query.folder}'.`);
 
@@ -29,7 +29,7 @@ export class ListFolderContentsCommand extends PfsService implements ICommand
 			const searchBody: SearchBody = {
 				Where: whereClause
 			};
-			return this.pfsGetter.getObjects(searchBody);
+			return await this.pfsGetter.getObjects(searchBody);
 
 		}
 		catch (err) 

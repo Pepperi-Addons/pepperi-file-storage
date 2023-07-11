@@ -2,7 +2,7 @@ import { AMutateS3Handler } from "./aMutateS3Handler";
 
 export class MutateS3HandlePostBase extends AMutateS3Handler
 {
-    public async execute(): Promise<void>
+	public async execute(): Promise<void>
 	{
 		await this.specificHandle();
 		await this.handleThumbnails();
@@ -21,8 +21,8 @@ export class MutateS3HandlePostBase extends AMutateS3Handler
 	}
 
 	protected async handleThumbnails()
-    {
-        if(Array.isArray(this.newFileFields.Thumbnails))
+	{
+		if(Array.isArray(this.newFileFields.Thumbnails))
 		{
 			for (const thumbnail of this.newFileFields.Thumbnails) 
 			{
@@ -44,9 +44,9 @@ export class MutateS3HandlePostBase extends AMutateS3Handler
 				}
 			}
 		}
-    }
+	}
 
-    protected async uploadThumbnail(size: string, Body: Buffer): Promise<any> 
+	protected async uploadThumbnail(size: string, Body: Buffer): Promise<any> 
 	{
 		const key = `thumbnails/${this.s3PfsDal.relativeAbsoluteKeyService.getAbsolutePath(this.newFileFields.Key)}_${size}`;
 		return this.s3PfsDal.uploadToS3(key, Body, this.shouldUseCache);

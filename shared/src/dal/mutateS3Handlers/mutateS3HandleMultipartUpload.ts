@@ -3,10 +3,12 @@ import { PromiseResult } from "aws-sdk/lib/request";
 import { MutateS3HandleFileCopy } from "./mutateS3HandleFileCopy";
 
 
-export class MutateS3HandleMultipartUpload extends MutateS3HandleFileCopy {
+export class MutateS3HandleMultipartUpload extends MutateS3HandleFileCopy 
+{
 	protected readonly BATCH_SIZE = 5;
 
-	protected override async specificHandle(): Promise<void> {
+	protected override async specificHandle(): Promise<void> 
+	{
 		// Copy the file's data from the temp location to the final location.
 		const absolutePath = this.s3PfsDal.relativeAbsoluteKeyService.getAbsolutePath(this.newFileFields.Key);
 		const tempFileURLs: Array<string> = this.s3PfsDal.request.body.TemporaryFileURLs;
@@ -50,21 +52,26 @@ export class MutateS3HandleMultipartUpload extends MutateS3HandleFileCopy {
 	private async copyUploadParts(tempFileURLs: string[], absolutePath: string, UploadId: string | undefined): Promise<AWS.S3.CompletedPart[]>
 	{
 		const uploadedParts: AWS.S3.CompletedPart[] = [];
-		for (let i = 0; i < tempFileURLs.length; i += this.BATCH_SIZE) {
+		for (let i = 0; i < tempFileURLs.length; i += this.BATCH_SIZE) 
+		{
 			const end = Math.min(i + this.BATCH_SIZE, tempFileURLs.length);
 
-			const copyUploadPromisesBatch = this.newFileFields.TemporaryFileURLs.slice(i, end).map((url, indexWithinBatch) => {
+			const copyUploadPromisesBatch = this.newFileFields.TemporaryFileURLs.slice(i, end).map((url, indexWithinBatch) => 
+			{
 				const partNumber = i + indexWithinBatch + 1;
 				return this.s3PfsDal.awsDal.copyUploadPart(absolutePath, UploadId!, partNumber, url);
 			});
 
 			const batchResults = await Promise.allSettled(copyUploadPromisesBatch);
 
-			batchResults.forEach((result, index) => {
-				if (result.status === 'rejected') {
+			batchResults.forEach((result, index) => 
+			{
+				if (result.status === "rejected") 
+				{
 					throw new Error(`Error copying upload part number ${i + index + 1}: ${result.reason}`);
 				}
-				else {
+				else 
+				{
 					const { ETag } = result.value.CopyPartResult;
 					uploadedParts.push({ ETag, PartNumber: i + index + 1 });
 				}
