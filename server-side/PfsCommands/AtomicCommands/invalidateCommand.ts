@@ -1,11 +1,12 @@
 
-import { ICommand } from 'pfs-shared';
-import PfsService from '../onlinePfs.service';
+import { ICommand } from "pfs-shared";
+import PfsService from "../onlinePfs.service";
 
 
 export class InvalidateCommand extends PfsService implements ICommand 
 {
-	public async execute(): Promise<any>{
+	public async execute(): Promise<any>
+	{
 		return await this.invalidate();
 	}
 

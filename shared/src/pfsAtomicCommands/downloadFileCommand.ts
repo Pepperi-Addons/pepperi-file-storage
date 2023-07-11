@@ -1,5 +1,5 @@
-import { ICommand } from '../iCommand';
-import PfsService from '../pfs.service';
+import { ICommand } from "../iCommand";
+import PfsService from "../pfs.service";
 
 export class DownloadFileCommand extends PfsService implements ICommand 
 {

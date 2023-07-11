@@ -1,11 +1,11 @@
-import { AddonData } from "@pepperi-addons/papi-sdk"
+import { AddonData } from "@pepperi-addons/papi-sdk";
 
 export const S3Buckets = {
 	"prod": "pepperi-file-storage",
 	"sandbox": "staging-pepperi-file-storage",
 	"eu": "eu-pepperi-file-storage",
 	"dev": "pepperi-file-storage-dev"
-}
+};
 
 export const CdnServers = {
 	"prod": "https://pfs.pepperi.com",
@@ -13,7 +13,7 @@ export const CdnServers = {
 	"eu": "https://eupfs.pepperi.com",
 	//The next entry is just a placeholder, not a real CDN.
 	"dev": "https://d3jagocnvgzx6w.cloudfront.net"
-}
+};
 
 export const CloudfrontDistributions = {
 	"prod": "EZ8RY7SWZ0ZA0",
@@ -21,7 +21,7 @@ export const CloudfrontDistributions = {
 	"eu": "E1R0ITT15925AL",
 	//The next entry is just a placeholder, not a real CDN.
 	"dev": "E3VND838PBH3CH"
-}
+};
 
 export interface IPfsDownloadObjectResponse {
     Key: string,
@@ -46,61 +46,61 @@ export interface IPfsListFilesResultObject {
     ModificationDateTime?: string // Folders don't have a ModificationDateTime, only files do.
 }
 
-export type TransactionType = 'post'|'hide';
+export type TransactionType = "post"|"hide";
 
 export const pfsSchemaData: any = {
 	Fields: {
 		Description: {
-			Type: 'String',
+			Type: "String",
 			Indexed: true
 		},
 		MIME: {
-			Type: 'String',
+			Type: "String",
 			Indexed: true,
 			Keyword: true
 		},
 		Sync: {
-			Type: 'String'
+			Type: "String"
 		},
 		Thumbnails: {
-			Type: 'Array',
+			Type: "Array",
 			Items: {
-				Type: 'Object'
+				Type: "Object"
 			}
 		},
 		Folder: {
-			Type: 'String',
+			Type: "String",
 			Indexed: true,
 			Keyword: true
 		},
 		Name: {
-			Type: 'String',
+			Type: "String",
 			Indexed: true,
 		},
 		URL: {
-			Type: 'String'
+			Type: "String"
 		},
 		FileVersion: {
-			Type: 'String'
+			Type: "String"
 		},
 		Cache: {
-			Type: 'Bool'
+			Type: "Bool"
 		},
 		UploadedBy: {
-			Type: 'String',
+			Type: "String",
 			Indexed: true,
 			Keyword: true
 		},
 		FileSize: {
-			Type: 'Integer'
+			Type: "Integer"
 		},
 		DeletedBy:{
-			Type: 'String',
+			Type: "String",
 			Indexed: true,
 			Keyword: true
 		}
 	} as any,
-}
+};
 
 export  type IPfsListFilesResultObjects = Array<IPfsListFilesResultObject>
 
@@ -110,7 +110,7 @@ export const METADATA_ADAL_TABLE_NAME = "S3ObjectsMetadata";
 export const LOCK_ADAL_TABLE_NAME = "PfsLockTable";
 export const FILES_TO_UPLOAD_TABLE_NAME = "filesToUpload";
 
-export const SECRETKEY_HEADER = 'x-pepperi-secretkey';
+export const SECRETKEY_HEADER = "x-pepperi-secretkey";
 
 export const MAXIMAL_LOCK_TIME: number = 1000 * 60 * 5; // Set to 5 minutes.
 export const DEBUG_MAXIMAL_LOCK_TIME = 1; // Debug
@@ -134,9 +134,9 @@ export const EXTENSIONS_WHITELIST: Array<string> = [
 	".bmp", ".csv", ".doc", ".docx", ".gif", ".jpg", ".jpeg", ".js",
 	".json", ".log", ".mp4", ".mpeg", ".pdf", ".png", ".ppt",
 	".pptx", ".svg", ".txt", ".xls", ".xlsx", ".xml", ".zip"
-]
+];
 
-export const DIMX_ADDON_UUID = '44c97115-6d14-4626-91dc-83f176e9a0fc';
+export const DIMX_ADDON_UUID = "44c97115-6d14-4626-91dc-83f176e9a0fc";
 
 export const PFS_TABLE_PREFIX = "pfs";
 

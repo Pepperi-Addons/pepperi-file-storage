@@ -1,5 +1,5 @@
 import { IAws } from "pfs-shared";
-import AWS from 'aws-sdk';
+import AWS from "aws-sdk";
 import { PromiseResult } from "aws-sdk/lib/request";
 import URL from "url-parse";
 
@@ -41,7 +41,7 @@ export default class AwsDal implements IAws
 		params.Bucket = params.Bucket ?? this.S3Bucket;
 		params.Expires = params.Expires ?? 24 * 60 * 60; //PUT presigned URL will expire after 24 hours = 60 sec * 60 min * 24 hrs
 
-		const urlString: string = await this.s3.getSignedUrl('putObject', params);
+		const urlString: string = await this.s3.getSignedUrl("putObject", params);
 		
 		return urlString;
 	}
@@ -89,7 +89,7 @@ export default class AwsDal implements IAws
 	public async cloudFrontInvalidate(objectsPath: string[]): Promise<PromiseResult<AWS.CloudFront.CreateInvalidationResult, AWS.AWSError>>
 	{
 		// Create invalidation request
-		const cloudfront = new AWS.CloudFront({apiVersion: '2020-05-31'});
+		const cloudfront = new AWS.CloudFront({apiVersion: "2020-05-31"});
 		const invalidationParams: AWS.CloudFront.CreateInvalidationRequest = {
 			DistributionId: this.CloudFrontDistribution,
   			InvalidationBatch: {
@@ -112,7 +112,7 @@ export default class AwsDal implements IAws
 			Bucket: this.S3Bucket,
 			CopySource: encodeURI(`/${this.S3Bucket}${new URL(originURL).pathname}`),
 			Key: destinationKey,
-			...(!cacheControl && {CacheControl: 'no-cache'}),
+			...(!cacheControl && {CacheControl: "no-cache"}),
 		};
 
 		console.log(`Trying to copy object from ${originURL} to ${destinationKey}...`);
@@ -125,7 +125,7 @@ export default class AwsDal implements IAws
 		}
 		catch (err)
 		{
-			console.error(`Error copying object from ${originURL} to ${destinationKey}: ${err instanceof Error ? err.message : 'An unknown error occurred'}`);
+			console.error(`Error copying object from ${originURL} to ${destinationKey}: ${err instanceof Error ? err.message : "An unknown error occurred"}`);
 			throw err;
 		}
 
@@ -147,7 +147,7 @@ export default class AwsDal implements IAws
 		}
 		catch (err)
 		{
-			console.error(`Error getting file size of ${key}: ${err instanceof Error ? err.message : 'An unknown error occurred'}`);
+			console.error(`Error getting file size of ${key}: ${err instanceof Error ? err.message : "An unknown error occurred"}`);
 			throw err;
 		}
 
@@ -170,7 +170,7 @@ export default class AwsDal implements IAws
 		}
 		catch (err)
 		{
-			console.error(`Error creating multipart upload of ${key}: ${err instanceof Error ? err.message : 'An unknown error occurred'}`);
+			console.error(`Error creating multipart upload of ${key}: ${err instanceof Error ? err.message : "An unknown error occurred"}`);
 			throw err;
 		}
 
@@ -196,7 +196,7 @@ export default class AwsDal implements IAws
 		}
 		catch (err)
 		{
-			console.error(`Error copying upload part number ${partNumber} of "${key}" from "${copySource}": ${err instanceof Error ? err.message : 'An unknown error occurred'}`);
+			console.error(`Error copying upload part number ${partNumber} of "${key}" from "${copySource}": ${err instanceof Error ? err.message : "An unknown error occurred"}`);
 			throw err;
 		}
 
@@ -223,7 +223,7 @@ export default class AwsDal implements IAws
 		}
 		catch (err)
 		{
-			console.error(`Error completing multipart upload of ${key}: ${err instanceof Error ? err.message : 'An unknown error occurred'}`);
+			console.error(`Error completing multipart upload of ${key}: ${err instanceof Error ? err.message : "An unknown error occurred"}`);
 			throw err;
 		}
 
@@ -247,7 +247,7 @@ export default class AwsDal implements IAws
 		}
 		catch (err)
 		{
-			console.error(`Error aborting multipart upload of ${key}: ${err instanceof Error ? err.message : 'An unknown error occurred'}`);
+			console.error(`Error aborting multipart upload of ${key}: ${err instanceof Error ? err.message : "An unknown error occurred"}`);
 			throw err;
 		}
 

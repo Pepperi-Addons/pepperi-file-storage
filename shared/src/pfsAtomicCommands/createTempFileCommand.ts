@@ -1,12 +1,12 @@
-import jwtDecode from 'jwt-decode';
+import jwtDecode from "jwt-decode";
 
-import { CdnServers, TempFile } from '../constants';
-import { ICommand } from '../iCommand';
-import PfsService from '../pfs.service';
-import { Request } from '@pepperi-addons/debug-server/dist';
-import { IPfsMutator } from '../iPfsMutator';
-import { IPfsGetter } from '../iPfsGetter';
-import TempFileService from '../tempFileService';
+import { CdnServers, TempFile } from "../constants";
+import { ICommand } from "../iCommand";
+import PfsService from "../pfs.service";
+import { Request } from "@pepperi-addons/debug-server/dist";
+import { IPfsMutator } from "../iPfsMutator";
+import { IPfsGetter } from "../iPfsGetter";
+import TempFileService from "../tempFileService";
 
 export class CreateTempFileCommand extends PfsService implements ICommand 
 {
@@ -16,7 +16,7 @@ export class CreateTempFileCommand extends PfsService implements ICommand
 	{
 		super(request, pfsMutator, pfsGetter);
 
-		this.environment = jwtDecode(OAuthAccessToken)['pepperi.datacenter'];
+		this.environment = jwtDecode(OAuthAccessToken)["pepperi.datacenter"];
 	}
 	public async execute(): Promise<TempFile>
 	{

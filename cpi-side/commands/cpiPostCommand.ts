@@ -3,8 +3,8 @@ import { PapiClient } from "@pepperi-addons/papi-sdk";
 import { FILES_TO_UPLOAD_TABLE_NAME, FileToUpload, ICommand, IPepperiDal, IPfsGetter, IPfsMutator, PfsService, PostService, RelativeAbsoluteKeyService } from "pfs-shared";
 import { FileUploadService } from "../fileUpload.service";
 import { OfflinePostService } from "./offlinePostService";
-import jwtDecode from 'jwt-decode';
-import { v4 as uuid } from 'uuid';
+import jwtDecode from "jwt-decode";
+import { v4 as uuid } from "uuid";
 
 export class CpiPostCommand extends PfsService implements ICommand
 {
@@ -53,7 +53,7 @@ export class CpiPostCommand extends PfsService implements ICommand
 
 	private async getRelativeAbsoluteKeyService(): Promise<RelativeAbsoluteKeyService>
 	{
-		const distUUID = jwtDecode(await pepperi.auth.getAccessToken())['pepperi.distributoruuid'];
+		const distUUID = jwtDecode(await pepperi.auth.getAccessToken())["pepperi.distributoruuid"];
 		return new RelativeAbsoluteKeyService(distUUID, this.AddonUUID, this.request.query.resource_name);
 	}
 

@@ -9,24 +9,25 @@ import { MutateS3HandleTempFile } from "./mutateS3HandleTempFile";
 export type MutateS3HandleType = "" | "tempFile" | "fileUpload" | "expiredFile" | "multipartUpload";
 export class MutateS3HandlerFactory
 {
-    public static getHandler(
-        type: MutateS3HandleType,
-        newFileFields: any,
-        existingFile: any,
-        s3PfsDal: AbstractS3PfsDal,
-        ): AMutateS3Handler
-    {
-        switch (type) {
-            case "tempFile":
-                return new MutateS3HandleTempFile(newFileFields, existingFile, s3PfsDal);
-            case "fileUpload":
-                return new MutateS3HandleFileUpload(newFileFields, existingFile, s3PfsDal);
-            case "expiredFile":
-                return new MutateS3HandleExpiredFile(newFileFields, existingFile, s3PfsDal);
-            case "multipartUpload":
-                return new MutateS3HandleMultipartUpload(newFileFields, existingFile, s3PfsDal);
-            default:
-                return new MutateS3HandlePostBase(newFileFields, existingFile, s3PfsDal);
-        }
-    }
+	public static getHandler(
+		type: MutateS3HandleType,
+		newFileFields: any,
+		existingFile: any,
+		s3PfsDal: AbstractS3PfsDal,
+	): AMutateS3Handler
+	{
+		switch (type) 
+		{
+		case "tempFile":
+			return new MutateS3HandleTempFile(newFileFields, existingFile, s3PfsDal);
+		case "fileUpload":
+			return new MutateS3HandleFileUpload(newFileFields, existingFile, s3PfsDal);
+		case "expiredFile":
+			return new MutateS3HandleExpiredFile(newFileFields, existingFile, s3PfsDal);
+		case "multipartUpload":
+			return new MutateS3HandleMultipartUpload(newFileFields, existingFile, s3PfsDal);
+		default:
+			return new MutateS3HandlePostBase(newFileFields, existingFile, s3PfsDal);
+		}
+	}
 }

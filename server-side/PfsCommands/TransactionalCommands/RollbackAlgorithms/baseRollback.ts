@@ -5,10 +5,10 @@ import { IRollbackAlgorithm } from "./iRollbackAlgorithm";
 
 export abstract class BaseRollbackAlgorithm extends PfsService implements IRollbackAlgorithm 
 {
-    constructor (client: Client,
-				request: Request,
-				pfsMutator: IPfsMutator,
-				pfsGetter: IPfsGetter,
+	constructor (client: Client,
+		request: Request,
+		pfsMutator: IPfsMutator,
+		pfsGetter: IPfsGetter,
 				protected lockedFile: any)
 	{
 		super(client, request, pfsMutator, pfsGetter);
@@ -36,7 +36,8 @@ export abstract class BaseRollbackAlgorithm extends PfsService implements IRollb
 		}
 	}
 
-	protected rollbackLogger(){
+	protected rollbackLogger()
+	{
 		console.error(`Rollback algorithm invoked for key: ${this.lockedFile.Key}, Transaction Type: ${this.lockedFile.TransactionType}`);
 	}
 }
