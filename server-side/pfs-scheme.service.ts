@@ -1,7 +1,6 @@
 import { Client, Request } from "@pepperi-addons/debug-server/dist";
 import { AddonDataScheme, PapiClient, Subscription } from "@pepperi-addons/papi-sdk";
-import config from './../addon.config.json';
-import isEqual from 'lodash.isequal';
+import config from "./../addon.config.json";
 import { ServerHelper } from "./serverHelper";
 import { pfsSchemaData, SharedHelper } from "pfs-shared";
 
@@ -46,7 +45,7 @@ export class PfsSchemeService
 		
 		// Set the schema's name to pfs_{{addon_uuid}}_{{schema_name}}
 		pfsMetadataTable.Name = this.getPfsSchemaName();
-		pfsMetadataTable.Type = 'data';
+		pfsMetadataTable.Type = "data";
 
 		// Set the schemas SyncData.PushLocalChanges to false if SyncData.Sync is true
 		if(pfsMetadataTable.SyncData?.Sync)
@@ -74,7 +73,8 @@ export class PfsSchemeService
 		// This is for DI-23567. For more info, see https://pepperi.atlassian.net/browse/DI-23567
 		if(schemaCopy.Fields)
 		{
-			Object.keys(schemaCopy.Fields).forEach(key => {
+			Object.keys(schemaCopy.Fields).forEach(key => 
+			{
 				delete schemaCopy.Fields[key].Indexed;
 			});
 		}
@@ -82,7 +82,7 @@ export class PfsSchemeService
 		return {
 			...pfsSchemaData,
 			...schemaCopy
-		}
+		};
 	}
 
 	private async subscribeToExpiredRecords(): Promise<Subscription>
@@ -109,7 +109,7 @@ export class PfsSchemeService
 				Action: ["remove"],
 				AddonUUID: [config.AddonUUID]
 			},
-			AddonRelativeURL: '/api/record_removed',
+			AddonRelativeURL: "/api/record_removed",
 			Hidden: hidden,
 		});
 	}
@@ -138,9 +138,9 @@ export class PfsSchemeService
      */
 	private validateSchemaType() 
 	{
-		if (!this.schema || this.schema.Type !== 'pfs') 
+		if (!this.schema || this.schema.Type !== "pfs") 
 		{
-			throw new Error("The schema must be of type 'pfs'")
+			throw new Error("The schema must be of type 'pfs'");
 		}
 	}
 

@@ -1,8 +1,8 @@
 import configure from "@jimp/custom";
-import bmp from '@jimp/bmp';
-import jpeg from '@jimp/jpeg';
-import png from '@jimp/png';
-import tiff from '@jimp/tiff';
+import bmp from "@jimp/bmp";
+import jpeg from "@jimp/jpeg";
+import png from "@jimp/png";
+import tiff from "@jimp/tiff";
 
 import resize from "@jimp/plugin-resize";
 
@@ -18,7 +18,7 @@ export class ImageResizer
 		const supportedMimeTypes: Array<string> = this.supportedTypes.map(type => Object.keys(type().mime)[0]);
 		if (!supportedMimeTypes.includes(mimeType)) 
 		{
-			throw new Error(`Bad Request. Creating a thumbnail for MIME type ${mimeType} is not supported.`)
+			throw new Error(`Bad Request. Creating a thumbnail for MIME type ${mimeType} is not supported.`);
 		}
 
 		// Create a Jimp instance, that supports only resizing the supported types
@@ -37,12 +37,12 @@ export class ImageResizer
      * @param requestedScales  the requested scales
      * @returns a buffer of the new scaled image
      */
-	public async resize(requestedScales: { "Size": '200x200' }) 
+	public async resize(requestedScales: { "Size": "200x200" }) 
 	{
-		const requestedWidth = parseInt(requestedScales.Size.toLowerCase().split('x')[0]);
-		const requestedHeight = parseInt(requestedScales.Size.toLowerCase().split('x')[1]);
+		const requestedWidth = parseInt(requestedScales.Size.toLowerCase().split("x")[0]);
+		const requestedHeight = parseInt(requestedScales.Size.toLowerCase().split("x")[1]);
 		const buffer =  await (await this.jimp.read(this.imageBuffer)).resize(requestedWidth, requestedHeight).getBufferAsync(this.mimeType);
-		return buffer
+		return buffer;
 	}
 
 }

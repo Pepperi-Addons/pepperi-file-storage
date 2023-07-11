@@ -2,11 +2,11 @@ import { Client, Request } from "@pepperi-addons/debug-server/dist";
 import { PapiClient } from "@pepperi-addons/papi-sdk";
 import { FailAfterLock, FailAfterMutatingAdal, FailAfterMutatingS3 } from "./DAL/TestLockMechanism";
 import { CloudfrontDistributions, DEBUG_MAXIMAL_LOCK_TIME, DIMX_ADDON_UUID, IAws, IndexedDataS3PfsDal, IPepperiDal, MAXIMAL_LOCK_TIME, S3Buckets,  } from "pfs-shared";
-import config from '../addon.config.json';
+import config from "../addon.config.json";
 import docDbDal from "./DAL/docDbDal";
 import AwsDal from "./DAL/AwsDal";
-import jwtDecode from 'jwt-decode';
-import AWS from 'aws-sdk';
+import jwtDecode from "jwt-decode";
+import AWS from "aws-sdk";
 
 export class ServerHelper
 {
@@ -17,11 +17,11 @@ export class ServerHelper
 			request.query = {};
 		}
 		const lowerCaseHeaders = ServerHelper.getLowerCaseHeaders(request.header);
-		const awaitIndexing = Object.keys(lowerCaseHeaders).includes('x-pepperi-await-indexing') ? JSON.parse(lowerCaseHeaders['x-pepperi-await-indexing']) : undefined;
+		const awaitIndexing = Object.keys(lowerCaseHeaders).includes("x-pepperi-await-indexing") ? JSON.parse(lowerCaseHeaders["x-pepperi-await-indexing"]) : undefined;
 		const iPepperiDal: IPepperiDal = new docDbDal(ServerHelper.createPapiClient(client, config.AddonUUID, client.AddonSecretKey), awaitIndexing);
 
-		const environment = jwtDecode(client.OAuthAccessToken)['pepperi.datacenter'];
-		const s3 = new AWS.S3({apiVersion: '2006-03-01', }); //lock API version
+		const environment = jwtDecode(client.OAuthAccessToken)["pepperi.datacenter"];
+		const s3 = new AWS.S3({apiVersion: "2006-03-01", }); //lock API version
 		const s3Bucket = S3Buckets[environment];
 		const cloudfrontDistribution = CloudfrontDistributions[environment];
 		const iAws: IAws = new AwsDal(s3Bucket, cloudfrontDistribution, s3);
@@ -92,7 +92,7 @@ export class ServerHelper
 		}
 	}
 
-	public static createPapiClient(client: Client, addonUUID: string, secretKey = '') 
+	public static createPapiClient(client: Client, addonUUID: string, secretKey = "") 
 	{
 		return new PapiClient({
 			baseURL: client.BaseURL,

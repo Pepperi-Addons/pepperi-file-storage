@@ -25,6 +25,15 @@
         "brace-style": ["error", "allman"],
         "semi": ["error", "always"],
         "no-debugger": "error",
-        "eol-last": ["error", "always"]
+        "eol-last": ["error", "always"],
+        "@typescript-eslint/quotes": [
+            "error",
+            "double",
+            {
+              "avoidEscape": true,
+              "allowTemplateLiterals": true
+            }
+          ]
+          
     }
 }

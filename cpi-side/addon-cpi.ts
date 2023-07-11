@@ -1,11 +1,11 @@
-import '@pepperi-addons/cpi-node'
-import { ListFolderContentsCommand, ListObjectsCommand, DownloadFileCommand, MAXIMAL_LOCK_TIME } from 'pfs-shared';
-import { CpiPostCommand } from './commands/cpiPostCommand';
-import CpiAwsDal from './dal/awsDal';
-import { CpiIndexedDataS3PfsDal } from './dal/cpiIndexedDataS3PfsDal';
-import CpiPepperiDal from './dal/pepperiDal';
-import { BeforeSyncService } from './beforeSync.service';
-import { BeforeSyncResult } from './entities';
+import "@pepperi-addons/cpi-node";
+import { ListFolderContentsCommand, ListObjectsCommand, DownloadFileCommand, MAXIMAL_LOCK_TIME } from "pfs-shared";
+import { CpiPostCommand } from "./commands/cpiPostCommand";
+import CpiAwsDal from "./dal/awsDal";
+import { CpiIndexedDataS3PfsDal } from "./dal/cpiIndexedDataS3PfsDal";
+import CpiPepperiDal from "./dal/pepperiDal";
+import { BeforeSyncService } from "./beforeSync.service";
+import { BeforeSyncResult } from "./entities";
 
 export const router = Router();
 
@@ -21,10 +21,10 @@ router.post(BeforeSyncService.endpointName, async (req, res) =>
 	const beforeSyncService = new BeforeSyncService();
 	const areAllFilesUploadedResult: BeforeSyncResult = await beforeSyncService.areAllFilesUploaded();
 
-    res.json(areAllFilesUploadedResult)
+	res.json(areAllFilesUploadedResult);
 });
 
-router.get('/file', async (req, res, next) => 
+router.get("/file", async (req, res, next) => 
 {
 	try 
 	{
@@ -34,7 +34,7 @@ router.get('/file', async (req, res, next) =>
 
 		if(!fileKey || !addonUUID || !schemaName) 
 		{
-			throw new Error('Missing required parameters');
+			throw new Error("Missing required parameters");
 		}
 
 		req.query.Key = fileKey;
@@ -48,7 +48,7 @@ router.get('/file', async (req, res, next) =>
 	catch (err) 
 	{
 		console.log(err);
-		next(err)
+		next(err);
 	}
 });
 
@@ -81,7 +81,7 @@ router.get('/file', async (req, res, next) =>
 // 	}
 // });
 
-router.get('/files/find', async (req, res, next) => 
+router.get("/files/find", async (req, res, next) => 
 {
 	try 
 	{
@@ -90,7 +90,7 @@ router.get('/files/find', async (req, res, next) =>
 
 		if(!addonUUID || !schemaName) 
 		{
-			throw new Error('Missing required parameters');
+			throw new Error("Missing required parameters");
 		}
 
 		const {PfsDal} = await getDal(req);
@@ -114,7 +114,7 @@ router.get('/files/find', async (req, res, next) =>
 	catch (err) 
 	{
 		console.log(err);
-		next(err)
+		next(err);
 	}
 });
 

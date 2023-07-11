@@ -1,5 +1,5 @@
 import { Request } from "@pepperi-addons/debug-server/dist";
-import { validate as uuidValidate } from 'uuid';
+import { validate as uuidValidate } from "uuid";
 import { PFS_TABLE_PREFIX } from "./constants";
 
 export class SharedHelper
@@ -48,7 +48,7 @@ export class SharedHelper
 	{
 		// DI-21812: Migrate internal 'data' schema to names without '-' char
 		// https://pepperi.atlassian.net/browse/DI-21812
-		return `${PFS_TABLE_PREFIX}_${clientAddonUUID.replace(/-/g, '')}_${schemaName}`;
+		return `${PFS_TABLE_PREFIX}_${clientAddonUUID.replace(/-/g, "")}_${schemaName}`;
 	}
 
 	public static addMinusesToUUID(uuid: string): string 

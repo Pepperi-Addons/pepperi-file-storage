@@ -1,11 +1,11 @@
-import { Client, Request } from '@pepperi-addons/debug-server'
-import { PostTransactionalCommand } from './PfsCommands/TransactionalCommands/postCommand/postTransactionalCommand';
-import { RecordRemovedCommand } from './PfsCommands/AtomicCommands/recordRemovedCommand';
-import { InvalidateCommand } from './PfsCommands/AtomicCommands/invalidateCommand';
-import { HideFolderTransactionalCommand } from './PfsCommands/TransactionalCommands/hideFolderTransactionalCommand';
-import { CreateTempFileCommand, DownloadFileCommand, ICommand, ListFolderContentsCommand, ListObjectsCommand, SharedHelper } from 'pfs-shared';
-import { ServerHelper } from './serverHelper';
-import { PapiClient } from '@pepperi-addons/papi-sdk';
+import { Client, Request } from "@pepperi-addons/debug-server";
+import { PostTransactionalCommand } from "./PfsCommands/TransactionalCommands/postCommand/postTransactionalCommand";
+import { RecordRemovedCommand } from "./PfsCommands/AtomicCommands/recordRemovedCommand";
+import { InvalidateCommand } from "./PfsCommands/AtomicCommands/invalidateCommand";
+import { HideFolderTransactionalCommand } from "./PfsCommands/TransactionalCommands/hideFolderTransactionalCommand";
+import { CreateTempFileCommand, DownloadFileCommand, ICommand, ListFolderContentsCommand, ListObjectsCommand, SharedHelper } from "pfs-shared";
+import { ServerHelper } from "./serverHelper";
+import { PapiClient } from "@pepperi-addons/papi-sdk";
 
 export async function file(client: Client, request: Request) 
 {
@@ -77,7 +77,7 @@ export async function record_removed(client: Client, request: Request)
 	case "POST": {
 		// The addon uuid is embedded in the resource name: pfs_{{addon_uuid}}_{{resource_name}}. (addon_uuid is without dashes)
 		// Extract addon uuid from resource name:
-		const splitResourceName = request.body.FilterAttributes.Resource.split('_');
+		const splitResourceName = request.body.FilterAttributes.Resource.split("_");
 		if(splitResourceName.length != 3)
 		{
 			// Something very strange happened...
