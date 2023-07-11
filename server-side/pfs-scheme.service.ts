@@ -1,7 +1,6 @@
 import { Client, Request } from "@pepperi-addons/debug-server/dist";
 import { AddonDataScheme, PapiClient, Subscription } from "@pepperi-addons/papi-sdk";
 import config from "./../addon.config.json";
-import isEqual from "lodash.isequal";
 import { ServerHelper } from "./serverHelper";
 import { pfsSchemaData, SharedHelper } from "pfs-shared";
 
