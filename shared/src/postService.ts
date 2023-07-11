@@ -99,7 +99,7 @@ export abstract class PostService extends PfsService
 		this.validateMIMEtype();
 
 		// If file does not exist, validate that either URI or TemporaryFileURLs are provided.
-		if (!this.existingFile.doesFileExist && !this.request.body.URI && !this.request.body.TemporaryFileURLs)
+		if (!this.existingFile.doesFileExist && !this.request.body.URI && !this.request.body.TemporaryFileURLs && !this.request.body.Key.endsWith("/"))
 		{
 			// The user might have wanted to use the deprecated presigned URL functionality.
 			// (This is when you don't provide a URI nor TemporaryFileURLs at all)
