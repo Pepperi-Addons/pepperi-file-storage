@@ -1,5 +1,5 @@
-import { CACHE_DEFAULT_VALUE } from '../../constants';
-import { AbstractS3PfsDal } from '../abstractS3PfsDal';
+import { CACHE_DEFAULT_VALUE } from "../../constants";
+import { AbstractS3PfsDal } from "../abstractS3PfsDal";
 
 
 export abstract class AMutateS3Handler// extends AbstractS3PfsDal
@@ -10,14 +10,14 @@ export abstract class AMutateS3Handler// extends AbstractS3PfsDal
         protected newFileFields: any,
         protected existingFile: any,
         protected s3PfsDal: AbstractS3PfsDal,
-        )
-    {
+	)
+	{
 		this.shouldUseCache = newFileFields?.Cache ?? existingFile?.Cache ?? CACHE_DEFAULT_VALUE;
-    }
+	}
 
 	abstract execute(): Promise<void>;
 
-    protected async deleteFileData(removedKey: string): Promise<any> 
+	protected async deleteFileData(removedKey: string): Promise<any> 
 	{
 		console.log(`Trying to delete Key: ${removedKey}`);
 

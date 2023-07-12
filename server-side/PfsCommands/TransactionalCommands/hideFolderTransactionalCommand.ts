@@ -3,9 +3,10 @@ import { PapiClient } from "@pepperi-addons/papi-sdk";
 import { ListObjectsCommand, TransactionType } from "pfs-shared";
 import { ServerHelper } from "../../serverHelper";
 
-export class HideFolderTransactionalCommand extends ABaseTransactionalCommand{
+export class HideFolderTransactionalCommand extends ABaseTransactionalCommand
+{
 
-	readonly TRANSACTION_TYPE: TransactionType = 'hide' ;
+	readonly TRANSACTION_TYPE: TransactionType = "hide" ;
 	protected isRollbackRequested = false;
 
 	async preLockLogic() 
@@ -27,7 +28,7 @@ export class HideFolderTransactionalCommand extends ABaseTransactionalCommand{
 	
 	private async getIsRollbackRequested()
 	{
-		let isRollbackRequested:boolean = !!this.request.body?.rollbackUUID;
+		let isRollbackRequested = !!this.request.body?.rollbackUUID;
 		let lockedFile: any;
 
 		if(this.request.body.rollbackUUID && isRollbackRequested)
@@ -53,8 +54,8 @@ export class HideFolderTransactionalCommand extends ABaseTransactionalCommand{
 	 */
 	private async validateFolder()
 	{
-		this.request.query.Key = this.request.query.Key.startsWith('/') ? this.request.query.Key.slice(1) : this.request.query.Key;
-		this.request.query.Key = this.request.query.Key.endsWith('/') ? this.request.query.Key : `${this.request.query.Key}/`;
+		this.request.query.Key = this.request.query.Key.startsWith("/") ? this.request.query.Key.slice(1) : this.request.query.Key;
+		this.request.query.Key = this.request.query.Key.endsWith("/") ? this.request.query.Key : `${this.request.query.Key}/`;
 		await this.getCurrentItemData();
 		
 		if (!this.existingFile.doesFileExist)
@@ -63,14 +64,15 @@ export class HideFolderTransactionalCommand extends ABaseTransactionalCommand{
 			// We run the transaction if the folder does not exist, but there's a 'hide' lock on it, and a rollbackUUID is provided.
 			// We check if the rollbackUUID in the request's body matches the one on the lock, to ensure a single rollback is run.
 			// This allows us to use the function itself as its own rollback.
-			if(!(lockedObject?.transactionType === 'hide' && this.request.body?.rollbackUUID === lockedObject?.rollbackUUID)){
+			if(!(lockedObject?.transactionType === "hide" && this.request.body?.rollbackUUID === lockedObject?.rollbackUUID))
+			{
 				console.log(`${this.request.query.Key} does not exist`);
 				throw new Error(`${this.request.query.Key} does not exist`);
 			}
 		}
 	}
 
-    async lock(): Promise<void>
+	async lock(): Promise<void>
 	{
 		// If a rollback is requested, there's no need to lock the file.
 		// A lock is already in place.
@@ -80,9 +82,9 @@ export class HideFolderTransactionalCommand extends ABaseTransactionalCommand{
 
 			await this.pfsMutator.lock(this.request.query.Key, this.TRANSACTION_TYPE);
 		}
-    }
+	}
 
-    async executeTransaction(): Promise<any>
+	async executeTransaction(): Promise<any>
 	{	
 		// First, hide the requested folder, to prevent it from being visible in the UI.
 		await this.hideRequestedFolder();
@@ -91,7 +93,7 @@ export class HideFolderTransactionalCommand extends ABaseTransactionalCommand{
 		// It should be possible to hide the files and folder concurrently, but for simplicity and readability, we'll do it sequentially.
 		await this.hideSubtreeFiles();
 		await this.hideSubtreeFolders();
-    }
+	}
 
 	/**
 	 * Hides the requested folder.
@@ -105,7 +107,8 @@ export class HideFolderTransactionalCommand extends ABaseTransactionalCommand{
 	{
 		let filesKeys: any[] = [];
 
-		do {
+		do 
+		{
 			// Get the subtree's files' keys
 			// Since each page's files are deleted, there's no use in requesting different pages.
 			filesKeys = await this.getSubtreeFilesKeys();
@@ -128,7 +131,8 @@ export class HideFolderTransactionalCommand extends ABaseTransactionalCommand{
 	{
 		let folders: any[] = [];
 
-		do {
+		do 
+		{
 			// Get the subtree's folder' keys
 			// Since each page's folder are deleted, there's no use in requesting different pages.
 			folders = await this.getFoldersKeysPageFromSubtree();
@@ -170,11 +174,13 @@ export class HideFolderTransactionalCommand extends ABaseTransactionalCommand{
 		return (await (new ListObjectsCommand(requestCopy, this.pfsMutator, this.pfsGetter)).execute()).map(resObj => resObj.Key);
 	}
 
-	private async hideObjectsUsingPfsBatchDisregardingExistingLocks(filesKeys: any) {
+	private async hideObjectsUsingPfsBatchDisregardingExistingLocks(filesKeys: any) 
+	{
 		const lowerCaseHeaders = ServerHelper.getLowerCaseHeaders(this.request.header);
 		const papiClient: PapiClient = ServerHelper.createPapiClient(this.client, this.AddonUUID, lowerCaseHeaders["x-pepperi-secretkey"]);
 
-		filesKeys = filesKeys.map(fileKey => {
+		filesKeys = filesKeys.map(fileKey => 
+		{
 			return {
 				Key: fileKey,
 				DeletedBy: this.request.query.Key,
@@ -191,7 +197,8 @@ export class HideFolderTransactionalCommand extends ABaseTransactionalCommand{
 		return await papiClient.addons.data.import.uuid(this.AddonUUID).table(this.request.query.resource_name).upsert({Objects: filesKeys});
 	}
 
-    async unlock(key: string): Promise<void>{
-        await this.pfsMutator.unlock(key);
-    }
+	async unlock(key: string): Promise<void>
+	{
+		await this.pfsMutator.unlock(key);
+	}
 }

@@ -1,6 +1,6 @@
-import { AddonData } from '@pepperi-addons/papi-sdk';
-import { ICommand } from '../iCommand';
-import PfsService from '../pfs.service';
+import { AddonData } from "@pepperi-addons/papi-sdk";
+import { ICommand } from "../iCommand";
+import PfsService from "../pfs.service";
 
 export class ListObjectsCommand extends PfsService implements ICommand 
 {

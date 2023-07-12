@@ -1,7 +1,7 @@
-import { Request } from '@pepperi-addons/debug-server';
-import { AddonData, SearchBody } from '@pepperi-addons/papi-sdk';
-import { IPfsGetter } from './iPfsGetter';
-import { IPfsMutator } from './iPfsMutator';
+import { Request } from "@pepperi-addons/debug-server";
+import { AddonData, SearchBody } from "@pepperi-addons/papi-sdk";
+import { IPfsGetter } from "./iPfsGetter";
+import { IPfsMutator } from "./iPfsMutator";
 
 export abstract class PfsService
 {
@@ -14,9 +14,9 @@ export abstract class PfsService
 				 
 		this.AddonUUID = this.request.query.addon_uuid;
 
-		if(this.request.body && typeof this.request.body.Hidden === 'string')
+		if(this.request.body && typeof this.request.body.Hidden === "string")
 		{
-			this.request.body.Hidden = this.request.body.Hidden.toLowerCase() === 'true';
+			this.request.body.Hidden = this.request.body.Hidden.toLowerCase() === "true";
 		}
 	}
 
@@ -67,13 +67,13 @@ export abstract class PfsService
 	protected async downloadFile(downloadKey? : string): Promise<AddonData>
 	{
 		const downloadKeyRes: string = downloadKey ?? ((this.request.body && this.request.body.Key) ? this.request.body.Key : this.request.query.Key); 
-		const canonizedPath = downloadKeyRes.startsWith('/') ? downloadKeyRes.slice(1) : downloadKeyRes;
+		const canonizedPath = downloadKeyRes.startsWith("/") ? downloadKeyRes.slice(1) : downloadKeyRes;
 
 		const searchBody: SearchBody = {
 			KeyList: [
 				canonizedPath
 			]
-		}
+		};
 		const res = await this.pfsGetter.getObjects(searchBody);
 		if (res.length === 1) 
 		{

@@ -7,11 +7,11 @@ If the result of your code is 'false' then return:
 The error Message is importent! it will be written in the audit log and help the user to understand what happen
 */
 
-import { Client, Request } from '@pepperi-addons/debug-server'
-import { AddonData, AddonDataScheme, FindOptions, PapiClient, Relation } from '@pepperi-addons/papi-sdk';
-import semverLessThan from 'semver/functions/lt';
-import clonedeep from 'lodash.clonedeep';
-import { FILES_TO_UPLOAD_TABLE_NAME, LOCK_ADAL_TABLE_NAME, pfsSchemaData, PFS_TABLE_PREFIX } from 'pfs-shared/lib/constants';
+import { Client, Request } from "@pepperi-addons/debug-server";
+import { AddonData, AddonDataScheme, FindOptions, PapiClient, Relation } from "@pepperi-addons/papi-sdk";
+import semverLessThan from "semver/functions/lt";
+import clonedeep from "lodash.clonedeep";
+import { FILES_TO_UPLOAD_TABLE_NAME, LOCK_ADAL_TABLE_NAME, pfsSchemaData, PFS_TABLE_PREFIX } from "pfs-shared/lib/constants";
 
 export async function install(client: Client, request: Request): Promise<any> 
 {
@@ -21,7 +21,7 @@ export async function install(client: Client, request: Request): Promise<any>
 	await createFilesToUploadSchema(papiClient);
 	await createDimxRelations(papiClient, client);
 
-	return { success: true, resultObject: {} }
+	return { success: true, resultObject: {} };
 }
 
 export async function uninstall(client: Client, request: Request): Promise<any> 
@@ -29,19 +29,19 @@ export async function uninstall(client: Client, request: Request): Promise<any>
 	const papiClient = createPapiClient(client);
 	await papiClient.post(`/addons/data/schemes/${LOCK_ADAL_TABLE_NAME}/purge`);
 
-	return { success: true, resultObject: {} }
+	return { success: true, resultObject: {} };
 }
 
 export async function upgrade(client: Client, request: Request): Promise<any> 
 {
 	const papiClient = createPapiClient(client);
 
-	if(request.body.FromVersion && semverLessThan(request.body.FromVersion, '1.0.1'))
+	if(request.body.FromVersion && semverLessThan(request.body.FromVersion, "1.0.1"))
 	{
-		throw new Error('Upgrading from versions earlier than 1.0.1 is not supported. Please uninstall the addon and install it again.');
+		throw new Error("Upgrading from versions earlier than 1.0.1 is not supported. Please uninstall the addon and install it again.");
 	}
 	
-	if(request.body.FromVersion && semverLessThan(request.body.FromVersion, '1.2.7'))
+	if(request.body.FromVersion && semverLessThan(request.body.FromVersion, "1.2.7"))
 	{
 		console.log("Migrating internal schemas to have SyncData.PushLocalChanges = false...");
 		// For more details see DI-21812: https://pepperi.atlassian.net/browse/DI-21812
@@ -51,14 +51,14 @@ export async function upgrade(client: Client, request: Request): Promise<any>
 		await createFilesToUploadSchema(papiClient);
 	}
 
-	if(request.body.FromVersion && semverLessThan(request.body.FromVersion, '1.1.6'))
+	if(request.body.FromVersion && semverLessThan(request.body.FromVersion, "1.1.6"))
 	{
 		console.log("Migrating internal schemas to schemas that don't use '-' char...");
 		// For more details see DI-21812: https://pepperi.atlassian.net/browse/DI-21812
 		await migrateSchemasToNotUseMinusChar(papiClient, client);
 	}
 
-	if (request.body.FromVersion && semverLessThan(request.body.FromVersion, '1.0.4'))
+	if (request.body.FromVersion && semverLessThan(request.body.FromVersion, "1.0.4"))
 	{
 		// Add the new TransactionType field to the lock table schema
 		await createLockADALTable(papiClient);
@@ -68,23 +68,23 @@ export async function upgrade(client: Client, request: Request): Promise<any>
 
 	}
 
-	if (request.body.FromVersion && semverLessThan(request.body.FromVersion, '1.0.8'))
+	if (request.body.FromVersion && semverLessThan(request.body.FromVersion, "1.0.8"))
 	{
 		await addTrailingSlashToFolderProperty(papiClient, client);
 	}
 
-	if (request.body.FromVersion && semverLessThan(request.body.FromVersion, '1.0.29'))
+	if (request.body.FromVersion && semverLessThan(request.body.FromVersion, "1.0.29"))
 	{
 		console.log("Updating \"Name\" field on all schemas");
 		await updateNameField(papiClient);
 	}
 
-	return { success: true, resultObject: {} }
+	return { success: true, resultObject: {} };
 }
 
 export async function downgrade(client: Client, request: Request): Promise<any> 
 {
-	return { success: true, resultObject: {} }
+	return { success: true, resultObject: {} };
 }
 
 function createPapiClient(Client: Client) 
@@ -103,11 +103,11 @@ async function createLockADALTable(papiClient: PapiClient)
 	const pfsMetadataTable = {
 		...pfsSchemaData,
 		Name: LOCK_ADAL_TABLE_NAME
-	}
+	};
 
 	//Add Transaction Type field to schema
 	pfsMetadataTable.Fields.TransactionType = {
-		Type: 'String',
+		Type: "String",
 		Indexed: true,
 		Keyword: true,
 	};
@@ -120,19 +120,19 @@ async function createDimxRelations(papiClient: PapiClient, client: Client)
 	const importRelation: Relation = {
 		RelationName: "DataImportSource",
 		AddonUUID: client.AddonUUID,
-		Name: 'pfs',
+		Name: "pfs",
 		KeyName: "Key",
-		Type: 'AddonAPI',
-		AddonRelativeURL: '/data-source-api/batch'
-	}
+		Type: "AddonAPI",
+		AddonRelativeURL: "/data-source-api/batch"
+	};
 
 	const exportRelation: Relation = {
 		RelationName: "DataExportSource",
 		AddonUUID: client.AddonUUID,
-		Name: 'pfs',
-		Type: 'AddonAPI',
-		AddonRelativeURL: '/data-source-api/pfs_export'
-	}
+		Name: "pfs",
+		Type: "AddonAPI",
+		AddonRelativeURL: "/data-source-api/pfs_export"
+	};
 
 	await upsertRelation(papiClient, importRelation);
 	await upsertRelation(papiClient, exportRelation);
@@ -140,7 +140,7 @@ async function createDimxRelations(papiClient: PapiClient, client: Client)
 
 async function upsertRelation(papiClient: PapiClient, relation: Relation) 
 {
-	return papiClient.post('/addons/data/relations', relation);
+	return papiClient.post("/addons/data/relations", relation);
 }
 
 /**
@@ -153,14 +153,14 @@ async function addDeletedByFieldToPfsSchemas(papiClient: PapiClient)
 		if (schema.Fields) 
 		{
 			schema.Fields.DeletedBy = {
-				Type: 'String',
+				Type: "String",
 				Indexed: true,
 				Keyword: true,
 			};
 
 			await papiClient.addons.data.schemes.post(schema);
 		}
-	}
+	};
 
 	await manipulateAllPfsSchemas(papiClient, manipulatorFunction);
 }
@@ -172,21 +172,21 @@ export async function updateNameField(papiClient: PapiClient)
 		if (schema.Fields  && !schema.Fields.Name?.Indexed) 
 		{
 
-			console.log('Setting Name field Indexed=true...');
+			console.log("Setting Name field Indexed=true...");
 			schema.Fields.Name =
 			{
-				Type: 'String',
+				Type: "String",
 				Indexed: true,
 			};
 
 			await papiClient.addons.data.schemes.post(schema);
-			console.log('Done setting Name field Indexed=true.');
+			console.log("Done setting Name field Indexed=true.");
 
 			console.log(`Rebuilding (clean) schema: '${schema.Name}'...`);
 			const rebuildResponse = await papiClient.post(`/addons/api/async/00000000-0000-0000-0000-00000000ada1/indexed_adal_api/clean_rebuild?table_name=${schema.Name}`);
 			console.log(`Rebuild response: ${JSON.stringify(rebuildResponse)}`);
 		}
-	}
+	};
 
 	await manipulateAllPfsSchemas(papiClient, manipulatorFunction);
 }
@@ -194,10 +194,10 @@ export async function updateNameField(papiClient: PapiClient)
 async function manipulateAllPfsSchemas(papiClient: PapiClient, manipulatorFunction: (schema: AddonDataScheme) => Promise<void>)
 {
 	// Get all schemas whose name starts with 'pfs_%'
-	console.log('Getting all pfs_ schemas...');
+	console.log("Getting all pfs_ schemas...");
 	const pfsSchemas: Array<AddonDataScheme> = await papiClient.addons.data.schemes.get({ where: `Name like '${PFS_TABLE_PREFIX}_%'` });
 
-	console.log('Done getting all pfs_ schemas.');
+	console.log("Done getting all pfs_ schemas.");
 
 	for (const pfsSchema of pfsSchemas)
 	{
@@ -234,7 +234,7 @@ export async function addTrailingSlashToFolderProperty(papiClient: PapiClient, c
 				objects = await papiClient.addons.data.uuid(client.AddonUUID).table(pfsSchema.Name).find(findParams);
 
 				// Keep only objects whose obj.Folder is missing a trailing '/'
-				objects = objects.filter(obj => obj.Folder && !obj.Folder.endsWith('/'));
+				objects = objects.filter(obj => obj.Folder && !obj.Folder.endsWith("/"));
 
 				// Create the updated Folder value
 				objects = objects.map(obj => 
@@ -245,8 +245,8 @@ export async function addTrailingSlashToFolderProperty(papiClient: PapiClient, c
 						// Upserting a Hidden object will mark it Hidden=false. 
 						// We have to keep the Hidden value unchanged to keep the object hidden.
 						Hidden: obj.Hidden,
-					}
-				})
+					};
+				});
 
 				// Check if there are objects, to avoid a redundant api call
 				if (objects.length > 0) 
@@ -265,7 +265,7 @@ async function migrateSchemasToNotUseMinusChar(papiClient: PapiClient, client: C
 {
 	const manipulatorFunction = async (originalSchema: AddonDataScheme) : Promise<void> =>
 	{
-		if (originalSchema.Name.includes('-'))
+		if (originalSchema.Name.includes("-"))
 		{
 			// Create a new schema, whose name does not include '-'.
 			const validSchema = await createSchemaWithoutMinus(originalSchema);
@@ -282,14 +282,14 @@ async function migrateSchemasToNotUseMinusChar(papiClient: PapiClient, client: C
 			// Subscribe to new schema's PNS
 			await subscribeToSchema(validSchema);
 		}
-	}
+	};
 
 	await manipulateAllPfsSchemas(papiClient, manipulatorFunction);
 
 	async function createSchemaWithoutMinus(originalSchema: AddonDataScheme)
 	{
 		const validSchema = clonedeep(originalSchema);
-		validSchema.Name = validSchema.Name.replace(/-/g, '');
+		validSchema.Name = validSchema.Name.replace(/-/g, "");
 		return await papiClient.addons.data.schemes.post(validSchema);
 	}
 	
@@ -344,14 +344,15 @@ async function migrateSchemasToNotUseMinusChar(papiClient: PapiClient, client: C
 				Action: ["remove"],
 				AddonUUID: [client.AddonUUID]
 			},
-			AddonRelativeURL: '/api/record_removed',
+			AddonRelativeURL: "/api/record_removed",
 			Hidden: hidden,
 		});
 	}
 }
 
 
-async function migrateSchemasToNotPushLocalChanges(papiClient: PapiClient, client: Client) {
+async function migrateSchemasToNotPushLocalChanges(papiClient: PapiClient, client: Client) 
+{
 	const manipulatorFunction = async (schema: AddonDataScheme) : Promise<void> => 
 	{
 		// Set PushLocalChanges to false only if Sync is true
@@ -362,30 +363,31 @@ async function migrateSchemasToNotPushLocalChanges(papiClient: PapiClient, clien
 			schema.SyncData.PushLocalChanges = false;
 
 			await papiClient.addons.data.schemes.post(schema);
-			console.log('Done setting SyncData.PushLocalChanges=false.');
+			console.log("Done setting SyncData.PushLocalChanges=false.");
 		}
-	}
+	};
 
 	await manipulateAllPfsSchemas(papiClient, manipulatorFunction);
 }
 
-async function createFilesToUploadSchema(papiClient: PapiClient) {
+async function createFilesToUploadSchema(papiClient: PapiClient) 
+{
 	
 	const filesToUploadSchema: AddonDataScheme = {
 		Name: FILES_TO_UPLOAD_TABLE_NAME,
 		Fields: {
 			Key: {
-				Type: 'String',
+				Type: "String",
 			},
 			AbsolutePath: {
-				Type: 'String',
+				Type: "String",
 			}
 		},
 		SyncData: {
 			Sync: true,
 			PushLocalChanges: false,
 		},
-	}
+	};
 
 	await papiClient.addons.data.schemes.post(filesToUploadSchema);
 }

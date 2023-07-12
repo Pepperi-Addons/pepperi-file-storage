@@ -1,4 +1,4 @@
-import { PfsService as SharedPfsService } from 'pfs-shared';
+import { PfsService as SharedPfsService } from "pfs-shared";
 
 declare global {
     //  for singleton

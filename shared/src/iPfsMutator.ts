@@ -1,4 +1,4 @@
-import { TempFile, TransactionType } from "./constants";
+import { TransactionType } from "./constants";
 
 export interface IPfsMutator
 {

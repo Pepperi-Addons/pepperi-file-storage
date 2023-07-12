@@ -3,9 +3,9 @@ import { BaseRollbackAlgorithm } from "./baseRollback";
 
 export class PostRollbackAlgorithm extends BaseRollbackAlgorithm 
 {
-    async rollbackImplementation(): Promise<void>
-    {
-        this.rollbackLogger();
+	async rollbackImplementation(): Promise<void>
+	{
+		this.rollbackLogger();
 
 		await this.getCurrentItemData();
 		console.log("Trying to determine where the transaction failed...");
@@ -47,9 +47,9 @@ export class PostRollbackAlgorithm extends BaseRollbackAlgorithm
 		{
 			throw new TestError("Testing rollback - finishing execution after rollback was done.");
 		}
-    }
+	}
 
-    private areExistingAndLockedFileSame() 
+	private areExistingAndLockedFileSame() 
 	{
 		console.log("Comparing locked object data and the stored metadata...");
 
@@ -57,13 +57,13 @@ export class PostRollbackAlgorithm extends BaseRollbackAlgorithm
 
 		for(const file of files)
 		{
-			delete file.ModificationDateTime
-			delete file.CreationDateTime
+			delete file.ModificationDateTime;
+			delete file.CreationDateTime;
 			delete file.doesFileExist;
-            delete file.TransactionType;
+			delete file.TransactionType;
 		}
 
-		files[1].Key = files[1].Key.startsWith('/') ? files[1].Key.substring(1) : files[1].Key
+		files[1].Key = files[1].Key.startsWith("/") ? files[1].Key.substring(1) : files[1].Key;
 
 		const res = shallowCompareObjects();
 

@@ -1,7 +1,7 @@
-import { Client, Request } from '@pepperi-addons/debug-server';
-import { AddonData } from '@pepperi-addons/papi-sdk';
-import { IPfsGetter, IPfsMutator, PfsService as SharedPfsService  } from 'pfs-shared';
-import { ServerHelper } from '../serverHelper';
+import { Client, Request } from "@pepperi-addons/debug-server";
+import { AddonData } from "@pepperi-addons/papi-sdk";
+import { IPfsGetter, IPfsMutator, PfsService as SharedPfsService  } from "pfs-shared";
+import { ServerHelper } from "../serverHelper";
 // import {PfsService as SharedPfsService} from './pfs.service'
 
 

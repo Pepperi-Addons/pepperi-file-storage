@@ -1,9 +1,9 @@
-import { Request } from '@pepperi-addons/debug-server';
-import { AddonData, SearchBody } from '@pepperi-addons/papi-sdk';
-import { AbstractS3PfsDal } from './abstractS3PfsDal';
-import { CdnServers, LOCK_ADAL_TABLE_NAME, SharedHelper, TransactionType } from '../';
-import { IAws } from './iAws';
-import { IPepperiDal } from './iPepperiDal';
+import { Request } from "@pepperi-addons/debug-server";
+import { AddonData, SearchBody } from "@pepperi-addons/papi-sdk";
+import { AbstractS3PfsDal } from "./abstractS3PfsDal";
+import { CdnServers, LOCK_ADAL_TABLE_NAME, SharedHelper, TransactionType } from "../";
+import { IAws } from "./iAws";
+import { IPepperiDal } from "./iPepperiDal";
 
 export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 {    
@@ -31,7 +31,7 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 			...(this.request.query?.where && {Where: this.request.query.where}),
 			...(this.request.query?.page_size && {PageSize: parseInt(this.request.query.page_size)}),
 			...(this.request.query?.page && {Page: this.getRequestedPageNumber()}),
-			...(this.request.query?.fields && {Fields: this.request.query.fields.split(',')}),
+			...(this.request.query?.fields && {Fields: this.request.query.fields.split(",")}),
 			...(this.request.query?.include_count && {IncludeCount: this.request.query.include_count}),
 			...(this.request.query?.include_deleted && {IncludeDeleted: this.request.query.include_deleted}),
 			...(this.request.query?.order_by && {OrderBy: this.request.query.order_by}),
@@ -86,10 +86,10 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 		const tableName = LOCK_ADAL_TABLE_NAME;
 		try
 		{
-			const lockAbsoluteKey = this.relativeAbsoluteKeyService.getAbsolutePath(key).replace(new RegExp("/", 'g'), "~");
+			const lockAbsoluteKey = this.relativeAbsoluteKeyService.getAbsolutePath(key).replace(new RegExp("/", "g"), "~");
 			const getHidden = true;
 			res = await this.getObjectFromTable(lockAbsoluteKey, tableName, getHidden);
-			res.Key = this.relativeAbsoluteKeyService.getRelativePath(res.Key.replace(new RegExp("~", 'g'), "/"));
+			res.Key = this.relativeAbsoluteKeyService.getRelativePath(res.Key.replace(new RegExp("~", "g"), "/"));
 		}
 		catch // If the object isn't locked, the getObjectFromTable will throw an "object not found" error. Return null to indicate this object isn't locked.
 		{}
@@ -106,13 +106,13 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 
 		const item: any = 
 						{
-							Key : this.relativeAbsoluteKeyService.getAbsolutePath(Key).replace(new RegExp("/", 'g'), "~"),
+							Key : this.relativeAbsoluteKeyService.getAbsolutePath(Key).replace(new RegExp("/", "g"), "~"),
 							TransactionType : transactionType
 						};
 
 		const lockRes =  await this.pepperiDal.postDocumentToTable(LOCK_ADAL_TABLE_NAME, item);
 
-		lockRes.Key = this.relativeAbsoluteKeyService.getRelativePath(item.Key.replace(new RegExp("~", 'g'), "/"));
+		lockRes.Key = this.relativeAbsoluteKeyService.getRelativePath(item.Key.replace(new RegExp("~", "g"), "/"));
 
 		console.log(`Successfully locked key: ${lockRes.Key}`);
 
@@ -124,11 +124,11 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 		console.log(`Setting rollback data to key: ${item.Key}`);
 		const itemCopy = {...item};
 
-		itemCopy.Key = this.relativeAbsoluteKeyService.getAbsolutePath(item.Key).replace(new RegExp("/", 'g'), "~");
+		itemCopy.Key = this.relativeAbsoluteKeyService.getAbsolutePath(item.Key).replace(new RegExp("/", "g"), "~");
 
 		const lockRes =  await this.pepperiDal.postDocumentToTable(LOCK_ADAL_TABLE_NAME, itemCopy);
 
-		lockRes.Key = this.relativeAbsoluteKeyService.getRelativePath(itemCopy.Key.replace(new RegExp("~", 'g'), "/"));
+		lockRes.Key = this.relativeAbsoluteKeyService.getRelativePath(itemCopy.Key.replace(new RegExp("~", "g"), "/"));
 
 		console.log(`Successfully set rollback data for key: ${lockRes.Key}`);
 
@@ -147,7 +147,7 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 	
 	async unlock(key: string)
 	{
-		const lockKey = this.relativeAbsoluteKeyService.getAbsolutePath(key).replace(new RegExp("/", 'g'), "~");
+		const lockKey = this.relativeAbsoluteKeyService.getAbsolutePath(key).replace(new RegExp("/", "g"), "~");
 
 		console.log(`Attempting to unlock object: ${key}`);
 		const res = await this.pepperiDal.hardDeleteDocumentFromTable(LOCK_ADAL_TABLE_NAME, lockKey);
@@ -197,7 +197,7 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 
 		if (!existingFile.doesFileExist) 
 		{
-			if (!newFileFields.Key.endsWith('/')) //Add URL if this isn't a folder and this file doesn't exist.
+			if (!newFileFields.Key.endsWith("/")) //Add URL if this isn't a folder and this file doesn't exist.
 			{
 				newFileFields.URL = encodeURI(`${CdnServers[this.environment]}/${this.relativeAbsoluteKeyService.getAbsolutePath(newFileFields.Key)}`);
 			}
