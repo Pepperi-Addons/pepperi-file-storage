@@ -56,30 +56,30 @@ router.get("/file", async (req, res, next) =>
 // This functionality will be added in PFS 1.3.
 // For more information, see https://pepperi.atlassian.net/browse/DI-23241
 
-// router.post('/file', async (req, res, next) =>
-// {
-// 	try
-// 	{
-// 		const addonUUID = req.query.addon_uuid?.toString();
-// 		const schemaName = req.query.resource_name?.toString();
+router.post('/file', async (req, res, next) =>
+{
+	try
+	{
+		const addonUUID = req.query.addon_uuid?.toString();
+		const schemaName = req.query.resource_name?.toString();
 
-// 		if(!addonUUID || !schemaName) 
-// 		{
-// 			throw new Error('Missing required parameters');
-// 		}
+		if(!addonUUID || !schemaName) 
+		{
+			throw new Error('Missing required parameters');
+		}
 		
-// 		const {PfsDal, PepperiDal} = await getDal(req);
-// 		const uploadFileCommand = new CpiPostCommand(req, PfsDal, PfsDal, PepperiDal);
-// 		const result = await uploadFileCommand.execute();
+		const {PfsDal, PepperiDal} = await getDal(req);
+		const uploadFileCommand = new CpiPostCommand(req, PfsDal, PfsDal, PepperiDal);
+		const result = await uploadFileCommand.execute();
 
-// 		res.json(result);
-// 	}
-// 	catch (err)
-// 	{
-// 		console.log(err);
-// 		next(err)
-// 	}
-// });
+		res.json(result);
+	}
+	catch (err)
+	{
+		console.log(err);
+		next(err)
+	}
+});
 
 router.get("/files/find", async (req, res, next) => 
 {
