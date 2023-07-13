@@ -1,4 +1,4 @@
-import { PapiClient, SearchBody } from "@pepperi-addons/papi-sdk";
+import { AddonData, PapiClient, SearchBody } from "@pepperi-addons/papi-sdk";
 import fetch, { RequestInit, Response } from "node-fetch";
 import fs from "fs";
 import { FILES_TO_UPLOAD_TABLE_NAME, FileToUpload, IPepperiDal, RelativeAbsoluteKeyService, SharedHelper, TempFile } from "pfs-shared";
@@ -136,7 +136,7 @@ export class FileUploadService
 			KeyList: [relativePath],
 			Fields: ["Key", "MIME", "URL"],
 		};
-		const fileMetadata = await this.pepperiDal.searchDataInTable(tableName, searchBody)[0];
+		const fileMetadata = (await this.pepperiDal.searchDataInTable(tableName, searchBody)).Objects[0];
 
 		if (!this.varHasKeyMimeTypeAndUrl(fileMetadata)) 
 		{
@@ -146,7 +146,7 @@ export class FileUploadService
 		return fileMetadata;
 	}
 
-	protected  varHasKeyMimeTypeAndUrl(fileMetadata: any): fileMetadata is { Key: string, MIME: string, URL: string }
+	protected  varHasKeyMimeTypeAndUrl(fileMetadata: AddonData): fileMetadata is { Key: string, MIME: string, URL: string }
 	{
 		return fileMetadata.Key && fileMetadata.MIME && fileMetadata.URL;
 	}

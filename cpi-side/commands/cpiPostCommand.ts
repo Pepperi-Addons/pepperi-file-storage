@@ -72,6 +72,8 @@ export class CpiPostCommand extends PfsService implements ICommand
 	{
 		const papiClient: PapiClient = await pepperi.papiClient;
 		const token: string = await pepperi.auth.getAccessToken();
-		return new OfflinePostService(papiClient, token, this.request, this.pfsMutator, this.pfsGetter);
+		// papiClient is as any since there's a discrepancy between pepperi.papiClient (cpi-node package) and papi-sdk. 
+		// This is a workaround until the discrepancy is resolved.
+		return new OfflinePostService(papiClient as any, token, this.request, this.pfsMutator, this.pfsGetter);
 	}
 }
