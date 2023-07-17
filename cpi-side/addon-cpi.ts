@@ -4,22 +4,22 @@ import { CpiPostCommand } from "./commands/cpiPostCommand";
 import CpiAwsDal from "./dal/awsDal";
 import { CpiIndexedDataS3PfsDal } from "./dal/cpiIndexedDataS3PfsDal";
 import CpiPepperiDal from "./dal/pepperiDal";
-import { BeforeSyncService } from "./beforeSync.service";
+import { PreSyncService } from "./preSync.service";
 import { BeforeSyncResult } from "./entities";
 
 export const router = Router();
 
 export async function load(configuration: any)
 {
-	const beforeSyncService = new BeforeSyncService();
-	await beforeSyncService.createRelations();
+	const preSyncService = new PreSyncService();
+	await preSyncService.createRelations();
 }
 
 // will be called right before the sync started
-router.post(BeforeSyncService.endpointName, async (req, res) =>
+router.post(PreSyncService.endpointName, async (req, res) =>
 {
-	const beforeSyncService = new BeforeSyncService();
-	const areAllFilesUploadedResult: BeforeSyncResult = await beforeSyncService.areAllFilesUploaded();
+	const preSyncService = new PreSyncService();
+	const areAllFilesUploadedResult: BeforeSyncResult = await preSyncService.areAllFilesUploaded();
 
 	res.json(areAllFilesUploadedResult);
 });
