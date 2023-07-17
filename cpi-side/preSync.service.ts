@@ -6,7 +6,7 @@ import CpiPepperiDal from "./dal/pepperiDal";
 import { BeforeSyncResult } from "./entities";
 
 
-export class BeforeSyncService
+export class PreSyncService
 {
 	
 	public static readonly endpointName = "/are_all_files_uploaded";
@@ -30,7 +30,7 @@ export class BeforeSyncService
 	{
 		const relation: Relation = {
 			Type: "CPIAddonAPI" as any,
-			AddonRelativeURL: `/addon-cpi${BeforeSyncService.endpointName}`,
+			AddonRelativeURL: `/addon-cpi${PreSyncService.endpointName}`,
 			AddonUUID: AddonUUID,
 			RelationName: relationName,
 			Name: `PFS_${relationName}`,
