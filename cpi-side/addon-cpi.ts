@@ -56,7 +56,7 @@ router.get("/file", async (req, res, next) =>
 // This functionality will be added in PFS 1.3.
 // For more information, see https://pepperi.atlassian.net/browse/DI-23241
 
-router.post('/file', async (req, res, next) =>
+router.post("/file", async (req, res, next) =>
 {
 	try
 	{
@@ -65,7 +65,7 @@ router.post('/file', async (req, res, next) =>
 
 		if(!addonUUID || !schemaName) 
 		{
-			throw new Error('Missing required parameters');
+			throw new Error("Missing required parameters");
 		}
 		
 		const {PfsDal, PepperiDal} = await getDal(req);
@@ -77,7 +77,7 @@ router.post('/file', async (req, res, next) =>
 	catch (err)
 	{
 		console.log(err);
-		next(err)
+		next(err);
 	}
 });
 

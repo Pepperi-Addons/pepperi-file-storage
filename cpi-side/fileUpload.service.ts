@@ -139,7 +139,8 @@ export class FileUploadService
 
 		const release = await FilesToUploadDal.mutex.acquire();
 		
-		try{
+		try
+		{
 			// Update the file's TemporaryFileURLs array to point to the temporary file.
 			if(await this.filesToUploadDal.isLatestEntry(this.fileToUpload))
 			{
@@ -152,7 +153,8 @@ export class FileUploadService
 				this.fileUploadLog(`The file's TemporaryFileURLs property was not updated, because a newer version of the file is being uploaded.`);
 			}
 		}
-		finally{
+		finally
+		{
 			release(); //release lock
 		}		
 	}
