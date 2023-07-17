@@ -162,7 +162,7 @@ export class FileUploadService
 	protected async shouldUploadFile(): Promise<boolean>
 	{
 		// Try get the file from the FilesToUpload table.
-		const currentFileToUpload = await this.filesToUploadDal.getByKey(this.fileToUpload.Key!) as unknown as FileToUpload;
+		const currentFileToUpload = await this.filesToUploadDal.getByKey(this.fileToUpload.Key!);
 		return (currentFileToUpload && !currentFileToUpload.Hidden);
 	}
 
