@@ -5,7 +5,7 @@ import CpiAwsDal from "./dal/awsDal";
 import { CpiIndexedDataS3PfsDal } from "./dal/cpiIndexedDataS3PfsDal";
 import CpiPepperiDal from "./dal/pepperiDal";
 import { PreSyncService } from "./preSync.service";
-import { BeforeSyncResult } from "./entities";
+import { PreSyncResult } from "./entities";
 
 export const router = Router();
 
@@ -19,7 +19,7 @@ export async function load(configuration: any)
 router.post(PreSyncService.endpointName, async (req, res) =>
 {
 	const preSyncService = new PreSyncService();
-	const areAllFilesUploadedResult: BeforeSyncResult = await preSyncService.areAllFilesUploaded();
+	const areAllFilesUploadedResult: PreSyncResult = await preSyncService.areAllFilesUploaded();
 
 	res.json(areAllFilesUploadedResult);
 });

@@ -3,7 +3,7 @@ import { Relation } from "@pepperi-addons/papi-sdk";
 import { AddonUUID } from "../addon.config.json";
 import { FilesToUploadDal } from "./dal/filesToUploadDal";
 import CpiPepperiDal from "./dal/pepperiDal";
-import { BeforeSyncResult } from "./entities";
+import { PreSyncResult } from "./entities";
 
 
 export class PreSyncService
@@ -43,15 +43,15 @@ export class PreSyncService
 
 	/**
      * Checks if all files are uploaded to S3 and ready for sync
-     * @returns {Promise<BeforeSyncResult>}
+     * @returns {Promise<PreSyncResult>}
      */
-	public async areAllFilesUploaded(): Promise<BeforeSyncResult>
+	public async areAllFilesUploaded(): Promise<PreSyncResult>
 	{
 		const filesToUploadDal = new FilesToUploadDal(new CpiPepperiDal());
 		const filesToUpload = (await filesToUploadDal.search({})).Objects.filter(file => !file.Hidden);
 		const areAllFilesUploaded = filesToUpload.length === 0;
 
-		const res: BeforeSyncResult = {
+		const res: PreSyncResult = {
 			Success: areAllFilesUploaded,
 			Message: areAllFilesUploaded ? "" : "PFS failed the sync request. Not all files are uploaded to S3 yet."
 		};

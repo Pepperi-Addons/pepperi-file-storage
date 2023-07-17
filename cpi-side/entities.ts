@@ -1,4 +1,4 @@
-export interface BeforeSyncResult {
+export interface PreSyncResult {
     /**
      * In case of Success is false, sync process will not start.
      */
