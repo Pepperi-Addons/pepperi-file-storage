@@ -52,10 +52,6 @@ router.get("/file", async (req, res, next) =>
 	}
 });
 
-// The following code is commented out because the development of the upload file feature is not complete yet.
-// This functionality will be added in PFS 1.3.
-// For more information, see https://pepperi.atlassian.net/browse/DI-23241
-
 router.post("/file", async (req, res, next) =>
 {
 	try
