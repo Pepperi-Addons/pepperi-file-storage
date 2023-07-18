@@ -8,6 +8,7 @@ import { FILES_TO_UPLOAD_TABLE_NAME, FileToUpload, IPepperiDal } from "pfs-share
  */
 export class FilesToUploadDal
 {
+	
 	public static readonly mutex = new Mutex();
 
 	constructor(protected pepperiDal: IPepperiDal)
@@ -70,24 +71,13 @@ export class FilesToUploadDal
 		return await this.pepperiDal.postDocumentToTable(FILES_TO_UPLOAD_TABLE_NAME, fileToUpload) as FileToUpload;
 	}
 
-	/**
-     * true if the entry is the most recently created entry for the file, false otherwise.
-     * @param fileToUpload {FileToUpload} The entry to check.
-     * @returns {Promise<boolean>} A Promise that resolves to true if the entry is the most recently created entry for the file, false otherwise.
-     */
-	public async isLatestEntry(fileToUpload: FileToUpload): Promise<boolean>
-	{
-		const latestEntry = await this.getLatestEntryKey(fileToUpload);
-
-		return latestEntry === undefined || latestEntry.Key === fileToUpload.Key;
-	}
 
 	/**
      * Get the most recently created entry for the file.
      * @param fileToUpload {FileToUpload} The file to get the most recently created entry for.
      * @returns {Promise<{ Key: string } | undefined>} A Promise that resolves to the most recently created entry for the file, or undefined if there are no entries for the file.
      */
-	protected async getLatestEntryKey(fileToUpload: FileToUpload): Promise<{ Key: string } | undefined>
+	public async getLatestEntryKey(fileToUpload: FileToUpload): Promise<{ Key: string } | undefined>
 	{
 		const searchBody: SearchBody = {
 			Fields: ["Key"],
@@ -99,5 +89,58 @@ export class FilesToUploadDal
 		const searchResult = await this.search(searchBody);
 
 		return searchResult.Objects[0] as { Key: string };
+	}
+
+	/**
+     * Hide older entries of the file.
+     * @param fileToUpload {FileToUpload} The file to hide older entries of.
+     * @returns {Promise<void>} A Promise that resolves when the older entries are hidden.
+     */
+	public async hideOlderEntries(fileToUpload: FileToUpload): Promise<void>
+	{
+		// Get older or equal versions
+		const olderVersions = await this.getOlderEntries(fileToUpload);
+
+		// Remove older versions
+		const promises = olderVersions.map(f => 
+		{
+			f.Hidden = true;
+			return this.upsert(f);
+		});
+
+		await Promise.allSettled(promises);
+	}
+
+	/**
+     * Get older versions of the file.
+     * @param fileToUpload {FileToUpload} The file to get older versions of.
+     * @returns {Promise<FileToUpload[]>} A Promise that resolves to the older versions.
+     */
+	protected async getOlderEntries(fileToUpload: FileToUpload): Promise<FileToUpload[]>
+	{
+		// We might not get the CreationDateTime. If so, we'll get it from the DB.
+		// Make a copy so as not to change the original object.
+		const fileToUploadCopy = { ...fileToUpload };
+		fileToUploadCopy.CreationDateTime = fileToUploadCopy.CreationDateTime ?? (await this.getByKey(fileToUploadCopy.Key!)).CreationDateTime;
+
+		const res: FileToUpload[] = [];
+
+		const searchBody: SearchBody = {
+			Where: `AbsolutePath='${fileToUpload.AbsolutePath}' AND CreationDateTime <= ${fileToUpload.CreationDateTime}`,
+			Fields: ["Key", "CreationDateTime"],
+			Page: 0,
+			PageSize: 1000,
+		};
+
+		do
+		{
+            searchBody.Page!++;
+            const searchResult = await this.search(searchBody);
+
+            res.push(...searchResult.Objects);
+		}
+		while (res.length < searchBody.PageSize!);
+
+		return res;
 	}
 }

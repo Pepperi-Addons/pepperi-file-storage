@@ -91,7 +91,7 @@ export class FileUploadService
 		const fileDataBuffer: Buffer = await this.getFileDataBufferFromDisk();
 
 		// Prior to uploading the file, check if there is a newer version of the file in the FilesToUpload table.
-		if(!await this.filesToUploadDal.isLatestEntry(this.fileToUpload))
+		if((await this.filesToUploadDal.getLatestEntryKey(this.fileToUpload))?.Key !== this.fileToUpload.Key)
 		{
 			this.fileUploadLog("A newer version of the file was uploaded. Skipping...");
 
@@ -113,50 +113,45 @@ export class FileUploadService
 
 		this.fileUploadLog(`File successfully uploaded to a temp file on S3.`);
 
-		// Setting the file's TemporaryFileURLs property to point to the temporary file's CDN URL.
-		await this.atomicallySetTemporaryFileURLs(fileMetadata, tempFileUrls);
+		const release = await FilesToUploadDal.mutex.acquire();
+		try
+		{
+			const isLatestEntry = await this.filesToUploadDal.getLatestEntryKey(this.fileToUpload) === this.fileToUpload.Key;
+			if(isLatestEntry)
+			{
+				// Setting the file's TemporaryFileURLs property to point to the temporary file's CDN URL.
+				await this.setTemporaryFileURLs(fileMetadata, tempFileUrls);
+
+				// Remove all older versions of the file from the FilesToUpload table (including this one).
+				await this.filesToUploadDal.hideOlderEntries(this.fileToUpload);
+			}
+		}
+		finally
+		{
+			release();
+		}
 
 		// Remove the file from the FilesToUpload table.
-		// At this point we might or might not have set the file's TemporaryFileURLs property to point to the temporary file.
-		// If we didn't, it is because a newer version of the file was uploaded to the FilesToUpload table, so we can safely remove this FileToUpload entry.
-		// If we did, it is because we were the latest version of the file in the FilesToUpload table, so we can safely remove this FileToUpload entry.
+		// At this point we might or might not have already hidden this entry.
+		// Just to avoid another if-condition, go ahead and remove weather it was removed or not.
 		await this.removeFromFilesToUpload();
 	}
 
 	/**
-     * If the FileToUpload is the latest version in the FilesToUpload table, set the file's TemporaryFileURLs property to point to the temporary file's CDN URL.
-	 * If the FileToUpload is not the latest version in the FilesToUpload table, do nothing.
-	 * The check and assignment is done atomically using a mutex.
+     * Set the file's TemporaryFileURLs property to point to the temporary file's CDN URL.
      * @param fileMetadata 
      * @param tempFileUrls 
      */
-	private async atomicallySetTemporaryFileURLs(fileMetadata: { Key: string; MIME: string; URL: string; }, tempFileUrls: TempFile): Promise<void>
+	private async setTemporaryFileURLs(fileMetadata: { Key: string; MIME: string; URL: string; }, tempFileUrls: TempFile): Promise<void>
 	{
 		this.fileUploadLog(`Updating file TemporaryFileURLs to point to the temporary file...`);
 
 		fileMetadata["TemporaryFileURLs"] = [tempFileUrls.TemporaryFileURL];
 		const tableName = SharedHelper.getPfsTableName(this.clientAddonUUID, this.clientAddonSchemaName);
 
-		const release = await FilesToUploadDal.mutex.acquire();
-		
-		try
-		{
-			// Update the file's TemporaryFileURLs array to point to the temporary file.
-			if(await this.filesToUploadDal.isLatestEntry(this.fileToUpload))
-			{
-				await this.pepperiDal.postDocumentToTable(tableName, fileMetadata);
+		await this.pepperiDal.postDocumentToTable(tableName, fileMetadata);
 
-				this.fileUploadLog(`The file's TemporaryFileURLs property was successfully updated to point to the temporary file.`);
-			}
-			else
-			{
-				this.fileUploadLog(`The file's TemporaryFileURLs property was not updated, because a newer version of the file is being uploaded.`);
-			}
-		}
-		finally
-		{
-			release(); //release lock
-		}		
+		this.fileUploadLog(`The file's TemporaryFileURLs property was successfully updated to point to the temporary file.`);
 	}
 
 	protected async shouldUploadFile(): Promise<boolean>

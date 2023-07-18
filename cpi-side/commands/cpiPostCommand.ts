@@ -49,7 +49,8 @@ export class CpiPostCommand extends PfsService implements ICommand
 
 		await this.filesToUploadDal.upsert(fileToUpload);
 
-		if(await this.filesToUploadDal.isLatestEntry(fileToUpload))
+		const isLatestEntry = (await this.filesToUploadDal.getLatestEntryKey(fileToUpload)) === fileToUpload.Key;
+		if(isLatestEntry)
 		{
 			// Upload file to temp file
 			const fileUploadService = new FileUploadService(this.pepperiDal, pepperi.papiClient, fileToUpload);
