@@ -15,7 +15,7 @@ export class FileUploadService
 {
 
 	// To avoid race conditions, we use a queue to upload files one by one.
-	protected static readonly queueConcurrency = 1;
+	protected static readonly queueConcurrency = 5;
 	protected static filesUploadQueue = new PQueue({ concurrency: FileUploadService.queueConcurrency });
 
 	protected clientAddonUUID: string;
