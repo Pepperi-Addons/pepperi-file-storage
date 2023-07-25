@@ -1,10 +1,11 @@
-import { PapiClient, SearchBody } from "@pepperi-addons/papi-sdk";
+import { AddonData, PapiClient, SearchBody } from "@pepperi-addons/papi-sdk";
 import fetch, { RequestInit, Response } from "node-fetch";
 import fs from "fs";
-import { FILES_TO_UPLOAD_TABLE_NAME, FileToUpload, IPepperiDal, RelativeAbsoluteKeyService, SharedHelper, TempFile } from "pfs-shared";
+import { FileToUpload, IPepperiDal, RelativeAbsoluteKeyService, SharedHelper, TempFile } from "pfs-shared";
 import { AddonUUID } from "../addon.config.json";
 import CpiPepperiDal from "./dal/pepperiDal";
 import PQueue from "p-queue";
+import { FilesToUploadDal } from "./dal/filesToUploadDal";
 
 declare global {
     //  for singleton
@@ -14,12 +15,13 @@ export class FileUploadService
 {
 
 	// To avoid race conditions, we use a queue to upload files one by one.
-	protected static readonly queueConcurrency = 1;
+	protected static readonly queueConcurrency = 5;
 	protected static filesUploadQueue = new PQueue({ concurrency: FileUploadService.queueConcurrency });
 
 	protected clientAddonUUID: string;
 	protected clientAddonSchemaName: string;
 	protected relativeAbsoluteKeyService: RelativeAbsoluteKeyService;
+	protected filesToUploadDal: FilesToUploadDal;
 
 
 	constructor(
@@ -31,6 +33,7 @@ export class FileUploadService
 		this.relativeAbsoluteKeyService = new RelativeAbsoluteKeyService(fileToUpload.AbsolutePath);
 		this.clientAddonUUID = this.relativeAbsoluteKeyService.clientAddonUUID;
 		this.clientAddonSchemaName = this.relativeAbsoluteKeyService.clientSchemaName;
+		this.filesToUploadDal = new FilesToUploadDal(this.pepperiDal);
 	}
         
 	/**
@@ -46,8 +49,9 @@ export class FileUploadService
      */
 	public static async asyncUploadAllFilesToUpload(): Promise<void>
 	{
+		const filesToUploadDal = new FilesToUploadDal(new CpiPepperiDal());
 		//Read all files from FilesToUpload table
-		const filesToUpload = (await pepperi.addons.data.uuid(AddonUUID).table(FILES_TO_UPLOAD_TABLE_NAME).search({})).Objects.filter(file => !file.Hidden) as FileToUpload[];
+		const filesToUpload = (await filesToUploadDal.getAllFilesToUpload()).filter(file => !file.Hidden);
 		const pepperiDal = new CpiPepperiDal();
 		const papiClient = pepperi.papiClient;
 
@@ -86,6 +90,16 @@ export class FileUploadService
 		// This is an offline call.
 		const fileDataBuffer: Buffer = await this.getFileDataBufferFromDisk();
 
+		// Prior to uploading the file, check if there is a newer version of the file in the FilesToUpload table.
+		if((await this.filesToUploadDal.getLatestEntryKey(this.fileToUpload))?.Key !== this.fileToUpload.Key)
+		{
+			this.fileUploadLog("A newer version of the file was uploaded. Skipping...");
+
+			await this.removeFromFilesToUpload();
+
+			return;
+		}
+
 		// Upload the file to the temporary file.
 		// This is an online call.
 		const uploadResponse = await this.uploadFileToTempUrl(fileDataBuffer, tempFileUrls.PutURL);
@@ -93,37 +107,57 @@ export class FileUploadService
 		if (uploadResponse.status !== 200) 
 		{
 			this.fileUploadLog(`Failed to upload file to S3. Status: ${uploadResponse.status} ${uploadResponse.statusText}`);
+			// The FilesToUpload table entry isn't, so that we can try again later.
 			return;
 		}
 
 		this.fileUploadLog(`File successfully uploaded to a temp file on S3.`);
 
-		// Remove the file from the FilesToUpload table.
-		await this.removeFromFilesToUpload();
+		const release = await FilesToUploadDal.mutex.acquire();
+		try
+		{
+			const isLatestEntry = await this.filesToUploadDal.getLatestEntryKey(this.fileToUpload) === this.fileToUpload.Key;
+			if(isLatestEntry)
+			{
+				// Setting the file's TemporaryFileURLs property to point to the temporary file's CDN URL.
+				await this.setTemporaryFileURLs(fileMetadata, tempFileUrls);
 
-		// Update the file's TemporaryFileURLs array to point to the temporary file.
-		await this.setTemporaryFileURLs(fileMetadata, tempFileUrls);
+				// Remove all older versions of the file from the FilesToUpload table (including this one).
+				await this.filesToUploadDal.hideOlderEntries(this.fileToUpload);
+			}
+		}
+		finally
+		{
+			release();
+		}
+
+		// Remove the file from the FilesToUpload table.
+		// At this point we might or might not have already hidden this entry.
+		// Just to avoid another if-condition, go ahead and remove weather it was removed or not.
+		await this.removeFromFilesToUpload();
 	}
 
 	/**
-     * Sets the file's TemporaryFileURLs property to point to the temporary file's CDN URL.
+     * Set the file's TemporaryFileURLs property to point to the temporary file's CDN URL.
      * @param fileMetadata 
      * @param tempFileUrls 
      */
 	private async setTemporaryFileURLs(fileMetadata: { Key: string; MIME: string; URL: string; }, tempFileUrls: TempFile): Promise<void>
 	{
 		this.fileUploadLog(`Updating file TemporaryFileURLs to point to the temporary file...`);
+
 		fileMetadata["TemporaryFileURLs"] = [tempFileUrls.TemporaryFileURL];
 		const tableName = SharedHelper.getPfsTableName(this.clientAddonUUID, this.clientAddonSchemaName);
 
 		await this.pepperiDal.postDocumentToTable(tableName, fileMetadata);
+
 		this.fileUploadLog(`The file's TemporaryFileURLs property was successfully updated to point to the temporary file.`);
 	}
 
 	protected async shouldUploadFile(): Promise<boolean>
 	{
 		// Try get the file from the FilesToUpload table.
-		const currentFileToUpload = await pepperi.addons.data.uuid(AddonUUID).table(FILES_TO_UPLOAD_TABLE_NAME).key(this.fileToUpload.Key!) as unknown as FileToUpload;
+		const currentFileToUpload = await this.filesToUploadDal.getByKey(this.fileToUpload.Key!);
 		return (currentFileToUpload && !currentFileToUpload.Hidden);
 	}
 
@@ -136,7 +170,7 @@ export class FileUploadService
 			KeyList: [relativePath],
 			Fields: ["Key", "MIME", "URL"],
 		};
-		const fileMetadata = await this.pepperiDal.searchDataInTable(tableName, searchBody)[0];
+		const fileMetadata = (await this.pepperiDal.searchDataInTable(tableName, searchBody)).Objects[0];
 
 		if (!this.varHasKeyMimeTypeAndUrl(fileMetadata)) 
 		{
@@ -146,9 +180,9 @@ export class FileUploadService
 		return fileMetadata;
 	}
 
-	protected  varHasKeyMimeTypeAndUrl(fileMetadata: any): fileMetadata is { Key: string, MIME: string, URL: string }
+	protected  varHasKeyMimeTypeAndUrl(fileMetadata: AddonData): fileMetadata is { Key: string, MIME: string, URL: string }
 	{
-		return fileMetadata.Key && fileMetadata.MIME && fileMetadata.URL;
+		return fileMetadata?.Key && fileMetadata?.MIME && fileMetadata?.URL;
 	}
 
 	/**
@@ -196,7 +230,7 @@ export class FileUploadService
 		this.fileUploadLog(`Removing file from the FilesToUpload table...`);
 
 		const hiddenFileToUpload: FileToUpload = { ...this.fileToUpload, Hidden: true };
-		await pepperi.addons.data.uuid(AddonUUID).table(FILES_TO_UPLOAD_TABLE_NAME).upsert(hiddenFileToUpload);
+		await this.filesToUploadDal.upsert(hiddenFileToUpload);
 
 		this.fileUploadLog(`File successfully removed from the FilesToUpload table.`);
 	}

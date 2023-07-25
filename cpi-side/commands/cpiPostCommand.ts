@@ -1,16 +1,19 @@
 import { Request } from "@pepperi-addons/debug-server/dist";
 import { PapiClient } from "@pepperi-addons/papi-sdk";
-import { FILES_TO_UPLOAD_TABLE_NAME, FileToUpload, ICommand, IPepperiDal, IPfsGetter, IPfsMutator, PfsService, PostService, RelativeAbsoluteKeyService } from "pfs-shared";
+import { FileToUpload, ICommand, IPepperiDal, IPfsGetter, IPfsMutator, PfsService, PostService, RelativeAbsoluteKeyService } from "pfs-shared";
 import { FileUploadService } from "../fileUpload.service";
 import { OfflinePostService } from "./offlinePostService";
 import jwtDecode from "jwt-decode";
 import { v4 as uuid } from "uuid";
+import { FilesToUploadDal } from "../dal/filesToUploadDal";
 
 export class CpiPostCommand extends PfsService implements ICommand
 {
+	protected filesToUploadDal: FilesToUploadDal;
 	constructor(request: Request, pfsMutator: IPfsMutator, pfsGetter: IPfsGetter, protected pepperiDal: IPepperiDal)
 	{
 		super(request, pfsMutator, pfsGetter);
+		this.filesToUploadDal = new FilesToUploadDal(this.pepperiDal);
 	}
 
 	public async execute(): Promise<any> 
@@ -44,11 +47,21 @@ export class CpiPostCommand extends PfsService implements ICommand
 			AbsolutePath: relativeAbsoluteKeyService.getAbsolutePath(res.Key!),
 		};
 
-		await this.pepperiDal.postDocumentToTable(FILES_TO_UPLOAD_TABLE_NAME, fileToUpload);
+		await this.filesToUploadDal.upsert(fileToUpload);
 
-		// Upload file to temp file
-		const fileUploadService = new FileUploadService(this.pepperiDal, pepperi.papiClient, fileToUpload);
-		await fileUploadService.asyncUploadFile();
+		const isLatestEntry = (await this.filesToUploadDal.getLatestEntryKey(fileToUpload)) === fileToUpload.Key;
+		if(isLatestEntry)
+		{
+			// Upload file to temp file
+			const fileUploadService = new FileUploadService(this.pepperiDal, pepperi.papiClient, fileToUpload);
+			await fileUploadService.asyncUploadFile();
+		}
+		else
+		{
+			console.log(`A newer version of file ${fileToUpload.AbsolutePath} was already uploaded to temp file. Skipping upload.`);
+			fileToUpload.Hidden = true;
+			this.filesToUploadDal.upsert(fileToUpload);
+		}
 	}
 
 	private async getRelativeAbsoluteKeyService(): Promise<RelativeAbsoluteKeyService>
@@ -72,6 +85,8 @@ export class CpiPostCommand extends PfsService implements ICommand
 	{
 		const papiClient: PapiClient = await pepperi.papiClient;
 		const token: string = await pepperi.auth.getAccessToken();
-		return new OfflinePostService(papiClient, token, this.request, this.pfsMutator, this.pfsGetter);
+		// papiClient is as any since there's a discrepancy between pepperi.papiClient (cpi-node package) and papi-sdk. 
+		// This is a workaround until the discrepancy is resolved.
+		return new OfflinePostService(papiClient as any, token, this.request, this.pfsMutator, this.pfsGetter);
 	}
 }

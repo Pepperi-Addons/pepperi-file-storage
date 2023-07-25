@@ -1,7 +1,8 @@
 import { Relation } from "@pepperi-addons/papi-sdk";
-import { FILES_TO_UPLOAD_TABLE_NAME } from "pfs-shared";
 
 import { AddonUUID } from "../addon.config.json";
+import { FilesToUploadDal } from "./dal/filesToUploadDal";
+import CpiPepperiDal from "./dal/pepperiDal";
 import { PreSyncResult } from "./entities";
 
 
@@ -46,7 +47,8 @@ export class PreSyncService
      */
 	public async areAllFilesUploaded(): Promise<PreSyncResult>
 	{
-		const filesToUpload = (await pepperi.addons.data.uuid(AddonUUID).table(FILES_TO_UPLOAD_TABLE_NAME).search({})).Objects.filter(file => !file.Hidden);
+		const filesToUploadDal = new FilesToUploadDal(new CpiPepperiDal());
+		const filesToUpload = (await filesToUploadDal.search({})).Objects.filter(file => !file.Hidden);
 		const areAllFilesUploaded = filesToUpload.length === 0;
 
 		const res: PreSyncResult = {

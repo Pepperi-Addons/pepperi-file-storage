@@ -1,11 +1,12 @@
-import { IndexedDataS3PfsDal, SharedHelper } from "pfs-shared";
 import { AddonData, SearchBody } from "@pepperi-addons/papi-sdk";
 import lodashPick from "lodash.pick";
 import URL from "url-parse";
-import { PfsService } from "../cpiPfs.service";
 import fs from "fs";
 import path from "path";
+import writeFile from "write-file-atomic";
 
+import { PfsService } from "../cpiPfs.service";
+import { IndexedDataS3PfsDal, SharedHelper } from "pfs-shared";
 
 export class CpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal 
 {    
@@ -164,12 +165,23 @@ export class CpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal
 		console.log(`mutateS3: Successfully saved file "${canonizedKey}" to the device.`);
 	}
 
+	/**
+	 * Write the buffer to the file path. Creates any missing folders in the path.
+	 * @param {Buffer} buffer the buffer to write to the file
+	 * @param {string} filePath the path to write the file to
+	 */
 	public async locallySaveBase64ToFile(buffer: Buffer, filePath: string): Promise<void> 
 	{
 		const dir = path.dirname(filePath);
 
 		// Create any missing directories in the file path
 		await fs.promises.mkdir(dir, { recursive: true });
+
+		// // Atomically write the file to the path
+		// // This function writes the file to a temporary file, and then renames it to the correct file name (the rename is atomic).
+		// // That way we can read a previous version of the file even while it's being written to.
+		// // For more details see: https://www.npmjs.com/package/write-file-atomic
+		// await writeFile(filePath, buffer);
 
 		// Write the file to the path
 		await fs.promises.writeFile(filePath, buffer);
