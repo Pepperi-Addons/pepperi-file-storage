@@ -1,11 +1,13 @@
 import "@pepperi-addons/cpi-node";
 import { ListFolderContentsCommand, ListObjectsCommand, DownloadFileCommand, MAXIMAL_LOCK_TIME } from "pfs-shared";
-import { CpiPostCommand } from "./commands/cpiPostCommand";
+import { DataUriPostCommand } from "./commands/dataUriPostCommand";
 import CpiAwsDal from "./dal/awsDal";
 import { CpiIndexedDataS3PfsDal } from "./dal/cpiIndexedDataS3PfsDal";
 import CpiPepperiDal from "./dal/pepperiDal";
 import { PreSyncService } from "./preSync.service";
 import { PreSyncResult } from "./entities";
+import { TemporaryFileCpiIndexedDataS3PfsDal } from "./dal/temporaryFileCpiIndexedDataS3PfsDal";
+import { TemporaryFileUrlPostCommand } from "./commands/temporaryFileUrlPostCommand";
 
 export const router = Router();
 
@@ -65,7 +67,7 @@ router.post("/file", async (req, res, next) =>
 		}
 		
 		const {PfsDal, PepperiDal} = await getDal(req);
-		const uploadFileCommand = new CpiPostCommand(req, PfsDal, PfsDal, PepperiDal);
+		const uploadFileCommand = getPostCommand(req, PfsDal, PepperiDal);
 		const result = await uploadFileCommand.execute();
 
 		res.json(result);
@@ -114,6 +116,22 @@ router.get("/files/find", async (req, res, next) =>
 	}
 });
 
+function getPostCommand(req, PfsDal: CpiIndexedDataS3PfsDal, PepperiDal: CpiPepperiDal): TemporaryFileUrlPostCommand
+{
+	let postCommand: TemporaryFileUrlPostCommand;
+
+	if(Array.isArray(req.body?.TemporaryFileURLs))
+	{
+		postCommand = new TemporaryFileUrlPostCommand(req, PfsDal, PfsDal, PepperiDal);
+	}
+	else
+	{
+		postCommand = new DataUriPostCommand(req, PfsDal, PfsDal, PepperiDal);
+	}
+	
+	return postCommand;
+}
+
 async function getDal(req) 
 {
 	const OAuthAccessToken = await pepperi.auth.getAccessToken();
@@ -122,7 +140,16 @@ async function getDal(req)
 
 	const pepperiDal = new CpiPepperiDal();
 
-	const dal = new CpiIndexedDataS3PfsDal(OAuthAccessToken, req, MAXIMAL_LOCK_TIME, awsDal, pepperiDal);
+	let dal: CpiIndexedDataS3PfsDal;
+	
+	if(Array.isArray(req.body?.TemporaryFileURLs))
+	{
+		dal = new TemporaryFileCpiIndexedDataS3PfsDal(OAuthAccessToken, req, MAXIMAL_LOCK_TIME, awsDal, pepperiDal);
+	}
+	else
+	{
+		dal = new CpiIndexedDataS3PfsDal(OAuthAccessToken, req, MAXIMAL_LOCK_TIME, awsDal, pepperiDal);
+	}
 
 	return {PfsDal: dal, PepperiDal: pepperiDal} ;
 }
