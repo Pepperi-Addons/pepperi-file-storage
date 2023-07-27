@@ -1,5 +1,5 @@
 import { Request } from "@pepperi-addons/debug-server";
-import { AddonData, SearchBody } from "@pepperi-addons/papi-sdk";
+import { AddonData, SearchBody, SearchData } from "@pepperi-addons/papi-sdk";
 import { AbstractS3PfsDal } from "./abstractS3PfsDal";
 import { CdnServers, LOCK_ADAL_TABLE_NAME, SharedHelper, TransactionType } from "../";
 import { IAws } from "./iAws";
@@ -14,7 +14,7 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 
 	//#region IPfsGetter
 
-	async getObjects(searchBody?: SearchBody): Promise<AddonData[]>
+	async getObjects(searchBody?: SearchBody): Promise<SearchData<AddonData>>
 	{
 		searchBody = searchBody ?? this.constructSearchBodyFromRequest();
 
@@ -22,12 +22,12 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 		const res = await this.pepperiDal.searchDataInTable(getPfsTableName, searchBody!);
 
 		console.log(`Files listing done successfully.`);
-		return res.Objects;
+		return res;
 	}
 
 	protected constructSearchBodyFromRequest(): SearchBody
 	{
-		const searchBody: SearchBody = {
+		let searchBody: SearchBody = {
 			...(this.request.query?.where && {Where: this.request.query.where}),
 			...(this.request.query?.page_size && {PageSize: parseInt(this.request.query.page_size)}),
 			...(this.request.query?.page && {Page: this.getRequestedPageNumber()}),
@@ -36,6 +36,7 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 			...(this.request.query?.include_deleted && {IncludeDeleted: this.request.query.include_deleted}),
 			...(this.request.query?.order_by && {OrderBy: this.request.query.order_by}),
 			...(this.request.query?.key_list && {KeyList: this.request.query.key_list}),
+			...(this.request.query?.page_key && {PageKey: this.request.query.page_key}),
 		};
 
 		return searchBody;

@@ -1,4 +1,4 @@
-import { AddonData, SearchBody } from "@pepperi-addons/papi-sdk";
+import { AddonData, SearchBody, SearchData } from "@pepperi-addons/papi-sdk";
 import lodashPick from "lodash.pick";
 import URL from "url-parse";
 import fs from "fs";
@@ -13,28 +13,28 @@ export class CpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal
 
 	//#region IPfsGetter
 
-	override async getObjects(searchBody?: SearchBody): Promise<AddonData[]>
+	override async getObjects(searchBody?: SearchBody): Promise<SearchData<AddonData>>
 	{
 		// ModificationDateTime is always needed so we could add the version later on in the function.
 		// The Fields filter will be enforced after the GET from the schema.
 		searchBody = searchBody ?? this.constructSearchBodyFromRequest();
 
 		const getPfsTableName = SharedHelper.getPfsTableName(this.request.query.addon_uuid, this.clientSchemaName);
-		let resultObjects = (await this.pepperiDal.searchDataInTable(getPfsTableName, searchBody!)).Objects;
+		let resultObjects = (await this.pepperiDal.searchDataInTable(getPfsTableName, searchBody!));
 
 		// Set v={{modificationDateTime}} on each URL to avoid browser cache.
-		resultObjects = this.addVersionToObjectsUrl(resultObjects);
+		resultObjects.Objects = this.addVersionToObjectsUrl(resultObjects.Objects);
 
 		// Handle downloading files to device if needed
-		await this.downloadFilesToDevice(resultObjects);
+		await this.downloadFilesToDevice(resultObjects.Objects);
 
 		// Return only needed Fields
 		// This must happen after we set the version, and after we download the files to the device.
 		// Setting the version requires the ModificationDateTime field, and downloading the files
 		// is based on the Sync field.
-		resultObjects = this.pickRequestedFields(resultObjects, this.request.query?.fields);
+		resultObjects.Objects = this.pickRequestedFields(resultObjects.Objects, this.request.query?.fields);
 
-		resultObjects.map(object =>
+		resultObjects.Objects.map(object =>
 		{
 			// Delete the TemporaryFileURLs field, since it's not needed in the response.
 			delete object.TemporaryFileURLs;

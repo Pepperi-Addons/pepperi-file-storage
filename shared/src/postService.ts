@@ -144,7 +144,7 @@ export abstract class PostService extends PfsService
 		};
 		const folderContents = await this.pfsGetter.getObjects(searchBody);
 
-		if (folderContents.length > 0) // Deleting a folder that has existing content is not currently supported.
+		if (folderContents.Objects.length > 0) // Deleting a folder that has existing content is not currently supported.
 		{
 			const err: any = new Error(`Bad request. Folder content must be deleted before the deletion of the folder.`);
 			err.code = 400;

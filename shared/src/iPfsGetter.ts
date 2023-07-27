@@ -1,4 +1,4 @@
-import { AddonData, SearchBody } from "@pepperi-addons/papi-sdk";
+import { AddonData, SearchBody, SearchData } from "@pepperi-addons/papi-sdk";
 
 export interface IPfsGetter
 {
@@ -11,5 +11,5 @@ export interface IPfsGetter
     /**
      * Get a list of objects (files and folders). Standard Pepperi flags apply (i.e. where clause, include_deleted, etc.).
      */
-     getObjects(searchBody?: SearchBody): Promise<AddonData[]>;
+     getObjects(searchBody?: SearchBody): Promise<SearchData<AddonData>>;
 }
