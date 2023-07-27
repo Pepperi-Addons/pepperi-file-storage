@@ -1,5 +1,6 @@
 export * from "./constants";
 export * from "./iCommand";
+export * from "./iFetchCommand";
 export * from "./iPfsGetter";
 export * from "./iPfsMutator";
 export * from "./pfs.service";
@@ -15,4 +16,5 @@ export * from "./dal/abstractBasePfsDal";
 export * from "./dal/iAws";
 export * from "./dal/iPepperiDal";
 export * from "./relativeAbsoluteKey.service";
+export * from "./resourceFetcherServices";
 export * from "./tempFileService";
