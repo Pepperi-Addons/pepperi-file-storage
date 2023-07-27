@@ -12,7 +12,7 @@ import { AddonData, AddonDataScheme, FindOptions, PapiClient, Relation, SearchBo
 import semverLessThan from "semver/functions/lt";
 import clonedeep from "lodash.clonedeep";
 import { FILES_TO_UPLOAD_TABLE_NAME, LOCK_ADAL_TABLE_NAME, pfsSchemaData, PFS_TABLE_PREFIX } from "pfs-shared/lib/constants";
-import { AddonUUID } from '../addon.config.json';
+import { AddonUUID } from "../addon.config.json";
 
 export async function install(client: Client, request: Request): Promise<any> 
 {
