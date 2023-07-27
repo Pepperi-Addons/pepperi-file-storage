@@ -16,7 +16,7 @@ export class ListFolderContentsCommand extends PfsService implements IFetchComma
 
 		if(this.request.query.folder != "/" && !(await this.getDoesFileExist(requestedFolder))) // The root folder is not created, and therefore isn't listed in the adal table. It is there by default.
 		{
-			const errorMessage = `Could not list files in folder ${this.request.query.folder}. Could not find requested folder: '${this.request.query.folder}'.`
+			const errorMessage = `Could not list files in folder ${this.request.query.folder}. Could not find requested folder: '${this.request.query.folder}'.`;
 			console.error(errorMessage);
 
 			const err: any = new Error(errorMessage);

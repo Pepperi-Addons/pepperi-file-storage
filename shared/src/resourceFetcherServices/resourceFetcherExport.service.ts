@@ -1,5 +1,5 @@
-import { AddonData, SearchData } from '@pepperi-addons/papi-sdk';
-import { BaseResourceFetcherService } from './baseResourceFetcher.service';
+import { AddonData, SearchData } from "@pepperi-addons/papi-sdk";
+import { BaseResourceFetcherService } from "./baseResourceFetcher.service";
 
 
 export class ResourceFetcherExportService extends BaseResourceFetcherService

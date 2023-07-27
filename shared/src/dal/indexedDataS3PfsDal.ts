@@ -27,7 +27,7 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 
 	protected constructSearchBodyFromRequest(): SearchBody
 	{
-		let searchBody: SearchBody = {
+		const searchBody: SearchBody = {
 			...(this.request.query?.where && {Where: this.request.query.where}),
 			...(this.request.query?.page_size && {PageSize: parseInt(this.request.query.page_size)}),
 			...(this.request.query?.page && {Page: this.getRequestedPageNumber()}),

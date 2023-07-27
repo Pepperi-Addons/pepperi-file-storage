@@ -1,2 +1,2 @@
-export * from './baseResourceFetcher.service';
-export * from './resourceFetcherExport.service';
+export * from "./baseResourceFetcher.service";
+export * from "./resourceFetcherExport.service";
