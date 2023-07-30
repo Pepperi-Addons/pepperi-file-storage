@@ -1,6 +1,7 @@
 import { AddonData, SearchBody, SearchData } from "@pepperi-addons/papi-sdk";
 import { IFetchCommand } from "../iFetchCommand";
 import PfsService from "../pfs.service";
+import { SharedHelper } from "../sharedHelper";
 
 export class ListFolderContentsCommand extends PfsService implements IFetchCommand 
 {
@@ -28,7 +29,12 @@ export class ListFolderContentsCommand extends PfsService implements IFetchComma
 		const searchBody: SearchBody = {
 			Where: whereClause
 		};
+
+		// Since the user might have requested a specific page, fields or any other request,
+		// we need to construct the search body from the request as well as the default search body
+		// that we have created.
+		const resSearchBody = SharedHelper.constructSearchBodyFromRequest(this.request, searchBody);
 		
-		return await this.pfsGetter.getObjects(searchBody);
+		return await this.pfsGetter.getObjects(resSearchBody);
 	}
 }

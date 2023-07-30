@@ -16,30 +16,13 @@ export class IndexedDataS3PfsDal extends AbstractS3PfsDal
 
 	async getObjects(searchBody?: SearchBody): Promise<SearchData<AddonData>>
 	{
-		searchBody = searchBody ?? this.constructSearchBodyFromRequest();
+		searchBody = searchBody ?? SharedHelper.constructSearchBodyFromRequest(this.request);
 
 		const getPfsTableName = SharedHelper.getPfsTableName(this.request.query.addon_uuid, this.clientSchemaName);
 		const res = await this.pepperiDal.searchDataInTable(getPfsTableName, searchBody!);
 
 		console.log(`Files listing done successfully.`);
 		return res;
-	}
-
-	protected constructSearchBodyFromRequest(): SearchBody
-	{
-		const searchBody: SearchBody = {
-			...(this.request.query?.where && {Where: this.request.query.where}),
-			...(this.request.query?.page_size && {PageSize: parseInt(this.request.query.page_size)}),
-			...(this.request.query?.page && {Page: this.getRequestedPageNumber()}),
-			...(this.request.query?.fields && {Fields: this.request.query.fields.split(",")}),
-			...(this.request.query?.include_count && {IncludeCount: this.request.query.include_count}),
-			...(this.request.query?.include_deleted && {IncludeDeleted: this.request.query.include_deleted}),
-			...(this.request.query?.order_by && {OrderBy: this.request.query.order_by}),
-			...(this.request.query?.key_list && {KeyList: this.request.query.key_list}),
-			...(this.request.query?.page_key && {PageKey: this.request.query.page_key}),
-		};
-
-		return searchBody;
 	}
 
 	private async getObjectFromTable(key: string, tableName: string, getHidden = false)

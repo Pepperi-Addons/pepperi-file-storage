@@ -17,7 +17,7 @@ export class CpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal
 	{
 		// ModificationDateTime is always needed so we could add the version later on in the function.
 		// The Fields filter will be enforced after the GET from the schema.
-		searchBody = searchBody ?? this.constructSearchBodyFromRequest();
+		searchBody = searchBody ?? SharedHelper.constructSearchBodyFromRequest(this.request);
 
 		const getPfsTableName = SharedHelper.getPfsTableName(this.request.query.addon_uuid, this.clientSchemaName);
 		const resultObjects = (await this.pepperiDal.searchDataInTable(getPfsTableName, searchBody!));
