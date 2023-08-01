@@ -169,6 +169,10 @@ export async function pfs_export(client: Client, request: Request)
 
 	console.log(`Request received: ${JSON.stringify(request)}`);
 
+	// Build a new request where the properties or on the query, so that
+	// the ListObjectsCommand will be able to handle it.
+	// (This request data will be internally used in a Search, not a Find.)
+
 	request.query["where"] = request.body["Where"];
 	request.query["fields"] = request.body["Fields"];
 	request.query["page"] = request.body["Page"];
