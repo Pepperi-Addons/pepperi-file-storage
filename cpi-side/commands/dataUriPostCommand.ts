@@ -7,8 +7,13 @@ import { TemporaryFileUrlPostCommand } from "./temporaryFileUrlPostCommand";
 
 export class DataUriPostCommand extends TemporaryFileUrlPostCommand implements ICommand
 {
+	protected readonly MINIMAL_CPI_VERSION = "17.2";
+	
 	public override async execute(): Promise<any> 
 	{
+		// Validate that the CPI version is higher than this.MINIMAL_CPI_VERSION
+		await this.validateCpiNodeVersion();
+
 		// Write file data to device's storage and ADAL metadata table
 		const res: any = await super.execute();
 
@@ -17,7 +22,41 @@ export class DataUriPostCommand extends TemporaryFileUrlPostCommand implements I
 		return res;
 	}
 
-	private async uploadToTempFile(res: any): Promise<void>
+	/**
+	 * Validate that the CPI version is higher than this.MINIMAL_CPI_VERSION
+	 * @throws Error if the version is lower than this.MINIMAL_CPI_VERSION
+	 * @returns {Promise<void>}
+	 */
+	protected async validateCpiNodeVersion(): Promise<void>
+	{
+		// software version is in the format of "x.y". Split by '.', take the first number and parse it to int.
+		// From the second number, take the first digit and parse it to int.
+		const minimalVersion = this.getSplittedVersion(this.MINIMAL_CPI_VERSION);
+		const actualVersion = this.getSplittedVersion((await pepperi.environment.info()).softwareVersion);
+
+		// Throw an exception if the version is lower than this.MINIMAL_CPI_VERSION
+		if(actualVersion.MajorVersion < minimalVersion.MajorVersion || 
+			(actualVersion.MajorVersion === minimalVersion.MajorVersion && actualVersion.MinorVersion < minimalVersion.MinorVersion))
+		{
+			const errorMessage = `Offline POST with data URI is not supported in this version of CPI. Please upgrade to version ${this.MINIMAL_CPI_VERSION} or higher.`;
+			console.error(errorMessage);
+			throw new Error(errorMessage);
+		}
+	}
+
+	protected getSplittedVersion(version: string): { MajorVersion: number, MinorVersion: number }
+	{
+		const splittedVersion = version.split(".");
+		const majorVersion = parseInt(splittedVersion[0]);
+		const minorVersion = parseInt(splittedVersion[1][0]);
+
+		return {
+			MajorVersion: majorVersion,
+			MinorVersion: minorVersion,
+		}
+	}
+
+	protected async uploadToTempFile(res: any): Promise<void>
 	{
 		const relativeAbsoluteKeyService = await this.getRelativeAbsoluteKeyService();
 		// Save the file to the FilesToUpload table
@@ -43,7 +82,7 @@ export class DataUriPostCommand extends TemporaryFileUrlPostCommand implements I
 		}
 	}
 
-	private async getRelativeAbsoluteKeyService(): Promise<RelativeAbsoluteKeyService>
+	protected async getRelativeAbsoluteKeyService(): Promise<RelativeAbsoluteKeyService>
 	{
 		const distUUID = jwtDecode(await pepperi.auth.getAccessToken())["pepperi.distributoruuid"];
 		return new RelativeAbsoluteKeyService(distUUID, this.AddonUUID, this.request.query.resource_name);
