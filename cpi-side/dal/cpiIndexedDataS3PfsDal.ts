@@ -20,7 +20,7 @@ export class CpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal
 		searchBody = searchBody ?? SharedHelper.constructSearchBodyFromRequest(this.request);
 
 		const getPfsTableName = SharedHelper.getPfsTableName(this.request.query.addon_uuid, this.clientSchemaName);
-		const resultObjects = (await this.pepperiDal.searchDataInTable(getPfsTableName, searchBody!));
+		const resultObjects = await this.pepperiDal.searchDataInTable(getPfsTableName, searchBody!);
 
 		// Set v={{modificationDateTime}} on each URL to avoid browser cache.
 		resultObjects.Objects = this.addVersionToObjectsUrl(resultObjects.Objects);
