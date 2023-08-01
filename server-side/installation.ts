@@ -86,6 +86,12 @@ export async function upgrade(client: Client, request: Request): Promise<any>
 		await removeUriFromSavedObjects(papiClient);
 	}
 
+	if (request.body.FromVersion && semverLessThan(request.body.FromVersion, "1.3.13"))
+	{
+		console.log("Reupserting DIMX relations to support PageKey in export");
+		await createDimxRelations(papiClient, client);
+	}
+
 	return { success: true, resultObject: {} };
 }
 
@@ -138,7 +144,7 @@ async function createDimxRelations(papiClient: PapiClient, client: Client)
 		AddonUUID: client.AddonUUID,
 		Name: "pfs",
 		Type: "AddonAPI",
-		AddonRelativeURL: "/data-source-api/pfs_export"
+		AddonRelativeURL: "/api/pfs_export"
 	};
 
 	await upsertRelation(papiClient, importRelation);

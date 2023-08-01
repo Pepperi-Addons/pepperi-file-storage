@@ -1,5 +1,5 @@
 import "@pepperi-addons/cpi-node";
-import { ListFolderContentsCommand, ListObjectsCommand, DownloadFileCommand, MAXIMAL_LOCK_TIME } from "pfs-shared";
+import { ListFolderContentsCommand, ListObjectsCommand, DownloadFileCommand, MAXIMAL_LOCK_TIME, IFetchCommand, BaseResourceFetcherService } from "pfs-shared";
 import { DataUriPostCommand } from "./commands/dataUriPostCommand";
 import CpiAwsDal from "./dal/awsDal";
 import { CpiIndexedDataS3PfsDal } from "./dal/cpiIndexedDataS3PfsDal";
@@ -94,18 +94,19 @@ router.get("/files/find", async (req, res, next) =>
 		const {PfsDal} = await getDal(req);
 
 		let result: any;
+		let listCommand: IFetchCommand;
 
 		if(req.query.folder)
 		{
-			const listFolderContentsCommand = new ListFolderContentsCommand(req, PfsDal, PfsDal);
-			result = await listFolderContentsCommand.execute();
-
+			listCommand = new ListFolderContentsCommand(req, PfsDal, PfsDal);
 		}
 		else
 		{
-			const listObjectsCommand = new ListObjectsCommand(req, PfsDal, PfsDal);
-			result = await listObjectsCommand.execute();
+			listCommand = new ListObjectsCommand(req, PfsDal, PfsDal);
 		}
+
+		const resourceFetcherService = new BaseResourceFetcherService(listCommand);
+		result = await resourceFetcherService.fetch();
 
 		res.json(result);
 	}

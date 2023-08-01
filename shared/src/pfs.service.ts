@@ -75,10 +75,10 @@ export abstract class PfsService
 			]
 		};
 		const res = await this.pfsGetter.getObjects(searchBody);
-		if (res.length === 1) 
+		if (res.Objects.length === 1) 
 		{
 			console.log(`File Downloaded`);
-			return res[0];
+			return res.Objects[0];
 		}
 		else 
 		{ //Couldn't find results

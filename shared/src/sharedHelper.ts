@@ -1,4 +1,5 @@
 import { Request } from "@pepperi-addons/debug-server/dist";
+import { SearchBody } from "@pepperi-addons/papi-sdk";
 import { validate as uuidValidate } from "uuid";
 import { PFS_TABLE_PREFIX } from "./constants";
 
@@ -63,5 +64,40 @@ export class SharedHelper
 		}
 
 		return validUUID;
+	}
+
+	public static constructSearchBodyFromRequest(request: Request, searchBody?: SearchBody): SearchBody
+	{
+		const resSearchBody: SearchBody = {
+			...(request.query?.where && {Where: request.query.where}),
+			...(request.query?.page_size && {PageSize: parseInt(request.query.page_size)}),
+			...(request.query?.page && {Page: SharedHelper.getRequestedPageNumber(request)}),
+			...(request.query?.fields && {Fields: request.query.fields.split(",")}),
+			...(request.query?.include_count && {IncludeCount: request.query.include_count}),
+			...(request.query?.include_deleted && {IncludeDeleted: request.query.include_deleted}),
+			...(request.query?.order_by && {OrderBy: request.query.order_by}),
+			...(request.query?.key_list && {KeyList: request.query.key_list}),
+			...(request.query?.page_key && {PageKey: request.query.page_key}),
+		};
+
+		if(searchBody)
+		{
+			// Copy any additional properties from the passed searchBody
+			// Overlapping properties will be overwritten, having the passed searchBody properties take precedence
+			Object.assign(resSearchBody, searchBody);
+		}
+
+		return resSearchBody;
+	}
+
+	protected static getRequestedPageNumber(request: Request): number
+	{
+		let res = parseInt(request.query.page);
+		if(res === 0)
+		{
+			res++;
+		}
+
+		return res;
 	}
 }

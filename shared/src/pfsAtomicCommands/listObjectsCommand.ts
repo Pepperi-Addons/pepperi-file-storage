@@ -1,17 +1,18 @@
-import { AddonData } from "@pepperi-addons/papi-sdk";
-import { ICommand } from "../iCommand";
+import { AddonData, SearchData } from "@pepperi-addons/papi-sdk";
+import { IFetchCommand } from "../iFetchCommand";
 import PfsService from "../pfs.service";
 
-export class ListObjectsCommand extends PfsService implements ICommand 
+
+export class ListObjectsCommand extends PfsService implements IFetchCommand 
 {
 
-	public async execute(): Promise<AddonData[]>
+	public async execute(): Promise<SearchData<AddonData>>
 	{
 		return await this.listObjects();
 	}
 
 	private async listObjects()
 	{
-		return this.pfsGetter.getObjects();
+		return await this.pfsGetter.getObjects();
 	}
 }

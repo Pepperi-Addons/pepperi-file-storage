@@ -3,9 +3,10 @@ import { PostTransactionalCommand } from "./PfsCommands/TransactionalCommands/po
 import { RecordRemovedCommand } from "./PfsCommands/AtomicCommands/recordRemovedCommand";
 import { InvalidateCommand } from "./PfsCommands/AtomicCommands/invalidateCommand";
 import { HideFolderTransactionalCommand } from "./PfsCommands/TransactionalCommands/hideFolderTransactionalCommand";
-import { CreateTempFileCommand, DownloadFileCommand, ICommand, ListFolderContentsCommand, ListObjectsCommand, SharedHelper } from "pfs-shared";
+import { BaseResourceFetcherService, CreateTempFileCommand, DownloadFileCommand, ICommand, IFetchCommand, ListFolderContentsCommand, ListObjectsCommand, ResourceFetcherExportService, SharedHelper } from "pfs-shared";
 import { ServerHelper } from "./serverHelper";
 import { PapiClient } from "@pepperi-addons/papi-sdk";
+
 
 export async function file(client: Client, request: Request) 
 {
@@ -37,7 +38,7 @@ export async function files(client: Client, request: Request)
 
 	SharedHelper.validateFilesQueryParams(request);
 
-	let pfsCommand: ICommand;
+	let pfsCommand: IFetchCommand;
 
 	switch (request.method) 
 	{
@@ -53,7 +54,10 @@ export async function files(client: Client, request: Request)
 			pfsCommand = new ListObjectsCommand(request, dal, dal);
 		}
 
-		return pfsCommand.execute();
+		const resourceFetcherService = new BaseResourceFetcherService(pfsCommand);
+		const res = await resourceFetcherService.fetch();
+
+		return res;
 	}
 	case "POST": {
 		const dal = ServerHelper.DalFactory(client, request);
@@ -158,4 +162,42 @@ export async function hide_folder(client: Client, request: Request)
 		throw new Error(`Unsupported method: ${request.method}`);
 	}
 	}
+}
+
+export async function pfs_export(client: Client, request: Request)
+{
+
+	console.log(`Request received: ${JSON.stringify(request)}`);
+
+	// Build a new request where the properties or on the query, so that
+	// the ListObjectsCommand will be able to handle it.
+	// (This request data will be internally used in a Search, not a Find.)
+
+	request.query["where"] = request.body["Where"];
+	request.query["fields"] = request.body["Fields"];
+	request.query["page"] = request.body["Page"];
+	request.query["page_size"] = request.body["MaxPageSize"];
+	request.query["order_by"] = request.body["OrderBy"];
+	request.query["include_deleted"] = request.body["IncludeDeleted"];
+	request.query["resource_name"] = request.body["Resource"];
+	request.query["addon_uuid"] = request.body["AddonUUID"];
+	request.query["key_list"] = request.body["KeyList"];
+	request.query["page_key"] = request.body["PageKey"];
+	request.query["include_count"] = request.body["IncludeCount"];
+
+	request.method = "GET";
+
+	request.body = {};
+	
+	SharedHelper.validateFilesQueryParams(request);
+
+	const dal = ServerHelper.DalFactory(client, request);
+
+	const pfsCommand = new ListObjectsCommand(request, dal, dal);
+
+	const resourceFetcherExport = new ResourceFetcherExportService(pfsCommand);
+
+	const res = await resourceFetcherExport.fetch();
+
+	return res;
 }

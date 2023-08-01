@@ -1,44 +1,40 @@
-import { SearchBody } from "@pepperi-addons/papi-sdk";
-import { ICommand } from "../iCommand";
+import { AddonData, SearchBody, SearchData } from "@pepperi-addons/papi-sdk";
+import { IFetchCommand } from "../iFetchCommand";
 import PfsService from "../pfs.service";
+import { SharedHelper } from "../sharedHelper";
 
-export class ListFolderContentsCommand extends PfsService implements ICommand 
+export class ListFolderContentsCommand extends PfsService implements IFetchCommand 
 {
 
-	public async execute(): Promise<any>
+	public async execute(): Promise<SearchData<AddonData>>
 	{
 		return await this.listFolderContent();
 	}
 
-	private async listFolderContent()
+	private async listFolderContent(): Promise<SearchData<AddonData>>
 	{
-		try 
+		const requestedFolder = this.request.query.folder.endsWith("/") ? this.request.query.folder : this.request.query.folder + "/"; //handle trailing '/'
+
+		if(this.request.query.folder != "/" && !(await this.getDoesFileExist(requestedFolder))) // The root folder is not created, and therefore isn't listed in the adal table. It is there by default.
 		{
-			const requestedFolder = this.request.query.folder.endsWith("/") ? this.request.query.folder : this.request.query.folder + "/"; //handle trailing '/'
+			const errorMessage = `Could not list files in folder ${this.request.query.folder}. Could not find requested folder: '${this.request.query.folder}'.`;
+			console.error(errorMessage);
 
-			if(this.request.query.folder != "/" && !(await this.getDoesFileExist(requestedFolder))) // The root folder is not created, and therefore isn't listed in the adal table. It is there by default.
-			{
-				console.error(`Could not find requested folder: '${this.request.query.folder}'.`);
-
-				const err: any = new Error(`Could not find requested folder: ${this.request.query.folder}`);
-				err.code = 404;
-				throw err;
-			}
-
-			const whereClause = `Folder='${requestedFolder}'${(this.request.query && this.request.query.where) ? " AND (" + this.request.query.where + ")" :""}`;
-			const searchBody: SearchBody = {
-				Where: whereClause
-			};
-			return await this.pfsGetter.getObjects(searchBody);
-
+			const err: any = new Error(errorMessage);
+			err.code = 404;
+			throw err;
 		}
-		catch (err) 
-		{
-			if (err instanceof Error) 
-			{
-				console.error(`Could not list files in folder ${this.request.query.folder}. ${err.message}`);
-				throw err;
-			}
-		}
+
+		const whereClause = `Folder='${requestedFolder}'${(this.request.query && this.request.query.where) ? " AND (" + this.request.query.where + ")" :""}`;
+		const searchBody: SearchBody = {
+			Where: whereClause
+		};
+
+		// Since the user might have requested a specific page, fields or any other request,
+		// we need to construct the search body from the request as well as the default search body
+		// that we have created.
+		const resSearchBody = SharedHelper.constructSearchBodyFromRequest(this.request, searchBody);
+		
+		return await this.pfsGetter.getObjects(resSearchBody);
 	}
 }
