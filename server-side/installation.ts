@@ -8,10 +8,11 @@ The error Message is importent! it will be written in the audit log and help the
 */
 
 import { Client, Request } from "@pepperi-addons/debug-server";
-import { AddonData, AddonDataScheme, FindOptions, PapiClient, Relation } from "@pepperi-addons/papi-sdk";
+import { AddonData, AddonDataScheme, FindOptions, PapiClient, Relation, SearchBody, SearchData } from "@pepperi-addons/papi-sdk";
 import semverLessThan from "semver/functions/lt";
 import clonedeep from "lodash.clonedeep";
 import { FILES_TO_UPLOAD_TABLE_NAME, LOCK_ADAL_TABLE_NAME, pfsSchemaData, PFS_TABLE_PREFIX } from "pfs-shared/lib/constants";
+import { AddonUUID } from '../addon.config.json';
 
 export async function install(client: Client, request: Request): Promise<any> 
 {
@@ -77,6 +78,12 @@ export async function upgrade(client: Client, request: Request): Promise<any>
 	{
 		console.log("Updating \"Name\" field on all schemas");
 		await updateNameField(papiClient);
+	}
+
+	if (request.body.FromVersion && semverLessThan(request.body.FromVersion, "1.3.12"))
+	{
+		console.log("Removing URI property from any document that has it");
+		await removeUriFromSavedObjects(papiClient);
 	}
 
 	return { success: true, resultObject: {} };
@@ -390,4 +397,48 @@ async function createFilesToUploadSchema(papiClient: PapiClient)
 	};
 
 	await papiClient.addons.data.schemes.post(filesToUploadSchema);
+}
+
+async function removeUriFromSavedObjects(papiClient: PapiClient): Promise<void>
+{
+	const manipulatorFunction = async (schema: AddonDataScheme) : Promise<void> => 
+	{
+		let searchData: SearchData<AddonData>;
+		let nextPageKey: string | undefined;
+		do 
+		{
+			const searchBody: SearchBody = {
+				Fields: ["Key", "URI", "Hidden"],
+				PageKey: nextPageKey,
+				IncludeDeleted: true,
+				// No need to get folders, since they don't have URI
+				Where: 'MIME != "pepperi/folder"'
+			};
+
+			// Get a page of objects from the schema
+			searchData = await papiClient.addons.data.search.uuid(AddonUUID).table(schema.Name).post(searchBody);
+
+			// Keep only objects that have URI
+			searchData.Objects = searchData.Objects.filter(obj => obj.URI);
+
+			// Set these objects' URI to empty string
+			searchData.Objects = searchData.Objects.map(obj => 
+			{
+				return {
+					Key: obj.Key,
+					URI: "",
+					Hidden: obj.Hidden,
+				};
+			});
+
+			// Check if there are objects, to avoid a redundant api call
+			if (searchData.Objects.length > 0) 
+			{
+				await papiClient.post(`/addons/data/batch/${AddonUUID}/${schema.Name}`, { Objects: searchData.Objects });
+			}
+		}
+		while (searchData.NextPageKey);
+	};
+
+	await manipulateAllPfsSchemas(papiClient, manipulatorFunction);
 }

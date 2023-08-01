@@ -318,10 +318,11 @@ export abstract class PostService extends PfsService
 		// This is done after the above calls, so that the above calls can override any of these fields if needed.
 		// This implementation will let us keep the read-only nature of some of the fields, while still allowing the user to update others.
 		const pfsSchemaFields = new Set(Object.keys(pfsSchemaData.Fields));
+		// We should also remove any transient fields from the request body, so that they won't be copied to the newFileFields object.
+		const transientFields = new Set(["URI"]);
 		Object.keys(data).forEach(key => 
 		{
-
-			if (!pfsSchemaFields.has(key) && !newFileFields[key]) 
+			if (!pfsSchemaFields.has(key) && !transientFields.has(key) &&!newFileFields[key]) 
 			{
 				newFileFields[key] = data[key];
 			}
