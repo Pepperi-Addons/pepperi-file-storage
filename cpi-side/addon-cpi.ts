@@ -54,7 +54,7 @@ router.get("/file", async (req, res, next) =>
 	}
 });
 
-router.post("/file", async (req, res, next) =>
+router.post("/files", async (req, res, next) =>
 {
 	try
 	{
