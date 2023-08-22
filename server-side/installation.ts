@@ -13,6 +13,7 @@ import semverLessThan from "semver/functions/lt";
 import clonedeep from "lodash.clonedeep";
 import { FILES_TO_UPLOAD_TABLE_NAME, LOCK_ADAL_TABLE_NAME, pfsSchemaData, PFS_TABLE_PREFIX } from "pfs-shared/lib/constants";
 import { AddonUUID } from "../addon.config.json";
+import { PfsSchemeService } from "./pfs-scheme.service";
 
 export async function install(client: Client, request: Request): Promise<any> 
 {
@@ -90,6 +91,12 @@ export async function upgrade(client: Client, request: Request): Promise<any>
 	{
 		console.log("Reupserting DIMX relations to support PageKey in export");
 		await createDimxRelations(papiClient, client);
+	}
+
+	if (request.body.FromVersion && semverLessThan(request.body.FromVersion, "1.3.18"))
+	{
+		console.log("Creating Resource Import relations for internal 'data' schemas");
+		await createResourceImportRelations(papiClient, client, request);
 	}
 
 	return { success: true, resultObject: {} };
@@ -444,6 +451,17 @@ async function removeUriFromSavedObjects(papiClient: PapiClient): Promise<void>
 			}
 		}
 		while (searchData.NextPageKey);
+	};
+
+	await manipulateAllPfsSchemas(papiClient, manipulatorFunction);
+}
+async function createResourceImportRelations(papiClient: PapiClient, client: Client, request: Request)
+{
+	const pfsSchemaService = new PfsSchemeService(client, request);
+
+	const manipulatorFunction = async (schema: AddonDataScheme) : Promise<void> => 
+	{
+		await pfsSchemaService.createResourceImportRelation(schema);
 	};
 
 	await manipulateAllPfsSchemas(papiClient, manipulatorFunction);
