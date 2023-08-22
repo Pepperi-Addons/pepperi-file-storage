@@ -116,7 +116,7 @@ export class FileUploadService
 		const release = await FilesToUploadDal.mutex.acquire();
 		try
 		{
-			const isLatestEntry = await this.filesToUploadDal.getLatestEntryKey(this.fileToUpload) === this.fileToUpload.Key;
+			const isLatestEntry = (await this.filesToUploadDal.getLatestEntryKey(this.fileToUpload))?.Key === this.fileToUpload.Key;
 			if(isLatestEntry)
 			{
 				// Setting the file's TemporaryFileURLs property to point to the temporary file's CDN URL.

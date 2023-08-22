@@ -67,7 +67,7 @@ export class DataUriPostCommand extends TemporaryFileUrlPostCommand implements I
 
 		await this.filesToUploadDal.upsert(fileToUpload);
 
-		const isLatestEntry = (await this.filesToUploadDal.getLatestEntryKey(fileToUpload)) === fileToUpload.Key;
+		const isLatestEntry = (await this.filesToUploadDal.getLatestEntryKey(fileToUpload))?.Key === fileToUpload.Key;
 		if(isLatestEntry)
 		{
 			// Upload file to temp file
