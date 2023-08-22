@@ -5,7 +5,7 @@ import { InvalidateCommand } from "./PfsCommands/AtomicCommands/invalidateComman
 import { HideFolderTransactionalCommand } from "./PfsCommands/TransactionalCommands/hideFolderTransactionalCommand";
 import { BaseResourceFetcherService, CreateTempFileCommand, DownloadFileCommand, ICommand, IFetchCommand, ListFolderContentsCommand, ListObjectsCommand, ResourceFetcherExportService, SharedHelper } from "pfs-shared";
 import { ServerHelper } from "./serverHelper";
-import { PapiClient } from "@pepperi-addons/papi-sdk";
+import { DIMXObject, PapiClient } from "@pepperi-addons/papi-sdk";
 
 
 export async function file(client: Client, request: Request) 
@@ -200,4 +200,18 @@ export async function pfs_export(client: Client, request: Request)
 	const res = await resourceFetcherExport.fetch();
 
 	return res;
+}
+
+export async function resource_import(client: Client, request: Request): Promise<{DIMXObjects: DIMXObject[]}>
+{
+	console.log(`Request received: ${JSON.stringify(request)}`);
+
+	SharedHelper.validateFilesQueryParams(request);
+
+	const dal = ServerHelper.DalFactory(client, request);
+
+	throw new Error("Not implemented yet");
+	// const pfsCommand = new ImportResourceCommand(client, request, dal, dal);
+
+	// return await pfsCommand.execute();
 }

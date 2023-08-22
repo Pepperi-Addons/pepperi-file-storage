@@ -1,5 +1,5 @@
 import { Client, Request } from "@pepperi-addons/debug-server/dist";
-import { AddonDataScheme, PapiClient, Subscription } from "@pepperi-addons/papi-sdk";
+import { AddonDataScheme, PapiClient, Relation, Subscription } from "@pepperi-addons/papi-sdk";
 import config from "./../addon.config.json";
 import { ServerHelper } from "./serverHelper";
 import { pfsSchemaData, SharedHelper } from "pfs-shared";
@@ -24,7 +24,10 @@ export class PfsSchemeService
 		await this.validateSchemaCreationRequest();
 
 		// Create a data schema for the PFS's fields.
-		await this.createPfsSchema();
+		const internalDataSchema = await this.createPfsSchema();
+
+		// Create a Resource Import relation 
+		await this.createResourceImportRelation(internalDataSchema);
 
 		// Subscribe to Remove events on the PFS's schema
 		await this.subscribeToExpiredRecords();
@@ -34,6 +37,28 @@ export class PfsSchemeService
 		const res = this.getMergedSchema();
 
 		return res;
+	}
+
+	/**
+	 * Create a Resource Import relation for the given schema.
+	 * @param internalDataSchema The schema to create the relation for.
+	 * @returns {Promise<Relation>} A promise that resolves to the created relation.
+	 * @throws {Error} If the relation creation fails.
+	 * @remarks For more details see: https://pepperi.atlassian.net/browse/DI-24901
+	 */
+	public async createResourceImportRelation(internalDataSchema: AddonDataScheme): Promise<Relation>
+	{
+		const relation: Relation = {
+			Name: internalDataSchema.Name,
+			AddonUUID: config.AddonUUID,
+			Type: "AddonAPI",
+			RelationName: "DataImportResource",
+			AddonRelativeURL: "/api/resource_import",
+			MaxPageSize: 5, // Since connections to AWS will be made, limit the number of records to 5.
+		};
+
+		const papiClient: PapiClient = ServerHelper.createPapiClient(this.client, config.AddonUUID, this.client.AddonSecretKey);
+		return await papiClient.addons.data.relations.upsert(relation);
 	}
 
 	/**
