@@ -53,7 +53,7 @@ export class DataUriPostCommand extends TemporaryFileUrlPostCommand implements I
 		return {
 			MajorVersion: majorVersion,
 			MinorVersion: minorVersion,
-		}
+		};
 	}
 
 	protected async uploadToTempFile(res: any): Promise<void>
