@@ -54,7 +54,6 @@ export class PfsSchemeService
 			Type: "AddonAPI",
 			RelationName: "DataImportResource",
 			AddonRelativeURL: "/api/resource_import",
-			MaxPageSize: 5, // Since connections to AWS will be made, limit the number of records to 5.
 		};
 
 		const papiClient: PapiClient = ServerHelper.createPapiClient(this.client, config.AddonUUID, this.client.AddonSecretKey);
