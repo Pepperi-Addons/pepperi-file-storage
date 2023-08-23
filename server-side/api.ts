@@ -3,9 +3,10 @@ import { PostTransactionalCommand } from "./PfsCommands/TransactionalCommands/po
 import { RecordRemovedCommand } from "./PfsCommands/AtomicCommands/recordRemovedCommand";
 import { InvalidateCommand } from "./PfsCommands/AtomicCommands/invalidateCommand";
 import { HideFolderTransactionalCommand } from "./PfsCommands/TransactionalCommands/hideFolderTransactionalCommand";
-import { BaseResourceFetcherService, CreateTempFileCommand, DownloadFileCommand, ICommand, IFetchCommand, ListFolderContentsCommand, ListObjectsCommand, ResourceFetcherExportService, SharedHelper } from "pfs-shared";
+import { BaseResourceFetcherService, CreateTempFileCommand, DownloadFileCommand, IFetchCommand, ListFolderContentsCommand, ListObjectsCommand, ResourceFetcherExportService, SharedHelper } from "pfs-shared";
 import { ServerHelper } from "./serverHelper";
 import { DIMXObject, PapiClient } from "@pepperi-addons/papi-sdk";
+import { ImportResourcesCommand } from "./PfsCommands/AtomicCommands/importResourcesCommand";
 
 
 export async function file(client: Client, request: Request) 
@@ -210,8 +211,7 @@ export async function resource_import(client: Client, request: Request): Promise
 
 	const dal = ServerHelper.DalFactory(client, request);
 
-	throw new Error("Not implemented yet");
-	// const pfsCommand = new ImportResourceCommand(client, request, dal, dal);
+	const pfsCommand = new ImportResourcesCommand(request, dal);
 
-	// return await pfsCommand.execute();
+	return await pfsCommand.execute();
 }
