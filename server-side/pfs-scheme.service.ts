@@ -27,7 +27,7 @@ export class PfsSchemeService
 		const internalDataSchema = await this.createPfsSchema();
 
 		// Create a Resource Import relation 
-		await this.createResourceImportRelation(internalDataSchema);
+		await this.createResourceImportRelation(internalDataSchema.Name, this.schema.Name);
 
 		// Subscribe to Remove events on the PFS's schema
 		await this.subscribeToExpiredRecords();
@@ -41,19 +41,20 @@ export class PfsSchemeService
 
 	/**
 	 * Create a Resource Import relation for the given schema.
-	 * @param internalDataSchema The schema to create the relation for.
+	 * @param internalDataSchemaName The name of the internal data schema to create the relation for.
+	 * @param externalPfsSchemaName The name of the external PFS schema to create the relation for.
 	 * @returns {Promise<Relation>} A promise that resolves to the created relation.
 	 * @throws {Error} If the relation creation fails.
 	 * @remarks For more details see: https://pepperi.atlassian.net/browse/DI-24901
 	 */
-	public async createResourceImportRelation(internalDataSchema: AddonDataScheme): Promise<Relation>
+	public async createResourceImportRelation(internalDataSchemaName: string, externalPfsSchemaName: string): Promise<Relation>
 	{
 		const relation: Relation = {
-			Name: internalDataSchema.Name,
+			Name: internalDataSchemaName,
 			AddonUUID: config.AddonUUID,
 			Type: "AddonAPI",
 			RelationName: "DataImportResource",
-			AddonRelativeURL: "/api/resource_import",
+			AddonRelativeURL: `/api/resource_import?addon_uuid=${this.request.query.addon_uuid}&resource_name=${externalPfsSchemaName}`,
 		};
 
 		const papiClient: PapiClient = ServerHelper.createPapiClient(this.client, config.AddonUUID, this.client.AddonSecretKey);

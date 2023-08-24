@@ -11,9 +11,10 @@ import { Client, Request } from "@pepperi-addons/debug-server";
 import { AddonData, AddonDataScheme, FindOptions, PapiClient, Relation, SearchBody, SearchData } from "@pepperi-addons/papi-sdk";
 import semverLessThan from "semver/functions/lt";
 import clonedeep from "lodash.clonedeep";
-import { FILES_TO_UPLOAD_TABLE_NAME, LOCK_ADAL_TABLE_NAME, pfsSchemaData, PFS_TABLE_PREFIX } from "pfs-shared/lib/constants";
+import { FILES_TO_UPLOAD_TABLE_NAME, LOCK_ADAL_TABLE_NAME, pfsSchemaData, PFS_TABLE_PREFIX } from "pfs-shared/lib/shared/src/constants";
 import { AddonUUID } from "../addon.config.json";
 import { PfsSchemeService } from "./pfs-scheme.service";
+import { SharedHelper } from "pfs-shared";
 
 export async function install(client: Client, request: Request): Promise<any> 
 {
@@ -45,10 +46,6 @@ export async function upgrade(client: Client, request: Request): Promise<any>
 	
 	if(request.body.FromVersion && semverLessThan(request.body.FromVersion, "1.2.7"))
 	{
-		console.log("Migrating internal schemas to have SyncData.PushLocalChanges = false...");
-		// For more details see DI-21812: https://pepperi.atlassian.net/browse/DI-21812
-		await migrateSchemasToNotPushLocalChanges(papiClient, client);
-
 		console.log("Creating a new schema for the files to upload table...");
 		await createFilesToUploadSchema(papiClient);
 	}
@@ -93,10 +90,14 @@ export async function upgrade(client: Client, request: Request): Promise<any>
 		await createDimxRelations(papiClient, client);
 	}
 
-	if (request.body.FromVersion && semverLessThan(request.body.FromVersion, "1.3.20"))
+	if (request.body.FromVersion && semverLessThan(request.body.FromVersion, "1.3.24"))
 	{
 		console.log("Creating Resource Import relations for internal 'data' schemas");
 		await createResourceImportRelations(papiClient, client, request);
+
+		console.log("Migrating internal schemas to have SyncData.PushLocalChanges = true...");
+		await migrateSchemasToPushLocalChanges(papiClient, client);
+
 	}
 
 	return { success: true, resultObject: {} };
@@ -371,19 +372,18 @@ async function migrateSchemasToNotUseMinusChar(papiClient: PapiClient, client: C
 }
 
 
-async function migrateSchemasToNotPushLocalChanges(papiClient: PapiClient, client: Client) 
+async function migrateSchemasToPushLocalChanges(papiClient: PapiClient, client: Client) 
 {
 	const manipulatorFunction = async (schema: AddonDataScheme) : Promise<void> => 
 	{
-		// Set PushLocalChanges to false only if Sync is true
 		if (schema.SyncData?.Sync && !schema.SyncData.PushLocalChanges)
 		{
+			console.log(`Setting SyncData.PushLocalChanges=true for schema "${schema.Name}"...`);
 
-			console.log(`Setting SyncData.PushLocalChanges=false for schema "${schema.Name}"...`);
-			schema.SyncData.PushLocalChanges = false;
-
+			schema.SyncData.PushLocalChanges = true;
 			await papiClient.addons.data.schemes.post(schema);
-			console.log("Done setting SyncData.PushLocalChanges=false.");
+			
+			console.log("Done setting SyncData.PushLocalChanges=true.");
 		}
 	};
 
@@ -457,11 +457,20 @@ async function removeUriFromSavedObjects(papiClient: PapiClient): Promise<void>
 }
 async function createResourceImportRelations(papiClient: PapiClient, client: Client, request: Request)
 {
-	const pfsSchemaService = new PfsSchemeService(client, request);
-
 	const manipulatorFunction = async (schema: AddonDataScheme) : Promise<void> => 
 	{
-		await pfsSchemaService.createResourceImportRelation(schema);
+		// Since the schema name is in the format of "pfs-<owner_uuid>-<table_name>", we need to extract the owner uuid
+		// This is needed so that the created relation will have the owner uuid.
+		const splitSchemaName = schema.Name.split("_");
+		const schemaOwner = SharedHelper.addMinusesToUUID(splitSchemaName[1]);
+		const externalPfsSchemaName = splitSchemaName[2];
+
+		request.query = {
+			...request.query,
+			addon_uuid: schemaOwner,
+		};
+		const pfsSchemaService = new PfsSchemeService(client, request);
+		await pfsSchemaService.createResourceImportRelation(schema.Name, externalPfsSchemaName);
 	};
 
 	await manipulateAllPfsSchemas(papiClient, manipulatorFunction);
