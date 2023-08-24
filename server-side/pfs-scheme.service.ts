@@ -71,12 +71,6 @@ export class PfsSchemeService
 		pfsMetadataTable.Name = this.getPfsSchemaName();
 		pfsMetadataTable.Type = "data";
 
-		// Set the schemas SyncData.PushLocalChanges to false if SyncData.Sync is true
-		if(pfsMetadataTable.SyncData?.Sync)
-		{
-			pfsMetadataTable.SyncData.PushLocalChanges = false;
-		}
-
 		const papiClient: PapiClient = ServerHelper.createPapiClient(this.client, config.AddonUUID, this.client.AddonSecretKey);
 		return await papiClient.addons.data.schemes.post(pfsMetadataTable);
 	}
