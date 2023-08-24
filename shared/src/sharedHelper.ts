@@ -2,6 +2,7 @@ import { Request } from "@pepperi-addons/debug-server/dist";
 import { SearchBody } from "@pepperi-addons/papi-sdk";
 import { validate as uuidValidate } from "uuid";
 import { PFS_TABLE_PREFIX } from "./constants";
+import { AddonUUID } from "../../addon.config.json";
 
 export class SharedHelper
 {
@@ -56,7 +57,7 @@ export class SharedHelper
 	{
 		const validUUID = `${uuid.slice(0, 8)}-${uuid.slice(8, 12)}-${uuid.slice(12, 16)}-${uuid.slice(16, 20)}-${uuid.slice(20)}`;
 
-		if(!uuidValidate(validUUID))
+		if(validUUID !== AddonUUID && !uuidValidate(validUUID))
 		{
 			const errorMessage = `Passed UUID '${uuid}' is invalid.`;
 			console.error(errorMessage);
