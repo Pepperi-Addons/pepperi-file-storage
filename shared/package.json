@@ -2,7 +2,7 @@
 	"name": "pfs-shared",
 	"version": "1.0.0",
 	"description": "",
-	"main": "./lib/index.js",
+	"main": "./lib/shared/src/index.js",
 	"scripts": {
 		"test": "ts-mocha \"./{,!(node_modules)/**/}*.spec.ts\" -R mochawesome --reporter-options reportDir=tests/reports,reportFilename=SurveyTestsReport,reportTitle=Survey_Tests_Report",
 		"test-noReport": "ts-mocha \"./{,!(node_modules)/**/}*.spec.ts\"",
@@ -46,5 +46,5 @@
 		"./bin/*",
 		"./src/*"
 	],
-	"typings": "./lib/index.d.ts"
+	"typings": "./lib/shared/src/index.d.ts"
 }
