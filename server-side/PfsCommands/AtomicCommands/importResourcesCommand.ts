@@ -34,9 +34,8 @@ export class ImportResourcesCommand implements ICommand
 		for (const batch of batches)
 		{
 			const batchPromises = batch.map(obj => 
-			{
-				this.pfsMutator.mutateS3(obj.Object, existingFile);
-			});
+				this.pfsMutator.mutateS3(obj.Object, existingFile)
+			);
 
 			const batchResults = await Promise.allSettled(batchPromises);
 
