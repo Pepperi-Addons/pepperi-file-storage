@@ -18,6 +18,10 @@ export class CpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal
 		// ModificationDateTime is always needed so we could add the version later on in the function.
 		// The Fields filter will be enforced after the GET from the schema.
 		searchBody = searchBody ?? SharedHelper.constructSearchBodyFromRequest(this.request);
+		if(searchBody.Fields)
+		{
+			delete searchBody.Fields;
+		}
 
 		const getPfsTableName = SharedHelper.getPfsTableName(this.request.query.addon_uuid, this.clientSchemaName);
 		const resultObjects = await this.pepperiDal.searchDataInTable(getPfsTableName, searchBody!);
@@ -137,19 +141,15 @@ export class CpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal
 		const superRes = await super.uploadFileMetadata(newFileFields, existingFile);
 
 		// Cache the result, so we won't have to download the file again.
-		PfsService.downloadedFileKeysToLocalUrl.set(`${superRes.Key!}${superRes.ModificationDateTime!}`, superRes.URL!);
+		const localURL = `${await pepperi.files.baseURL()}/${this.relativeAbsoluteKeyService.getAbsolutePath(newFileFields.Key)}`;
+		PfsService.downloadedFileKeysToLocalUrl.set(`${superRes.Key!}${superRes.ModificationDateTime!}`, localURL);
+
 		delete superRes.PresignedURL; 
 
-		return superRes;
-	}
+		// Set the URL to point to the local file.
+		superRes.URL = localURL;
 
-	protected override async setUrls(newFileFields: any, existingFile: any): Promise<void>
-	{
-		// If it's a file - set URL to to point to the local file.
-		if(!newFileFields.Key.endsWith("/"))
-		{
-			newFileFields.URL = encodeURI(`${await pepperi.files.baseURL()}/${this.relativeAbsoluteKeyService.getAbsolutePath(newFileFields.Key)}`);
-		}
+		return superRes;
 	}
 
 	public override async mutateS3(newFileFields: any, existingFile: any): Promise<void> 
