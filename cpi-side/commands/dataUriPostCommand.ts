@@ -11,7 +11,6 @@ export class DataUriPostCommand extends TemporaryFileUrlPostCommand implements I
 	
 	public override async execute(): Promise<any> 
 	{
-		debugger;
 		// Validate that the CPI version is higher than this.MINIMAL_CPI_VERSION
 		await this.validateCpiNodeVersion();
 
@@ -32,20 +31,29 @@ export class DataUriPostCommand extends TemporaryFileUrlPostCommand implements I
 	{
 		// software version is in the format of "x.y". Split by '.', take the first number and parse it to int.
 		// From the second number, take the first digit and parse it to int.
-		const minimalMajorVersion = parseInt(this.MINIMAL_CPI_VERSION.split(".")[0]);
-		const minimalMinorVersion = parseInt(this.MINIMAL_CPI_VERSION.split(".")[1][0]);
-
-		const actualSoftwareVersion = (await pepperi.environment.info()).softwareVersion;
-		const majorVersion = parseInt(actualSoftwareVersion.split(".")[0]);
-		const minorVersion = parseInt(actualSoftwareVersion.split(".")[1][0]);
+		const minimalVersion = this.getSplittedVersion(this.MINIMAL_CPI_VERSION);
+		const actualVersion = this.getSplittedVersion((await pepperi.environment.info()).softwareVersion);
 
 		// Throw an exception if the version is lower than this.MINIMAL_CPI_VERSION
-		if(majorVersion < minimalMajorVersion || (majorVersion === minimalMajorVersion && minorVersion < minimalMinorVersion))
+		if(actualVersion.MajorVersion < minimalVersion.MajorVersion || 
+			(actualVersion.MajorVersion === minimalVersion.MajorVersion && actualVersion.MinorVersion < minimalVersion.MinorVersion))
 		{
 			const errorMessage = `Offline POST with data URI is not supported in this version of CPI. Please upgrade to version ${this.MINIMAL_CPI_VERSION} or higher.`;
 			console.error(errorMessage);
 			throw new Error(errorMessage);
 		}
+	}
+
+	protected getSplittedVersion(version: string): { MajorVersion: number, MinorVersion: number }
+	{
+		const splittedVersion = version.split(".");
+		const majorVersion = parseInt(splittedVersion[0]);
+		const minorVersion = parseInt(splittedVersion[1][0]);
+
+		return {
+			MajorVersion: majorVersion,
+			MinorVersion: minorVersion,
+		};
 	}
 
 	protected async uploadToTempFile(res: any): Promise<void>
@@ -59,7 +67,7 @@ export class DataUriPostCommand extends TemporaryFileUrlPostCommand implements I
 
 		await this.filesToUploadDal.upsert(fileToUpload);
 
-		const isLatestEntry = (await this.filesToUploadDal.getLatestEntryKey(fileToUpload)) === fileToUpload.Key;
+		const isLatestEntry = (await this.filesToUploadDal.getLatestEntryKey(fileToUpload))?.Key === fileToUpload.Key;
 		if(isLatestEntry)
 		{
 			// Upload file to temp file

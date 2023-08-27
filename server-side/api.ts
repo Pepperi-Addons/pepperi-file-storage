@@ -3,9 +3,10 @@ import { PostTransactionalCommand } from "./PfsCommands/TransactionalCommands/po
 import { RecordRemovedCommand } from "./PfsCommands/AtomicCommands/recordRemovedCommand";
 import { InvalidateCommand } from "./PfsCommands/AtomicCommands/invalidateCommand";
 import { HideFolderTransactionalCommand } from "./PfsCommands/TransactionalCommands/hideFolderTransactionalCommand";
-import { BaseResourceFetcherService, CreateTempFileCommand, DownloadFileCommand, ICommand, IFetchCommand, ListFolderContentsCommand, ListObjectsCommand, ResourceFetcherExportService, SharedHelper } from "pfs-shared";
+import { BaseResourceFetcherService, CreateTempFileCommand, DownloadFileCommand, IFetchCommand, ListFolderContentsCommand, ListObjectsCommand, ResourceFetcherExportService, SharedHelper } from "pfs-shared";
 import { ServerHelper } from "./serverHelper";
-import { PapiClient } from "@pepperi-addons/papi-sdk";
+import { DIMXObject, PapiClient } from "@pepperi-addons/papi-sdk";
+import { ImportResourcesCommand } from "./PfsCommands/AtomicCommands/importResourcesCommand";
 
 
 export async function file(client: Client, request: Request) 
@@ -169,6 +170,10 @@ export async function pfs_export(client: Client, request: Request)
 
 	console.log(`Request received: ${JSON.stringify(request)}`);
 
+	// Build a new request where the properties or on the query, so that
+	// the ListObjectsCommand will be able to handle it.
+	// (This request data will be internally used in a Search, not a Find.)
+
 	request.query["where"] = request.body["Where"];
 	request.query["fields"] = request.body["Fields"];
 	request.query["page"] = request.body["Page"];
@@ -196,4 +201,17 @@ export async function pfs_export(client: Client, request: Request)
 	const res = await resourceFetcherExport.fetch();
 
 	return res;
+}
+
+export async function resource_import(client: Client, request: Request): Promise<{DIMXObjects: DIMXObject[]}>
+{
+	console.log(`Request received: ${JSON.stringify(request)}`);
+
+	SharedHelper.validateFilesQueryParams(request);
+
+	const dal = ServerHelper.DalFactory(client, request);
+
+	const pfsCommand = new ImportResourcesCommand(request, dal);
+
+	return await pfsCommand.execute();
 }
