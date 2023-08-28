@@ -33,7 +33,7 @@ export interface IPfsMutator
      * @param newFileFields The new file data and metadata.
      * @param existingFile The previous file's metadata.
      */
-    mutateS3(newFileFields: any, existingFile: any);
+    mutateS3(newFileFields: any, existingFile: any): Promise<any>;
 
     /**
      * 

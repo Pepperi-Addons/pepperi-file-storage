@@ -124,6 +124,7 @@ export class FilesToUploadDal
 		fileToUploadCopy.CreationDateTime = fileToUploadCopy.CreationDateTime ?? (await this.getByKey(fileToUploadCopy.Key!)).CreationDateTime;
 
 		const res: FileToUpload[] = [];
+		let searchResult: SearchData<FileToUpload>;
 
 		const searchBody: SearchBody = {
 			Where: `AbsolutePath='${fileToUpload.AbsolutePath}' AND CreationDateTime <= ${fileToUpload.CreationDateTime}`,
@@ -135,11 +136,11 @@ export class FilesToUploadDal
 		do
 		{
             searchBody.Page!++;
-            const searchResult = await this.search(searchBody);
+            searchResult = await this.search(searchBody);
 
             res.push(...searchResult.Objects);
 		}
-		while (res.length < searchBody.PageSize!);
+		while (searchResult.Objects.length >= searchBody.PageSize!);
 
 		return res;
 	}

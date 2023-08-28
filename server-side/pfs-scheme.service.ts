@@ -1,5 +1,5 @@
 import { Client, Request } from "@pepperi-addons/debug-server/dist";
-import { AddonDataScheme, PapiClient, Subscription } from "@pepperi-addons/papi-sdk";
+import { AddonDataScheme, PapiClient, Relation, Subscription } from "@pepperi-addons/papi-sdk";
 import config from "./../addon.config.json";
 import { ServerHelper } from "./serverHelper";
 import { pfsSchemaData, SharedHelper } from "pfs-shared";
@@ -24,7 +24,10 @@ export class PfsSchemeService
 		await this.validateSchemaCreationRequest();
 
 		// Create a data schema for the PFS's fields.
-		await this.createPfsSchema();
+		const internalDataSchema = await this.createPfsSchema();
+
+		// Create a Resource Import relation 
+		await this.createResourceImportRelation(internalDataSchema.Name, this.schema.Name);
 
 		// Subscribe to Remove events on the PFS's schema
 		await this.subscribeToExpiredRecords();
@@ -37,6 +40,28 @@ export class PfsSchemeService
 	}
 
 	/**
+	 * Create a Resource Import relation for the given schema.
+	 * @param internalDataSchemaName The name of the internal data schema to create the relation for.
+	 * @param externalPfsSchemaName The name of the external PFS schema to create the relation for.
+	 * @returns {Promise<Relation>} A promise that resolves to the created relation.
+	 * @throws {Error} If the relation creation fails.
+	 * @remarks For more details see: https://pepperi.atlassian.net/browse/DI-24901
+	 */
+	public async createResourceImportRelation(internalDataSchemaName: string, externalPfsSchemaName: string): Promise<Relation>
+	{
+		const relation: Relation = {
+			Name: internalDataSchemaName,
+			AddonUUID: config.AddonUUID,
+			Type: "AddonAPI",
+			RelationName: "DataImportResource",
+			AddonRelativeURL: `/api/resource_import?addon_uuid=${this.request.query.addon_uuid}&resource_name=${externalPfsSchemaName}`,
+		};
+
+		const papiClient: PapiClient = ServerHelper.createPapiClient(this.client, config.AddonUUID, this.client.AddonSecretKey);
+		return await papiClient.addons.data.relations.upsert(relation);
+	}
+
+	/**
 	 * Creates a data scheme with PFS's and client's requested fields.
 	 */
 	private async createPfsSchema() 
@@ -46,12 +71,6 @@ export class PfsSchemeService
 		// Set the schema's name to pfs_{{addon_uuid}}_{{schema_name}}
 		pfsMetadataTable.Name = this.getPfsSchemaName();
 		pfsMetadataTable.Type = "data";
-
-		// Set the schemas SyncData.PushLocalChanges to false if SyncData.Sync is true
-		if(pfsMetadataTable.SyncData?.Sync)
-		{
-			pfsMetadataTable.SyncData.PushLocalChanges = false;
-		}
 
 		const papiClient: PapiClient = ServerHelper.createPapiClient(this.client, config.AddonUUID, this.client.AddonSecretKey);
 		return await papiClient.addons.data.schemes.post(pfsMetadataTable);

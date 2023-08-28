@@ -20,9 +20,9 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		{
 			mutateS3HandlerType = "expiredFile";
 		}
-		else if(Array.isArray(this.request.body.TemporaryFileURLs) && this.request.body.TemporaryFileURLs.length > 0)
+		else if(Array.isArray(newFileFields.TemporaryFileURLs) && newFileFields.TemporaryFileURLs.length > 0)
 		{
-			if(this.request.body.TemporaryFileURLs.length === 1)
+			if(newFileFields.TemporaryFileURLs.length === 1)
 			{
 				mutateS3HandlerType = "tempFile";
 			}
@@ -31,7 +31,7 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 				mutateS3HandlerType = "multipartUpload";
 			}
 		}
-		else if (this.request.body.URI) // The file already has data, or data was provided.
+		else if (newFileFields.buffer) // The file already has data, or data was provided.
 		{ 
 			mutateS3HandlerType = "fileUpload";
 		}

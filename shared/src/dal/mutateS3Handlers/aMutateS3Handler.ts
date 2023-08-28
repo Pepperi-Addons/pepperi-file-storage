@@ -2,7 +2,7 @@ import { CACHE_DEFAULT_VALUE } from "../../constants";
 import { AbstractS3PfsDal } from "../abstractS3PfsDal";
 
 
-export abstract class AMutateS3Handler// extends AbstractS3PfsDal
+export abstract class AMutateS3Handler
 {
 	protected shouldUseCache: boolean;
 
