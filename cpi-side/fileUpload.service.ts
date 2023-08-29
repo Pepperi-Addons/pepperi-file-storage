@@ -91,7 +91,7 @@ export class FileUploadService
 		const fileDataBuffer: Buffer = await this.getFileDataBufferFromDisk();
 
 		// Prior to uploading the file, check if there is a newer version of the file in the FilesToUpload table.
-		if((await this.filesToUploadDal.getLatestEntryKey(this.fileToUpload))?.Key !== this.fileToUpload.Key)
+		if((await this.filesToUploadDal.getLatestEntryKey(this.fileToUpload)) !== this.fileToUpload.Key)
 		{
 			this.fileUploadLog("A newer version of the file was uploaded. Skipping...");
 
@@ -116,7 +116,7 @@ export class FileUploadService
 		const release = await FilesToUploadDal.mutex.acquire();
 		try
 		{
-			const isLatestEntry = (await this.filesToUploadDal.getLatestEntryKey(this.fileToUpload))?.Key === this.fileToUpload.Key;
+			const isLatestEntry = (await this.filesToUploadDal.getLatestEntryKey(this.fileToUpload)) === this.fileToUpload.Key;
 			if(isLatestEntry)
 			{
 				// Setting the file's TemporaryFileURLs property to point to the temporary file's CDN URL.
