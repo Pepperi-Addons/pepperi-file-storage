@@ -11,9 +11,9 @@ export class MutateS3HandleTempFile extends MutateS3HandleFileCopy
 		// Set the file version and size
 		this.newFileFields.FileVersion = res.$response.data?.VersionId;
 
-		// If the file version was not provided, get it from S3.
+		// If the file size was not provided, get it from S3.
 		// It could be provided when this handler is used by the ImportResourcesCommand.
-		if(!this.newFileFields.FileVersion)
+		if(!this.newFileFields.FileSize)
 		{
 			this.newFileFields.FileSize = await this.s3PfsDal.awsDal.getFileSize(absolutePath);
 		}
