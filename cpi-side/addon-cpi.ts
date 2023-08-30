@@ -8,6 +8,7 @@ import { PreSyncService } from "./preSync.service";
 import { PreSyncResult } from "./entities";
 import { TemporaryFileCpiIndexedDataS3PfsDal } from "./dal/temporaryFileCpiIndexedDataS3PfsDal";
 import { TemporaryFileUrlPostCommand } from "./commands/temporaryFileUrlPostCommand";
+import { FileUploadService } from "./fileUpload.service";
 
 export const router = Router();
 
@@ -15,6 +16,8 @@ export async function load(configuration: any)
 {
 	const preSyncService = new PreSyncService();
 	await preSyncService.createRelations();
+
+	FileUploadService.initiatePeriodicUploadInterval();
 }
 
 // will be called right before the sync started

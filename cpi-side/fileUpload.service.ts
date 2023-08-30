@@ -7,16 +7,15 @@ import CpiPepperiDal from "./dal/pepperiDal";
 import PQueue from "p-queue";
 import { FilesToUploadDal } from "./dal/filesToUploadDal";
 
-declare global {
-    //  for singleton
-    var periodicallyUploadFiles: () => void;
-}
+
 export class FileUploadService 
 {
-
-	// To avoid race conditions, we use a queue to upload files one by one.
 	protected static readonly queueConcurrency = 5;
 	protected static filesUploadQueue = new PQueue({ concurrency: FileUploadService.queueConcurrency });
+
+	protected static interval: NodeJS.Timeout | undefined = undefined;
+	protected static readonly periodicTaskInterval = 1000 * 60 * 5; // Every 5 minutes
+
 
 	protected clientAddonUUID: string;
 	protected clientAddonSchemaName: string;
@@ -35,6 +34,23 @@ export class FileUploadService
 		this.clientAddonSchemaName = this.relativeAbsoluteKeyService.clientSchemaName;
 		this.filesToUploadDal = new FilesToUploadDal(this.pepperiDal);
 	}
+
+	/**
+	 * Initiate the periodic task that uploads all files in the FilesToUpload table.
+	 * This method should be called once the addon is loaded.
+	 * A periodic task is initiated only if it wasn't initiated before, to prevent
+	 * multiple intervals running in parallel.
+	 * @returns {void}
+	 */
+	public static initiatePeriodicUploadInterval(): void
+	{
+		if (!this.interval)
+		{
+			this.interval = setInterval(async () => {
+				await this.asyncUploadAllFilesToUpload();
+			}, this.periodicTaskInterval); // Every 10 seconds
+		}
+	  }
         
 	/**
      * Add a promise to the queue that will upload a single file.
@@ -52,11 +68,15 @@ export class FileUploadService
      */
 	public static async asyncUploadAllFilesToUpload(): Promise<void>
 	{
+		console.log(`asyncUploadAllFilesToUpload initiated: ${new Date().toISOString()}`);
+
 		const filesToUploadDal = new FilesToUploadDal(new CpiPepperiDal());
 		//Read all files from FilesToUpload table
 		const filesToUpload = (await filesToUploadDal.getAllFilesToUpload()).filter(file => !file.Hidden);
 		const pepperiDal = new CpiPepperiDal();
 		const papiClient = pepperi.papiClient;
+
+		console.log(`asyncUploadAllFilesToUpload found ${filesToUpload.length} files to upload`);
 
 		// We don't await this promise so the answer could be
 		// returned to the client, while the promise resolves in the
@@ -66,6 +86,8 @@ export class FileUploadService
 			const fileUploadService = new FileUploadService(pepperiDal, papiClient, fileToUpload);
 			return fileUploadService.uploadLocalFileToTempFile();
 		}));
+
+		console.log(`asyncUploadAllFilesToUpload finished: ${new Date().toISOString()}`);
 	}
 
 	protected async uploadLocalFileToTempFile(): Promise<void>
