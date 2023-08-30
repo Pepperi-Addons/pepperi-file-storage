@@ -26,6 +26,14 @@ router.post(PreSyncService.endpointName, async (req, res) =>
 	const preSyncService = new PreSyncService();
 	const areAllFilesUploadedResult: PreSyncResult = await preSyncService.areAllFilesUploaded();
 
+	// If not all files are uploaded, start the upload process
+	// This is so the user won't have to wait for the periodic upload interval to start
+	// before he can Sync again.
+	if(!areAllFilesUploadedResult.Success)
+	{
+		FileUploadService.asyncUploadAllFilesToUpload();
+	}
+
 	res.json(areAllFilesUploadedResult);
 });
 
