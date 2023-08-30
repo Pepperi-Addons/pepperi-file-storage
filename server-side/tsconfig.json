@@ -12,6 +12,7 @@
     "allowJs": true,
     "noImplicitOverride": true,
     "resolveJsonModule": true,
+    "skipLibCheck": true,
     "lib": ["ES2020"],
     "types": [
       "node"
