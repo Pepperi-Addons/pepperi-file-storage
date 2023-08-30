@@ -144,7 +144,9 @@ export class CpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal
 		const localURL = `${await pepperi.files.baseURL()}/${this.relativeAbsoluteKeyService.getAbsolutePath(newFileFields.Key)}`;
 		PfsService.downloadedFileKeysToLocalUrl.set(`${superRes.Key!}${superRes.ModificationDateTime!}`, localURL);
 
-		delete superRes.PresignedURL; 
+		// If this file has already been POSTed to the PFS table, has been uploaded, but not yet Synced,
+		// it will have a TemporaryFileURLs field. Since it is not needed in the response, delete it.
+		delete superRes.TemporaryFileURLs; 
 
 		// Set the URL to point to the local file.
 		superRes.URL = localURL;

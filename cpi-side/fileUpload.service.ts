@@ -7,16 +7,15 @@ import CpiPepperiDal from "./dal/pepperiDal";
 import PQueue from "p-queue";
 import { FilesToUploadDal } from "./dal/filesToUploadDal";
 
-declare global {
-    //  for singleton
-    var periodicallyUploadFiles: () => void;
-}
+
 export class FileUploadService 
 {
-
-	// To avoid race conditions, we use a queue to upload files one by one.
 	protected static readonly queueConcurrency = 5;
 	protected static filesUploadQueue = new PQueue({ concurrency: FileUploadService.queueConcurrency });
+
+	protected static interval: NodeJS.Timeout | undefined = undefined;
+	protected static readonly periodicTaskInterval = 1000 * 60 * 5; // Every 5 minutes
+
 
 	protected clientAddonUUID: string;
 	protected clientAddonSchemaName: string;
@@ -35,13 +34,33 @@ export class FileUploadService
 		this.clientAddonSchemaName = this.relativeAbsoluteKeyService.clientSchemaName;
 		this.filesToUploadDal = new FilesToUploadDal(this.pepperiDal);
 	}
+
+	/**
+	 * Initiate the periodic task that uploads all files in the FilesToUpload table.
+	 * This method should be called once the addon is loaded.
+	 * A periodic task is initiated only if it wasn't initiated before, to prevent
+	 * multiple intervals running in parallel.
+	 * @returns {void}
+	 */
+	public static initiatePeriodicUploadInterval(): void
+	{
+		if (!this.interval)
+		{
+			this.interval = setInterval(async () => {
+				await this.asyncUploadAllFilesToUpload();
+			}, this.periodicTaskInterval); // Every 10 seconds
+		}
+	  }
         
 	/**
      * Add a promise to the queue that will upload a single file.
      */
-	public async asyncUploadFile(): Promise<void>
+	public asyncUploadFile(): void
 	{
-		await FileUploadService.filesUploadQueue.add(() => this.uploadLocalFileToTempFile());
+		// We don't await this promise so the answer could be
+		// returned to the client, while the promise resolves in the
+		// background.
+		FileUploadService.filesUploadQueue.add(() => this.uploadLocalFileToTempFile());
 	}
 
 	/**
@@ -49,17 +68,26 @@ export class FileUploadService
      */
 	public static async asyncUploadAllFilesToUpload(): Promise<void>
 	{
+		console.log(`asyncUploadAllFilesToUpload initiated: ${new Date().toISOString()}`);
+
 		const filesToUploadDal = new FilesToUploadDal(new CpiPepperiDal());
 		//Read all files from FilesToUpload table
 		const filesToUpload = (await filesToUploadDal.getAllFilesToUpload()).filter(file => !file.Hidden);
 		const pepperiDal = new CpiPepperiDal();
 		const papiClient = pepperi.papiClient;
 
-		await FileUploadService.filesUploadQueue.addAll(filesToUpload.map(fileToUpload => () => 
+		console.log(`asyncUploadAllFilesToUpload found ${filesToUpload.length} files to upload`);
+
+		// We don't await this promise so the answer could be
+		// returned to the client, while the promise resolves in the
+		// background.
+		FileUploadService.filesUploadQueue.addAll(filesToUpload.map(fileToUpload => () => 
 		{
 			const fileUploadService = new FileUploadService(pepperiDal, papiClient, fileToUpload);
 			return fileUploadService.uploadLocalFileToTempFile();
 		}));
+
+		console.log(`asyncUploadAllFilesToUpload finished: ${new Date().toISOString()}`);
 	}
 
 	protected async uploadLocalFileToTempFile(): Promise<void>
@@ -79,7 +107,14 @@ export class FileUploadService
 		try
 		{
 			tempFileUrls = (await this.papiClient.post(`/addons/api/${AddonUUID}/api/temporary_file`, {})) as TempFile;
-			this.fileUploadLog(`Successfully created a temp file on S3.`);
+			if(tempFileUrls)
+			{
+				this.fileUploadLog(`Successfully created a temp file on S3.`);
+			}
+			else
+			{
+				throw new Error();
+			}
 		}
 		catch (err)
 		{
@@ -91,7 +126,7 @@ export class FileUploadService
 		const fileDataBuffer: Buffer = await this.getFileDataBufferFromDisk();
 
 		// Prior to uploading the file, check if there is a newer version of the file in the FilesToUpload table.
-		if((await this.filesToUploadDal.getLatestEntryKey(this.fileToUpload))?.Key !== this.fileToUpload.Key)
+		if((await this.filesToUploadDal.getLatestEntryKey(this.fileToUpload)) !== this.fileToUpload.Key)
 		{
 			this.fileUploadLog("A newer version of the file was uploaded. Skipping...");
 
@@ -102,7 +137,20 @@ export class FileUploadService
 
 		// Upload the file to the temporary file.
 		// This is an online call.
-		const uploadResponse = await this.uploadFileToTempUrl(fileDataBuffer, tempFileUrls.PutURL);
+
+		let uploadResponse;
+		try
+		{
+			uploadResponse = await this.uploadFileToTempUrl(fileDataBuffer, tempFileUrls.PutURL);
+		}
+		catch(error)
+		{
+			const errorMessage = `Error trying to upload. ${error instanceof Error ? error.message : 'Unknown error occurred'}`;
+			uploadResponse = {
+				status: 500,
+				statusText: errorMessage
+			};
+		}
 
 		if (uploadResponse.status !== 200) 
 		{
@@ -116,7 +164,7 @@ export class FileUploadService
 		const release = await FilesToUploadDal.mutex.acquire();
 		try
 		{
-			const isLatestEntry = (await this.filesToUploadDal.getLatestEntryKey(this.fileToUpload))?.Key === this.fileToUpload.Key;
+			const isLatestEntry = (await this.filesToUploadDal.getLatestEntryKey(this.fileToUpload)) === this.fileToUpload.Key;
 			if(isLatestEntry)
 			{
 				// Setting the file's TemporaryFileURLs property to point to the temporary file's CDN URL.
