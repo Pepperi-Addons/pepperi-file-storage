@@ -88,7 +88,7 @@ export class FilesToUploadDal
 
 		const searchResult = await this.search(searchBody);
 
-		return searchResult.Objects[0].Key;
+		return searchResult.Objects[0]?.Key;
 	}
 
 	/**
@@ -127,7 +127,7 @@ export class FilesToUploadDal
 		let searchResult: SearchData<FileToUpload>;
 
 		const searchBody: SearchBody = {
-			Where: `AbsolutePath='${fileToUpload.AbsolutePath}' AND CreationDateTime <= ${fileToUpload.CreationDateTime}`,
+			Where: `AbsolutePath='${fileToUpload.AbsolutePath}' AND CreationDateTime <= '${fileToUpload.CreationDateTime}'`,
 			Fields: ["Key", "CreationDateTime"],
 			Page: 0,
 			PageSize: 1000,

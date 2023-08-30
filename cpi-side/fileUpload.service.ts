@@ -39,9 +39,12 @@ export class FileUploadService
 	/**
      * Add a promise to the queue that will upload a single file.
      */
-	public async asyncUploadFile(): Promise<void>
+	public asyncUploadFile(): void
 	{
-		await FileUploadService.filesUploadQueue.add(() => this.uploadLocalFileToTempFile());
+		// We don't await this promise so the answer could be
+		// returned to the client, while the promise resolves in the
+		// background.
+		FileUploadService.filesUploadQueue.add(() => this.uploadLocalFileToTempFile());
 	}
 
 	/**
@@ -55,7 +58,10 @@ export class FileUploadService
 		const pepperiDal = new CpiPepperiDal();
 		const papiClient = pepperi.papiClient;
 
-		await FileUploadService.filesUploadQueue.addAll(filesToUpload.map(fileToUpload => () => 
+		// We don't await this promise so the answer could be
+		// returned to the client, while the promise resolves in the
+		// background.
+		FileUploadService.filesUploadQueue.addAll(filesToUpload.map(fileToUpload => () => 
 		{
 			const fileUploadService = new FileUploadService(pepperiDal, papiClient, fileToUpload);
 			return fileUploadService.uploadLocalFileToTempFile();
@@ -79,7 +85,14 @@ export class FileUploadService
 		try
 		{
 			tempFileUrls = (await this.papiClient.post(`/addons/api/${AddonUUID}/api/temporary_file`, {})) as TempFile;
-			this.fileUploadLog(`Successfully created a temp file on S3.`);
+			if(tempFileUrls)
+			{
+				this.fileUploadLog(`Successfully created a temp file on S3.`);
+			}
+			else
+			{
+				throw new Error();
+			}
 		}
 		catch (err)
 		{
@@ -102,7 +115,20 @@ export class FileUploadService
 
 		// Upload the file to the temporary file.
 		// This is an online call.
-		const uploadResponse = await this.uploadFileToTempUrl(fileDataBuffer, tempFileUrls.PutURL);
+
+		let uploadResponse;
+		try
+		{
+			uploadResponse = await this.uploadFileToTempUrl(fileDataBuffer, tempFileUrls.PutURL);
+		}
+		catch(error)
+		{
+			const errorMessage = `Error trying to upload. ${error instanceof Error ? error.message : 'Unknown error occurred'}`;
+			uploadResponse = {
+				status: 500,
+				statusText: errorMessage
+			};
+		}
 
 		if (uploadResponse.status !== 200) 
 		{

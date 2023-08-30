@@ -17,7 +17,7 @@ export class DataUriPostCommand extends TemporaryFileUrlPostCommand implements I
 		// Write file data to device's storage and ADAL metadata table
 		const res: any = await super.execute();
 
-		await this.uploadToTempFile(res);
+		this.uploadToTempFile(res);
 
 		return res;
 	}
@@ -72,7 +72,7 @@ export class DataUriPostCommand extends TemporaryFileUrlPostCommand implements I
 		{
 			// Upload file to temp file
 			const fileUploadService = new FileUploadService(this.pepperiDal, pepperi.papiClient, fileToUpload);
-			await fileUploadService.asyncUploadFile();
+			fileUploadService.asyncUploadFile();
 		}
 		else
 		{
