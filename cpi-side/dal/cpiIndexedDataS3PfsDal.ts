@@ -32,6 +32,8 @@ export class CpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal
 		// Handle downloading files to device if needed
 		await this.downloadFilesToDevice(resultObjects.Objects);
 
+		this.setObjectsUrls(resultObjects.Objects);
+
 		// Return only needed Fields
 		// This must happen after we set the version, and after we download the files to the device.
 		// Setting the version requires the ModificationDateTime field, and downloading the files
@@ -97,12 +99,6 @@ export class CpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal
 	 */
 	private async downloadFilesToDevice(objects: AddonData[]): Promise<void> 
 	{
-		// If webapp, no need to download files to device.
-		if(await global["app"]["wApp"]["isWebApp"]())
-		{
-			return;
-		}
-
 		// Only download to device files that are supposed to be synced, have a URL, and are not already cached.
 		const downloadRequiringObjects = objects.filter(object => object.Sync !== "None" &&
 																	object.Sync !== "DeviceThumbnail" &&
@@ -126,13 +122,19 @@ export class CpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal
 		// Use allSettled to download files in parallel.
 		await Promise.allSettled(downloadFilesPromises);
 
-		// Update the objects' URL if they have a cached local URL.
+		return;
+	}
+
+	/**
+	 * Updates the objects' URL if they have a cached URL.
+	 * @param objects 
+	 */
+	protected setObjectsUrls(objects: AddonData[])
+	{
 		objects.map(object => 
 		{
 			object.URL = PfsService.downloadedFileKeysToLocalUrl.get(`${object.Key!}${object.ModificationDateTime!}`) ?? object.URL;
 		});
-
-		return;
 	}
 
 	protected override async uploadFileMetadata(newFileFields: any, existingFile: any): Promise<AddonData> 
@@ -141,17 +143,22 @@ export class CpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal
 		const superRes = await super.uploadFileMetadata(newFileFields, existingFile);
 
 		// Cache the result, so we won't have to download the file again.
-		const localURL = `${await pepperi.files.baseURL()}/${this.relativeAbsoluteKeyService.getAbsolutePath(newFileFields.Key)}`;
-		PfsService.downloadedFileKeysToLocalUrl.set(`${superRes.Key!}${superRes.ModificationDateTime!}`, localURL);
+		const cpiURL = await this.getCpiURL(newFileFields);
+		PfsService.downloadedFileKeysToLocalUrl.set(`${superRes.Key!}${superRes.ModificationDateTime!}`, cpiURL);
 
 		// If this file has already been POSTed to the PFS table, has been uploaded, but not yet Synced,
 		// it will have a TemporaryFileURLs field. Since it is not needed in the response, delete it.
 		delete superRes.TemporaryFileURLs; 
 
 		// Set the URL to point to the local file.
-		superRes.URL = localURL;
+		superRes.URL = cpiURL;
 
 		return superRes;
+	}
+
+	protected async getCpiURL(newFileFields: any): Promise<string>
+	{
+		return `${await pepperi.files.baseURL()}/${this.relativeAbsoluteKeyService.getAbsolutePath(newFileFields.Key)}`;
 	}
 
 	public override async mutateS3(newFileFields: any, existingFile: any): Promise<void> 

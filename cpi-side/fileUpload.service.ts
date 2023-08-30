@@ -46,7 +46,8 @@ export class FileUploadService
 	{
 		if (!this.interval)
 		{
-			this.interval = setInterval(async () => {
+			this.interval = setInterval(async () => 
+			{
 				await this.asyncUploadAllFilesToUpload();
 			}, this.periodicTaskInterval); // Every 10 seconds
 		}
@@ -145,7 +146,7 @@ export class FileUploadService
 		}
 		catch(error)
 		{
-			const errorMessage = `Error trying to upload. ${error instanceof Error ? error.message : 'Unknown error occurred'}`;
+			const errorMessage = `Error trying to upload. ${error instanceof Error ? error.message : "Unknown error occurred"}`;
 			uploadResponse = {
 				status: 500,
 				statusText: errorMessage

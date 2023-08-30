@@ -154,7 +154,7 @@ async function getDal(req)
 
 	let dal: CpiIndexedDataS3PfsDal;
 	
-	if(Array.isArray(req.body?.TemporaryFileURLs))
+	if(await global["app"]["wApp"]["isWebApp"]())
 	{
 		dal = new TemporaryFileCpiIndexedDataS3PfsDal(OAuthAccessToken, req, MAXIMAL_LOCK_TIME, awsDal, pepperiDal);
 	}
