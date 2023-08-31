@@ -1,16 +1,12 @@
 
-import { Request } from "@pepperi-addons/debug-server/dist";
-import { DIMXObject } from "@pepperi-addons/papi-sdk";
+import { AddonFile, DIMXObject } from "@pepperi-addons/papi-sdk";
 
-import { ICommand, IPfsMutator } from "pfs-shared";
+import { ICommand, PfsService } from "pfs-shared";
 
 
-export class ImportResourcesCommand implements ICommand 
+export class ImportResourcesCommand extends PfsService implements ICommand 
 {
 	protected readonly MAX_CONCURRENCY = 5;
-
-	constructor(protected request: Request, protected pfsMutator: IPfsMutator)
-	{}
 
 	public async execute(): Promise<any>
 	{
@@ -33,9 +29,7 @@ export class ImportResourcesCommand implements ICommand
 
 		for (const batch of batches)
 		{
-			const batchPromises = batch.map(obj => 
-				this.pfsMutator.mutateS3(obj.Object, existingFile)
-			);
+			const batchPromises = batch.map(obj => this.importResource(obj));
 
 			const batchResults = await Promise.allSettled(batchPromises);
 
@@ -43,6 +37,21 @@ export class ImportResourcesCommand implements ICommand
 		}
 
 		return this.request.body;
+	}
+
+	private async importResource(obj: any) 
+	{
+		let existingFile: AddonFile;
+		try
+		{
+			existingFile = await this.downloadFile(obj.Object.Key);
+		}
+		catch (error)
+		{
+			existingFile = { doesFileExist: false };
+		}
+
+		await this.pfsMutator.mutateS3(obj.Object, existingFile);
 	}
 
 	/**
