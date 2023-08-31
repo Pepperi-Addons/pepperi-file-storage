@@ -12,12 +12,20 @@ export class DataUriPostCommand extends TemporaryFileUrlPostCommand implements I
 	public override async execute(): Promise<any> 
 	{
 		// Validate that the CPI version is higher than this.MINIMAL_CPI_VERSION
-		await this.validateCpiNodeVersion();
+		const shouldCreateTempFile: boolean = this.request.body?.URI 
+		
+		if(shouldCreateTempFile)
+		{
+			await this.validateCpiNodeVersion();
+		}
 
 		// Write file data to device's storage and ADAL metadata table
 		const res: any = await super.execute();
 
-		this.uploadToTempFile(res);
+		if(shouldCreateTempFile)
+		{
+			this.uploadToTempFile(res);
+		}
 
 		return res;
 	}
