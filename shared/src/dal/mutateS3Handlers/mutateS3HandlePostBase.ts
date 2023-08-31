@@ -24,7 +24,8 @@ export class MutateS3HandlePostBase extends AMutateS3Handler
 	{
 		if(Array.isArray(this.newFileFields.Thumbnails))
 		{
-			for (const thumbnail of this.newFileFields.Thumbnails) 
+			const thumbnailsToUpload = this.newFileFields.Thumbnails.filter(thumbnail => thumbnail.buffer);
+			for (const thumbnail of thumbnailsToUpload) 
 			{
 				await this.uploadThumbnail(thumbnail.Size, thumbnail.buffer,);
 				delete thumbnail.buffer;
