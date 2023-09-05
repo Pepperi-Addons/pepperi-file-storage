@@ -1,5 +1,5 @@
 
-import { AddonFile, DIMXObject } from "@pepperi-addons/papi-sdk";
+import { AddonFile, DIMXObject, SearchBody } from "@pepperi-addons/papi-sdk";
 
 import { ICommand, PfsService } from "pfs-shared";
 
@@ -22,14 +22,14 @@ export class ImportResourcesCommand extends PfsService implements ICommand
      */
 	protected async importResources(): Promise<{DIMXObjects: DIMXObject[]}>
 	{
-		const existingFile = {};
 		const dimxObjects = this.request.body.DIMXObjects;
+		const existingFilesMap: Map<string, AddonFile> = await this.getFileKeyToExistingFileMap();
 
-		const batches: any[][] = this.splitObjectsToBatches(dimxObjects);
+		const batches: any[][] = this.splitObjectsToBatches(dimxObjects, this.MAX_CONCURRENCY);
 
 		for (const batch of batches)
 		{
-			const batchPromises = batch.map(obj => this.importResource(obj));
+			const batchPromises = batch.map(obj => this.importResource(obj, existingFilesMap));
 
 			const batchResults = await Promise.allSettled(batchPromises);
 
@@ -39,17 +39,36 @@ export class ImportResourcesCommand extends PfsService implements ICommand
 		return this.request.body;
 	}
 
-	private async importResource(obj: any) 
+	/**
+	 * Get a Map object where the Key is the Key of the object, and the value is the existing item
+	 * @returns {Promise<Map<string, AddonFile>>} A promise that resolves to the resulting map.
+	 */
+	 protected async getFileKeyToExistingFileMap(): Promise<Map<string, AddonFile>>
+	 {
+		 const map = new Map<string, AddonFile>();
+		 const adalMaxKeyListLength = 100;
+ 
+		 const batches = this.splitObjectsToBatches(this.request.body.DIMXObjects, adalMaxKeyListLength);
+		 for (const batch of batches)
+		 {
+			 const searchBody: SearchBody = {
+				 KeyList: batch.map(obj => obj.Object.Key),
+				 PageSize: batch.length,
+				 IncludeDeleted: true
+			 };
+ 
+			 const searchResult = await this.pfsGetter.getObjects(searchBody);
+ 
+			 // Add the results to the map
+			 searchResult.Objects.reduce((acc, item) => acc.set(item.Key!, item), map);
+		 }
+ 
+		 return map;
+	 }
+
+	protected async importResource(obj: any, existingFilesMap: Map<string, AddonFile>) 
 	{
-		let existingFile: AddonFile;
-		try
-		{
-			existingFile = await this.downloadFile(obj.Object.Key);
-		}
-		catch (error)
-		{
-			existingFile = { doesFileExist: false };
-		}
+		const existingFile: AddonFile = existingFilesMap.get(obj.Object.Key) ?? { doesFileExist: false };
 
 		await this.pfsMutator.mutateS3(obj.Object, existingFile);
 	}
@@ -75,17 +94,18 @@ export class ImportResourcesCommand extends PfsService implements ICommand
 	}
 
 	/**
-     * Split the objects to batches of size this.MAX_CONCURRENCY
-     * @param dimxObjects - The array to split
+     * Split the objects to batches of size batchSize
+     * @param objects - The array to split
+	 * @param batchSize - The size of each splitted batch
      * @returns An array of batches
      */
-	protected splitObjectsToBatches(dimxObjects: any[]): any[][]
+	protected splitObjectsToBatches(objects: any[], batchSize: number): any[][]
 	{
 		const batches: any[] = [];
 
-		for (let i = 0; i < dimxObjects.length; i += this.MAX_CONCURRENCY)
+		for (let i = 0; i < objects.length; i += batchSize)
 		{
-			const batch = dimxObjects.slice(i, i + this.MAX_CONCURRENCY);
+			const batch = objects.slice(i, i + batchSize);
 			batches.push(batch);
 		}
 
