@@ -1,4 +1,4 @@
-import { AddonDataScheme, AddonFile, PapiClient } from '@pepperi-addons/papi-sdk';
+import { AddonDataScheme, AddonFile, PapiClient, TemporaryFile } from '@pepperi-addons/papi-sdk';
 
 import { AddonUUID } from '../../../addon.config.json';
 
@@ -58,6 +58,17 @@ export class PfsOnlineService
 		const res = await this.papiClient.addons.pfs.uuid(AddonUUID).schema(schemaName).key(key).get();
 
 		console.log(`Got by key ${key} from schema ${schemaName}: ${JSON.stringify(res)}`);
+
+		return res;
+	}
+
+	public async createTempFile(): Promise<TemporaryFile>
+	{
+		console.log(`Creating temp file...`);
+
+		const res = await this.papiClient.addons.pfs.temporaryFile();
+
+		console.log(`Created temp file: ${JSON.stringify(res)}`);
 
 		return res;
 	}
