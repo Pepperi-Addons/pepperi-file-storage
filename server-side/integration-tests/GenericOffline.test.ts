@@ -5,7 +5,7 @@ import { ABaseOfflinePfsTests } from "./aBaseOfflinePfsTests.test";
 
 export class GenericOfflineTests extends ABaseOfflinePfsTests
 {
-	title = 'Generic Offline tests';
+	title = "Generic Offline tests";
 
 	tests(describe: (suiteTitle: string, func: () => void) => void,
 		it: (name: string, fn: Mocha.Func) => void,
@@ -14,7 +14,7 @@ export class GenericOfflineTests extends ABaseOfflinePfsTests
 	{
 		describe(this.title, () => 
 		{
-			it('Create an empty schema online and sync it', async () => 
+			it("Create an empty schema online and sync it", async () => 
 			{
 				await this.ensureSchemaDoesntExist(expect);
 
@@ -49,14 +49,17 @@ export class GenericOfflineTests extends ABaseOfflinePfsTests
 	protected async ensureSchemaDoesntExist(expect: Chai.ExpectStatic): Promise<void>
 	{
 		let existingSchema: AddonDataScheme | undefined;
-		try {
+		try 
+		{
 			existingSchema = await this.pfsOnlineService.getSchema(this.pfsSchemaName);
 		}
-		catch (err) {
+		catch (err) 
+		{
 			// Schema not found
 		}
 
-		if (existingSchema) {
+		if (existingSchema) 
+		{
 			await this.pfsOnlineService.purgePfsSchema(this.pfsSchemaName);
 			// Await any PNS notifications to resolve.
 			// this.waitForAsyncJob();

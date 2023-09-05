@@ -8,7 +8,7 @@ import { IntegrationTestBody } from "pfs-shared";
 
 export class MobileOfflineTests extends APostOfflineTests
 {
-	title = 'Mobile Offline tests';
+	title = "Mobile Offline tests";
 	
 	public override tests(describe: (suiteTitle: string, func: () => void) => void, it: (name: string, fn: Mocha.Func) => void, expect: Chai.ExpectStatic): void 
 	{
@@ -16,7 +16,7 @@ export class MobileOfflineTests extends APostOfflineTests
 
 		describe(this.title, () => 
 		{
-			it('Simulate offline mode - POST while offline, initiate job to upload temp file, sync online', async () => 
+			it("Simulate offline mode - POST while offline, initiate job to upload temp file, sync online", async () => 
 			{
 				const offlineModePostFileName = `fail_${this.offlineTestFileName}`;
 				const integrationTestBody: IntegrationTestBody = {
@@ -29,7 +29,7 @@ export class MobileOfflineTests extends APostOfflineTests
 				// POST a file offline
 				const file: AddonFile = {
 					Key: offlineModePostFileName,
-					MIME: 'image/png',
+					MIME: "image/png",
 					Cache: false,
 					Sync: "Always",
 					...(this.getPostFileData()),
@@ -37,7 +37,7 @@ export class MobileOfflineTests extends APostOfflineTests
 				};
 
 				await this.pfsOfflineService.post(this.pfsSchemaName, file);
-				await this.waitForAsyncJob(5) // wait for the upload process to fail
+				await this.waitForAsyncJob(5); // wait for the upload process to fail
 
 				// try to sync, to initiate the job uploading the file
 				// This sync should fail, since there are files to upload.
@@ -63,16 +63,17 @@ export class MobileOfflineTests extends APostOfflineTests
 	protected async getPostFileData(): Promise<{URI: string}>
 	{
 		const temporaryFile = await this.pfsOnlineService.createTempFile();
-		let fileBuffer: Buffer = this.getFileBufferFromDataUri();
+		const fileBuffer: Buffer = this.getFileBufferFromDataUri();
 		
 		await this.putBufferToURL(fileBuffer, temporaryFile.PutURL);
 
 		return {URI: testFileData};
 	}
 
-	private async putBufferToURL(fileBuffer: Buffer, url: string) {
+	private async putBufferToURL(fileBuffer: Buffer, url: string) 
+	{
 		const fetchResult = await fetch(url, {
-			method: 'PUT',
+			method: "PUT",
 			body: fileBuffer,
 		});
 
@@ -82,18 +83,21 @@ export class MobileOfflineTests extends APostOfflineTests
 		}
 	}
 
-	private getFileBufferFromDataUri() {
+	private getFileBufferFromDataUri() 
+	{
 		let fileBuffer: Buffer;
 
 		const regex = /^data:.+\/(.+);base64,(.*)$/;
 		const matches = testFileData.match(regex);
-		if (matches?.length && matches?.length >= 3) {
+		if (matches?.length && matches?.length >= 3) 
+		{
 			const ext = matches[1];
 			const data = matches[2];
-			fileBuffer = Buffer.from(data, 'base64');
+			fileBuffer = Buffer.from(data, "base64");
 		}
 
-		else {
+		else 
+		{
 			throw new Error("Invalid file data");
 		}
 		return fileBuffer;

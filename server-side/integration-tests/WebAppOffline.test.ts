@@ -8,7 +8,7 @@ import { testFileData } from "./constants";
 
 export class WebAppOfflineTests extends APostOfflineTests
 {
-	title = 'WebApp Offline tests';
+	title = "WebApp Offline tests";
 	
 	protected getExpectedOfflineUrlRegex(): RegExp
 	{
@@ -18,33 +18,37 @@ export class WebAppOfflineTests extends APostOfflineTests
 	protected async getPostFileData(): Promise<{TemporaryFileURLs: string[]}>
 	{
 		const temporaryFile = await this.pfsOnlineService.createTempFile();
-		let fileBuffer: Buffer = this.getFileBufferFromDataUri();
+		const fileBuffer: Buffer = this.getFileBufferFromDataUri();
 		
 		await this.putBufferToURL(fileBuffer, temporaryFile.PutURL);
 
 		return {TemporaryFileURLs: [temporaryFile.TemporaryFileURL]};
 	}
 
-	private getFileBufferFromDataUri() {
+	private getFileBufferFromDataUri() 
+	{
 		let fileBuffer: Buffer;
 
 		const regex = /^data:.+\/(.+);base64,(.*)$/;
 		const matches = testFileData.match(regex);
-		if (matches?.length && matches?.length >= 3) {
+		if (matches?.length && matches?.length >= 3) 
+		{
 			const ext = matches[1];
 			const data = matches[2];
-			fileBuffer = Buffer.from(data, 'base64');
+			fileBuffer = Buffer.from(data, "base64");
 		}
 
-		else {
+		else 
+		{
 			throw new Error("Invalid file data");
 		}
 		return fileBuffer;
 	}
 
-	private async putBufferToURL(fileBuffer: Buffer, url: string) {
+	private async putBufferToURL(fileBuffer: Buffer, url: string) 
+	{
 		const fetchResult = await fetch(url, {
-			method: 'PUT',
+			method: "PUT",
 			body: fileBuffer,
 		});
 

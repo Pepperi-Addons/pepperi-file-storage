@@ -1,10 +1,10 @@
-import { Client, Request } from '@pepperi-addons/debug-server/dist';
-import { TestRunner, BaseTest } from '@pepperi-addons/addon-testing-framework';
-import * as Tests from './integration-tests';
+import { Client, Request } from "@pepperi-addons/debug-server/dist";
+import { TestRunner, BaseTest } from "@pepperi-addons/addon-testing-framework";
+import * as Tests from "./integration-tests";
 
 export async function tests(client: Client, request: Request) 
 {
-	if (request.method === 'GET') 
+	if (request.method === "GET") 
 	{
 		// return a list of all tests
 		return Object.keys(Tests).map((key) => 
@@ -14,17 +14,17 @@ export async function tests(client: Client, request: Request)
 			};
 		});
 	}
-	else if (request.method === 'POST') 
+	else if (request.method === "POST") 
 	{
 		// run a specific test
 		const testName = request.body.Name;
 		if (!testName) 
 		{
-			throw new Error('Missing body parameter: Name');
+			throw new Error("Missing body parameter: Name");
 		}
-		if (typeof testName !== 'string') 
+		if (typeof testName !== "string") 
 		{
-			throw new Error('Body parameter: Name must be a string');
+			throw new Error("Body parameter: Name must be a string");
 		}
 		const Test: new () => BaseTest = Tests[testName];
 		if (!Test) 

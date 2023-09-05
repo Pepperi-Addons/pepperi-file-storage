@@ -12,7 +12,7 @@ export class DataUriPostCommand extends TemporaryFileUrlPostCommand implements I
 	public override async execute(): Promise<any> 
 	{
 		// Validate that the CPI version is higher than this.MINIMAL_CPI_VERSION
-		const shouldCreateTempFile: boolean = this.request.body?.URI 
+		const shouldCreateTempFile: boolean = this.request.body?.URI; 
 		
 		if(shouldCreateTempFile)
 		{

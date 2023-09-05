@@ -1,6 +1,6 @@
-import { AddonDataScheme, AddonFile, PapiClient, TemporaryFile } from '@pepperi-addons/papi-sdk';
+import { AddonDataScheme, AddonFile, PapiClient, TemporaryFile } from "@pepperi-addons/papi-sdk";
 
-import { AddonUUID } from '../../../addon.config.json';
+import { AddonUUID } from "../../../addon.config.json";
 
 export class PfsOnlineService 
 {
@@ -15,7 +15,7 @@ export class PfsOnlineService
 
 		console.log(`Got schema ${schemaName}: ${JSON.stringify(res)}`);
 
-		return res
+		return res;
 	}
 
 	public async createPfsSchema(schema: AddonDataScheme): Promise<any>

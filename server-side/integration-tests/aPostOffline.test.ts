@@ -22,13 +22,13 @@ export abstract class APostOfflineTests extends ABaseOfflinePfsTests
 	{
 		describe(this.title, () => 
 		{
-			it('Post a file online and sync it', async () => 
+			it("Post a file online and sync it", async () => 
 			{
 				
 				// POST a file online
 				const file: AddonFile = {
 					Key: this.onlineTestFileName,
-					MIME: 'image/png',
+					MIME: "image/png",
 					Cache: false,
 					Sync: "Always",
 					Thumbnails: [
@@ -50,14 +50,14 @@ export abstract class APostOfflineTests extends ABaseOfflinePfsTests
 				expect(offlineFile.Key).to.equal(file.Key);
 
 				// Validate URL
-				expect(offlineFile).to.have.property("URL").that.is.a('string').and.is.not.empty;
+				expect(offlineFile).to.have.property("URL").that.is.a("string").and.is.not.empty;
 				expect(offlineFile.URL).to.match(this.getExpectedOfflineUrlRegex());
 
 				// Ensure the file exists in the provided URL
 				await this.ensureLocalFileIsValid(offlineFile, expect);
 			});
 
-			it('Delete file offline, sync, and ensure it is deleted online', async () => 
+			it("Delete file offline, sync, and ensure it is deleted online", async () => 
 			{
 				// Get file online
 				const onlineFileBeforeDeletion = await this.pfsOnlineService.getByKey(this.pfsSchemaName, this.onlineTestFileName);
@@ -87,12 +87,12 @@ export abstract class APostOfflineTests extends ABaseOfflinePfsTests
 				expect(thumbnailBufferAfterDeletion).to.not.deep.equal(thumbnailBufferBeforeDeletion);
 			});
 
-			it('Post a file offline and sync it', async () => 
+			it("Post a file offline and sync it", async () => 
 			{
 				// POST a file offline
 				const file: AddonFile = {
 					Key: this.offlineTestFileName,
-					MIME: 'image/png',
+					MIME: "image/png",
 					URI: testFileData,
 					Cache: false,
 					Sync: "Always",
@@ -111,13 +111,13 @@ export abstract class APostOfflineTests extends ABaseOfflinePfsTests
 				await this.validateOnlineFile(expect, this.offlineTestFileName);
 			});
 
-			it('Post a file offline, delete it offline and sync it', async () => 
+			it("Post a file offline, delete it offline and sync it", async () => 
 			{
 				const offlineFileToDeleteKey = "offlineFileToDeleteKey.png";
 				// POST a file offline
 				const file: AddonFile = {
 					Key: offlineFileToDeleteKey,
-					MIME: 'image/png',
+					MIME: "image/png",
 					URI: testFileData,
 					Cache: false,
 					Sync: "Always",
@@ -146,7 +146,7 @@ export abstract class APostOfflineTests extends ABaseOfflinePfsTests
 				expect(onlineFile).to.have.property("Hidden").that.is.true;
 
 				// Validate URL
-				expect(onlineFile).to.have.property("URL").that.is.a('string').and.is.not.empty;
+				expect(onlineFile).to.have.property("URL").that.is.a("string").and.is.not.empty;
 				expect(onlineFile.URL).to.include("pfs.");
 				const distributorUUID = jwtDecode(this.container.client.OAuthAccessToken)["pepperi.distributoruuid"];
 				expect(onlineFile.URL).to.include(`${distributorUUID}/${this.container.client.AddonUUID}/${this.pfsSchemaName}/${offlineFileToDeleteKey}`);
@@ -173,7 +173,7 @@ export abstract class APostOfflineTests extends ABaseOfflinePfsTests
 		expect(onlineFile.Key).to.equal(fileKey);
 
 		// Validate URL
-		expect(onlineFile).to.have.property("URL").that.is.a('string').and.is.not.empty;
+		expect(onlineFile).to.have.property("URL").that.is.a("string").and.is.not.empty;
 		expect(onlineFile.URL).to.include("pfs.");
 		const distributorUUID = jwtDecode(this.container.client.OAuthAccessToken)["pepperi.distributoruuid"];
 		expect(onlineFile.URL).to.include(`${distributorUUID}/${this.container.client.AddonUUID}/${this.pfsSchemaName}/${this.offlineTestFileName}`);
@@ -204,14 +204,17 @@ export abstract class APostOfflineTests extends ABaseOfflinePfsTests
 	protected async ensureSchemaDoesntExist(): Promise<void>
 	{
 		let existingSchema: AddonDataScheme | undefined;
-		try {
+		try 
+		{
 			existingSchema = await this.pfsOnlineService.getSchema(this.pfsSchemaName);
 		}
-		catch (err) {
+		catch (err) 
+		{
 			// Schema not found
 		}
 
-		if (existingSchema) {
+		if (existingSchema) 
+		{
 			await this.pfsOnlineService.purgePfsSchema(this.pfsSchemaName);
 			// Await any PNS notifications to resolve.
 			// this.waitForAsyncJob();
