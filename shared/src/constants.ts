@@ -150,3 +150,12 @@ export type TempFileRequest = {
 }
 
 export type FileToUpload = AddonData & { AbsolutePath: string };
+
+export interface IntegrationTestBody {
+	IntegrationTestData? : {
+		IsWebApp?: boolean,
+		ShouldFailTemporaryFile?: boolean,
+		ShouldDeleteURLsCache?: boolean,
+	},
+	[key: string]: any
+}

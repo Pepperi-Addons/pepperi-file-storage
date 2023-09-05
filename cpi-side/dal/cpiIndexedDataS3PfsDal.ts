@@ -6,7 +6,7 @@ import path from "path";
 import writeFile from "write-file-atomic";
 
 import { PfsService } from "../cpiPfs.service";
-import { IndexedDataS3PfsDal, SharedHelper } from "pfs-shared";
+import { IndexedDataS3PfsDal, IntegrationTestBody, SharedHelper } from "pfs-shared";
 
 export class CpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal 
 {    
@@ -32,6 +32,11 @@ export class CpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal
 		// Handle downloading files to device if needed
 		await this.downloadFilesToDevice(resultObjects.Objects);
 
+		if((this.request.body as IntegrationTestBody).IntegrationTestData?.ShouldDeleteURLsCache)
+		{
+			Array.from(PfsService.downloadedFileKeysToLocalUrl.keys()).map(key => PfsService.downloadedFileKeysToLocalUrl.delete(key));
+		}
+		
 		this.setObjectsUrls(resultObjects.Objects);
 
 		// Return only needed Fields
@@ -103,6 +108,7 @@ export class CpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal
 		const downloadRequiringObjects = objects.filter(object => object.Sync !== "None" &&
 																	object.Sync !== "DeviceThumbnail" &&
 																	object.URL &&
+																	!object.Hidden &&
 																	!PfsService.downloadedFileKeysToLocalUrl.has(`${object.Key!}${object.ModificationDateTime!}`));
 
 		const downloadFiles = async (object: AddonData) =>

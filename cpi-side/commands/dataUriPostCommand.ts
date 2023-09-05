@@ -68,10 +68,7 @@ export class DataUriPostCommand extends TemporaryFileUrlPostCommand implements I
 	{
 		const relativeAbsoluteKeyService = await this.getRelativeAbsoluteKeyService();
 		// Save the file to the FilesToUpload table
-		const fileToUpload: FileToUpload = {
-			Key: uuid(),
-			AbsolutePath: relativeAbsoluteKeyService.getAbsolutePath(res.Key!),
-		};
+		const fileToUpload: FileToUpload = this.createFileToUpload(relativeAbsoluteKeyService, res);
 
 		await this.filesToUploadDal.upsert(fileToUpload);
 
@@ -79,7 +76,7 @@ export class DataUriPostCommand extends TemporaryFileUrlPostCommand implements I
 		if(isLatestEntry)
 		{
 			// Upload file to temp file
-			const fileUploadService = new FileUploadService(this.pepperiDal, pepperi.papiClient, fileToUpload);
+			const fileUploadService = FileUploadService.getInstance(this.pepperiDal, pepperi.papiClient, fileToUpload);
 			fileUploadService.asyncUploadFile();
 		}
 		else
@@ -88,6 +85,14 @@ export class DataUriPostCommand extends TemporaryFileUrlPostCommand implements I
 			fileToUpload.Hidden = true;
 			this.filesToUploadDal.upsert(fileToUpload);
 		}
+	}
+
+	protected createFileToUpload(relativeAbsoluteKeyService: RelativeAbsoluteKeyService, res: any): FileToUpload
+	{
+		return {
+			Key: uuid(),
+			AbsolutePath: relativeAbsoluteKeyService.getAbsolutePath(res.Key!),
+		};
 	}
 
 	protected async getRelativeAbsoluteKeyService(): Promise<RelativeAbsoluteKeyService>
