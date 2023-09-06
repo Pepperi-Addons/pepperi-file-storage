@@ -41,7 +41,7 @@
         "@pepperi-addons/addon-testing-framework": "/Users/saar.g/dev/addon-testing-framework/framework/pepperi-addons-addon-testing-framework-0.0.24.tgz",
         "@pepperi-addons/cpi-node": "^1.4.1",
         "@pepperi-addons/debug-server": "*",
-        "@pepperi-addons/papi-sdk": "^1.53.0",
+        "@pepperi-addons/papi-sdk": "^1.57.5",
         "@types/node-fetch": "^2.5.7",
         "aws-sdk": "^2.1045.0",
         "encoding": "^0.1.13",

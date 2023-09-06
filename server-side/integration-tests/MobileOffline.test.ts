@@ -1,5 +1,4 @@
 import { AddonFile } from "@pepperi-addons/papi-sdk";
-import fetch from "node-fetch";
 
 import { APostOfflineTests } from "./aPostOffline.test";
 import { testFileData } from "./constants";
@@ -32,7 +31,7 @@ export class MobileOfflineTests extends APostOfflineTests
 					MIME: "image/png",
 					Cache: false,
 					Sync: "Always",
-					...(this.getPostFileData()),
+					...(await this.getPostFileData()),
 					...integrationTestBody
 				};
 
@@ -50,7 +49,6 @@ export class MobileOfflineTests extends APostOfflineTests
 				await this.sync(expect);
 
 				await this.validateOnlineFile(expect, offlineModePostFileName);
-
 			});
 		});
 	}
@@ -62,45 +60,7 @@ export class MobileOfflineTests extends APostOfflineTests
 
 	protected async getPostFileData(): Promise<{URI: string}>
 	{
-		const temporaryFile = await this.pfsOnlineService.createTempFile();
-		const fileBuffer: Buffer = this.getFileBufferFromDataUri();
-		
-		await this.putBufferToURL(fileBuffer, temporaryFile.PutURL);
-
-		return {URI: testFileData};
-	}
-
-	private async putBufferToURL(fileBuffer: Buffer, url: string) 
-	{
-		const fetchResult = await fetch(url, {
-			method: "PUT",
-			body: fileBuffer,
-		});
-
-		if (!fetchResult.ok)
-		{
-			throw new Error(`Failed to upload file to ${url}`);
-		}
-	}
-
-	private getFileBufferFromDataUri() 
-	{
-		let fileBuffer: Buffer;
-
-		const regex = /^data:.+\/(.+);base64,(.*)$/;
-		const matches = testFileData.match(regex);
-		if (matches?.length && matches?.length >= 3) 
-		{
-			const ext = matches[1];
-			const data = matches[2];
-			fileBuffer = Buffer.from(data, "base64");
-		}
-
-		else 
-		{
-			throw new Error("Invalid file data");
-		}
-		return fileBuffer;
+		return { URI: testFileData };
 	}
 
 	protected async ensureLocalFileIsValid(offlineFile: AddonFile, expect: Chai.ExpectStatic): Promise<void>

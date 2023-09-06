@@ -21,7 +21,7 @@ export class GenericOfflineTests extends ABaseOfflinePfsTests
 				// Create a PFS schema online
 				await this.createPfsSchema();
 				// Sync it
-				await this.sync(expect);
+				await this.resync(expect);
 				// Make sure it is synced
 				const offlineSchema = await this.pfsOfflineService.getSchema(this.pfsSchemaName);
 
@@ -29,17 +29,6 @@ export class GenericOfflineTests extends ABaseOfflinePfsTests
 				expect(offlineSchema.Name).to.equal(this.pfsSchemaName);
 			});
 		});
-	}
-	/**
-	 * Performs a sync and asserts the result.
-	 */
-	protected async sync(expect: Chai.ExpectStatic): Promise<void>
-	{
-		const syncResult = await this.pfsOfflineService.sync();
-
-		expect(syncResult).to.not.be.undefined;
-		expect(syncResult.success).to.be.true;
-		expect(syncResult.finish).to.be.true;
 	}
 
 	/**
@@ -62,7 +51,7 @@ export class GenericOfflineTests extends ABaseOfflinePfsTests
 		{
 			await this.pfsOnlineService.purgePfsSchema(this.pfsSchemaName);
 			// Await any PNS notifications to resolve.
-			// this.waitForAsyncJob();
+			this.waitForAsyncJob();
 
 			// Sync the purging of the schema to the device
 			await this.sync(expect);

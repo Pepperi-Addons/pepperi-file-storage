@@ -8,6 +8,12 @@ import { FileFindOptions } from "@pepperi-addons/papi-sdk/dist/endpoint";
 
 export class PfsOfflineService extends BaseService
 {
+	protected clientApi;
+	constructor(servicesContainer: ServicesContainer)
+	{
+		super(servicesContainer);
+		this.clientApi = this.cpiSideService.pepperi.getClientApi();
+	}
 	protected get cpiSideService(): CPISideService
 	{
 		return this.container.get(CPISideService, LocalCPISideService);
@@ -21,7 +27,7 @@ export class PfsOfflineService extends BaseService
 			Where: `Name='${schemaName}'`
 		};
 
-		const searchRes = await this.container.get(CPISideService).pepperi.clientApi.addons.data.schemes.get(searchParams);
+		const searchRes = await this.clientApi.addons.data.schemes.get(searchParams);
 		if (searchRes.length > 0)
 		{
 			const res = searchRes[0];
@@ -40,7 +46,7 @@ export class PfsOfflineService extends BaseService
 	{
 		console.log(`Posting to schema ${schemaName}...`);
 
-		const res = await this.cpiSideService.pepperi.clientApi.addons.pfs.uuid(AddonUUID).schema(schemaName).post(data);
+		const res = await this.clientApi.addons.pfs.uuid(AddonUUID).schema(schemaName).post(data);
 
 		console.log(`Posted to schema ${schemaName}: ${JSON.stringify(res)}`);
 
@@ -51,7 +57,7 @@ export class PfsOfflineService extends BaseService
 	{
 		console.log(`Offline: Getting from schema ${schemaName}...`);
 
-		const res = await this.cpiSideService.pepperi.clientApi.addons.pfs.uuid(AddonUUID).schema(schemaName).find(findOptions);
+		const res = await this.clientApi.addons.pfs.uuid(AddonUUID).schema(schemaName).find(findOptions);
 
 		console.log(`Offline: Got from schema ${schemaName}: ${JSON.stringify(res)}`);
 
@@ -62,7 +68,7 @@ export class PfsOfflineService extends BaseService
 	{
 		console.log(`Offline: Getting by key ${key} from schema ${schemaName}...`);
 
-		const res = await this.cpiSideService.pepperi.clientApi.addons.pfs.uuid(AddonUUID).schema(schemaName).key(key).get();
+		const res = await this.clientApi.addons.pfs.uuid(AddonUUID).schema(schemaName).key(key).get();
 
 		console.log(`Offline: Got by key ${key} from schema ${schemaName}: ${JSON.stringify(res)}`);
 
@@ -80,4 +86,14 @@ export class PfsOfflineService extends BaseService
 		return syncRes;
 	}
 
+	public async resync(): Promise<SyncResult>
+	{
+		console.log(`Offline: Resyncing...`);
+
+		const syncRes = await this.cpiSideService.resync();
+
+		console.log(`Offline: Resyncing: ${JSON.stringify(syncRes)}`);
+
+		return syncRes;
+	}
 }

@@ -1,4 +1,3 @@
-import { SyncResult } from "@pepperi-addons/addon-testing-framework";
 import { AddonDataScheme, AddonFile } from "@pepperi-addons/papi-sdk";
 import jwtDecode from "jwt-decode";
 import { IntegrationTestBody } from "pfs-shared";
@@ -36,7 +35,7 @@ export abstract class APostOfflineTests extends ABaseOfflinePfsTests
 							Size: "200x200"
 						}
 					],
-					...(this.getPostFileData())
+					...(await this.getPostFileData())
 				};
 
 				await this.pfsOnlineService.post(this.pfsSchemaName, file);
@@ -176,7 +175,7 @@ export abstract class APostOfflineTests extends ABaseOfflinePfsTests
 		expect(onlineFile).to.have.property("URL").that.is.a("string").and.is.not.empty;
 		expect(onlineFile.URL).to.include("pfs.");
 		const distributorUUID = jwtDecode(this.container.client.OAuthAccessToken)["pepperi.distributoruuid"];
-		expect(onlineFile.URL).to.include(`${distributorUUID}/${this.container.client.AddonUUID}/${this.pfsSchemaName}/${this.offlineTestFileName}`);
+		expect(onlineFile.URL).to.include(`${distributorUUID}/${this.container.client.AddonUUID}/${this.pfsSchemaName}/${fileKey}`);
 
 		// Ensure the file exists in the provided URL
 		const url = onlineFile.URL!;
@@ -185,17 +184,6 @@ export abstract class APostOfflineTests extends ABaseOfflinePfsTests
 		expect(buffer.length).to.be.equal(onlineFile.FileSize);
 	}
 
-	/**
-	 * Performs a sync and asserts the result.
-	 */
-	protected async sync(expect: Chai.ExpectStatic, expectedSyncResult: SyncResult = {success: true, finish: true}): Promise<void>
-	{
-		const syncResult = await this.pfsOfflineService.sync();
-
-		expect(syncResult).to.not.be.undefined;
-		expect(syncResult.success).to.equal(expectedSyncResult.success);
-		expect(syncResult.finish).to.equal(expectedSyncResult.finish);
-	}
 
 	/**
 	 * If the schema exists, purges it, and waits for any PNS notifications to resolve.

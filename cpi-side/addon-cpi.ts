@@ -137,7 +137,7 @@ function getPostCommand(req, PfsDal: CpiIndexedDataS3PfsDal, PepperiDal: CpiPepp
 	{
 		postCommand = new IntegrationTestsPostCommand(req, PfsDal, PfsDal, PepperiDal);
 	}
-	if(Array.isArray(req.body?.TemporaryFileURLs))
+	else if(Array.isArray(req.body?.TemporaryFileURLs))
 	{
 		postCommand = new TemporaryFileUrlPostCommand(req, PfsDal, PfsDal, PepperiDal);
 	}
