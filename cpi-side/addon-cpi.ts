@@ -8,6 +8,7 @@ import { PreSyncService } from "./preSync.service";
 import { PreSyncResult } from "./entities";
 import { TemporaryFileCpiIndexedDataS3PfsDal } from "./dal/temporaryFileCpiIndexedDataS3PfsDal";
 import { TemporaryFileUrlPostCommand } from "./commands/temporaryFileUrlPostCommand";
+import { FileUploadService } from "./fileUpload.service";
 
 export const router = Router();
 
@@ -15,6 +16,8 @@ export async function load(configuration: any)
 {
 	const preSyncService = new PreSyncService();
 	await preSyncService.createRelations();
+
+	FileUploadService.initiatePeriodicUploadInterval();
 }
 
 // will be called right before the sync started
@@ -22,6 +25,14 @@ router.post(PreSyncService.endpointName, async (req, res) =>
 {
 	const preSyncService = new PreSyncService();
 	const areAllFilesUploadedResult: PreSyncResult = await preSyncService.areAllFilesUploaded();
+
+	// If not all files are uploaded, start the upload process
+	// This is so the user won't have to wait for the periodic upload interval to start
+	// before he can Sync again.
+	if(!areAllFilesUploadedResult.Success)
+	{
+		FileUploadService.asyncUploadAllFilesToUpload();
+	}
 
 	res.json(areAllFilesUploadedResult);
 });

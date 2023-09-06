@@ -75,9 +75,9 @@ export class FilesToUploadDal
 	/**
      * Get the most recently created entry for the file.
      * @param fileToUpload {FileToUpload} The file to get the most recently created entry for.
-     * @returns {Promise<{ Key: string } | undefined>} A Promise that resolves to the most recently created entry for the file, or undefined if there are no entries for the file.
+     * @returns {Promise<{ Key: string } | undefined>} A Promise that resolves to the Key of the most recently created entry for the file, or undefined if there are no entries for the file.
      */
-	public async getLatestEntryKey(fileToUpload: FileToUpload): Promise<{ Key: string } | undefined>
+	public async getLatestEntryKey(fileToUpload: FileToUpload): Promise<string | undefined>
 	{
 		const searchBody: SearchBody = {
 			Fields: ["Key"],
@@ -88,7 +88,7 @@ export class FilesToUploadDal
 
 		const searchResult = await this.search(searchBody);
 
-		return searchResult.Objects[0] as { Key: string };
+		return searchResult.Objects[0]?.Key;
 	}
 
 	/**
@@ -124,9 +124,10 @@ export class FilesToUploadDal
 		fileToUploadCopy.CreationDateTime = fileToUploadCopy.CreationDateTime ?? (await this.getByKey(fileToUploadCopy.Key!)).CreationDateTime;
 
 		const res: FileToUpload[] = [];
+		let searchResult: SearchData<FileToUpload>;
 
 		const searchBody: SearchBody = {
-			Where: `AbsolutePath='${fileToUpload.AbsolutePath}' AND CreationDateTime <= ${fileToUpload.CreationDateTime}`,
+			Where: `AbsolutePath='${fileToUpload.AbsolutePath}' AND CreationDateTime <= '${fileToUpload.CreationDateTime}'`,
 			Fields: ["Key", "CreationDateTime"],
 			Page: 0,
 			PageSize: 1000,
@@ -135,11 +136,11 @@ export class FilesToUploadDal
 		do
 		{
             searchBody.Page!++;
-            const searchResult = await this.search(searchBody);
+            searchResult = await this.search(searchBody);
 
             res.push(...searchResult.Objects);
 		}
-		while (res.length < searchBody.PageSize!);
+		while (searchResult.Objects.length >= searchBody.PageSize!);
 
 		return res;
 	}
