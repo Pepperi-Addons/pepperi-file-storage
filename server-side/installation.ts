@@ -29,9 +29,6 @@ export async function install(client: Client, request: Request): Promise<any>
 
 export async function uninstall(client: Client, request: Request): Promise<any> 
 {
-	const papiClient = createPapiClient(client);
-	await papiClient.post(`/addons/data/schemes/${LOCK_ADAL_TABLE_NAME}/purge`);
-
 	return { success: true, resultObject: {} };
 }
 
