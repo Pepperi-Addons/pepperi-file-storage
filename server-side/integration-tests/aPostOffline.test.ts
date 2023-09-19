@@ -56,6 +56,43 @@ export abstract class APostOfflineTests extends ABaseOfflinePfsTests
 				await this.ensureLocalFileIsValid(offlineFile, expect);
 			});
 
+			it("Update file description offline, and sync", async () => 
+			{
+				// Update file description offline
+				const updateFile: AddonFile = {
+					Key: this.onlineTestFileName,
+					Description: "Updated description offline",
+					...(this.getIntegrationTestBody() ?? {})
+				};
+				await this.pfsOfflineService.post(this.pfsSchemaName, updateFile);
+
+				// Sync
+				await this.sync(expect);
+
+				// Get file online and ensure description was updated
+				const onlineFile = await this.pfsOnlineService.getByKey(this.pfsSchemaName, this.onlineTestFileName);
+				expect(onlineFile).to.have.property("Description").that.equals(updateFile.Description);
+			});
+
+			it("Update file description online, sync, and ensure it is updated offline", async () =>
+			{
+				// Update file description online
+				const updateFile: AddonFile = {
+					Key: this.onlineTestFileName,
+					Description: "Updated description online",
+					...(this.getIntegrationTestBody() ?? {})
+				};
+
+				await this.pfsOnlineService.post(this.pfsSchemaName, updateFile);
+
+				// Sync
+				await this.sync(expect);
+
+				// Get file offline and ensure description was updated
+				const offlineFile = await this.pfsOfflineService.getByKey(this.pfsSchemaName, this.onlineTestFileName);
+				expect(offlineFile).to.have.property("Description").that.equals(updateFile.Description);
+			});
+
 			it("Delete file offline, sync, and ensure it is deleted online", async () => 
 			{
 				// Get file online
