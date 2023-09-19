@@ -150,6 +150,8 @@ export class CpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal
 
 		// Cache the result, so we won't have to download the file again.
 		const cpiURL = await this.getCpiURL(newFileFields);
+		console.log(`PFS: uploadFileMetadata: cpiURL: ${cpiURL}`);
+
 		PfsService.downloadedFileKeysToLocalUrl.set(`${superRes.Key!}${superRes.ModificationDateTime!}`, cpiURL);
 
 		// If this file has already been POSTed to the PFS table, has been uploaded, but not yet Synced,
@@ -169,15 +171,19 @@ export class CpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal
 
 	public override async mutateS3(newFileFields: any, existingFile: any): Promise<void> 
 	{
+		console.log(`PFS: mutateS3: about to save file data to device.`);
+		
 		const canonizedKey = this.relativeAbsoluteKeyService.removeSlashPrefix(newFileFields.Key);
 
 		// Save dataUri to local file
 		const localFilePath = `${await pepperi.files.rootDir()}/${this.relativeAbsoluteKeyService.getAbsolutePath(canonizedKey)}`;
+		console.log(`PFS: mutateS3: localFilePath: ${localFilePath}`);
+
 		await this.locallySaveBase64ToFile(newFileFields.buffer, localFilePath);
 
 		delete newFileFields.buffer;
 		
-		console.log(`mutateS3: Successfully saved file "${canonizedKey}" to the device.`);
+		console.log(`PFS: mutateS3: Successfully saved file "${canonizedKey}" to the device.`);
 	}
 
 	/**
@@ -187,7 +193,11 @@ export class CpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal
 	 */
 	public async locallySaveBase64ToFile(buffer: Buffer, filePath: string): Promise<void> 
 	{
+		console.log(`PFS: locallySaveBase64ToFile: filePath: ${filePath}`);
+
 		const dir = path.dirname(filePath);
+
+		console.log(`PFS: locallySaveBase64ToFile: path.dirname: ${dir}`);
 
 		// Create any missing directories in the file path
 		await fs.promises.mkdir(dir, { recursive: true });
