@@ -15,7 +15,7 @@ export class IntegrationTestsPostCommand extends MobilePostCommand implements IC
 
 	protected override async uploadToTempFile(res: any): Promise<void>
 	{		
-		if(!(this.request.body as IntegrationTestBody)?.IntegrationTestData?.IsWebApp)
+		if(!(this.request.body as IntegrationTestBody)?.IntegrationTestData?.IsWebApp && this.request.body.URI)
 		{
 			await super.uploadToTempFile(res);
 		}

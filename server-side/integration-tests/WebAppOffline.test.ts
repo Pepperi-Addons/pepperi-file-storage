@@ -29,6 +29,10 @@ export class WebAppOfflineTests extends APostOfflineTests
 					Cache: false,
 					Sync: "Always",
 					URI: testFileData,
+					IntegrationTestData: {
+						IsWebApp: true,
+						ShouldDeleteURLsCache: true,
+					}
 				};
 
 				// Post it offline
