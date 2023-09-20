@@ -16,14 +16,13 @@ export class FileUploadService
 	protected static interval: NodeJS.Timeout | undefined = undefined;
 	protected static readonly periodicTaskInterval = 1000 * 60 * 5; // Every 5 minutes
 
-
 	protected clientAddonUUID: string;
 	protected clientAddonSchemaName: string;
 	protected relativeAbsoluteKeyService: RelativeAbsoluteKeyService;
 	protected filesToUploadDal: FilesToUploadDal;
 
 
-	constructor(
+	protected constructor(
         protected pepperiDal: IPepperiDal,
         protected papiClient: PapiClient,
         protected fileToUpload: FileToUpload,
@@ -84,11 +83,18 @@ export class FileUploadService
 		// background.
 		FileUploadService.filesUploadQueue.addAll(filesToUpload.map(fileToUpload => () => 
 		{
-			const fileUploadService = new FileUploadService(pepperiDal, papiClient, fileToUpload);
+			const fileUploadService = this.getInstance(pepperiDal, papiClient, fileToUpload);
 			return fileUploadService.uploadLocalFileToTempFile();
 		}));
 
 		console.log(`asyncUploadAllFilesToUpload finished: ${new Date().toISOString()}`);
+	}
+
+	public static getInstance(pepperiDal: IPepperiDal, papiClient: PapiClient, fileToUpload: FileToUpload): FileUploadService
+	{
+		const fileUploadServiceClass: typeof FileUploadService = fileToUpload.ShouldFailUpload ? FileUploadTestingService : FileUploadService;
+
+		return new fileUploadServiceClass(pepperiDal, papiClient, fileToUpload);
 	}
 
 	protected async uploadLocalFileToTempFile(): Promise<void>
@@ -294,4 +300,46 @@ export class FileUploadService
 		const fileUploadLogPrefix = `${uploadToTempFileDebugPrefix}File '${this.fileToUpload.AbsolutePath}' with UUID '${this.fileToUpload.Key}': `;
 		console.log(`${fileUploadLogPrefix}${message}`);
 	}
+}
+
+export class FileUploadTestingService extends FileUploadService
+{
+
+	 protected override async uploadFileToTempUrl(buffer: Buffer, putURL: string): Promise<Response>
+	 {
+		 if(this.fileToUpload.ShouldFailUpload)
+		 {
+			this.fileUploadLog(`Intentionally failing to upload file to temp url...`);
+
+			this.fileUploadLog(`About to delete ShouldFailUpload flag from file...`);
+
+			const release = await FilesToUploadDal.mutex.acquire();
+			try
+			{
+				this.fileToUpload.ShouldFailUpload = false;
+				await this.filesToUploadDal.upsert(this.fileToUpload);
+				this.fileUploadLog(`Successfully deleted ShouldFailUpload flag from file.`);
+			}
+			catch (error)
+			{
+				this.fileUploadLog(`Failed to delete ShouldFailUpload flag from file. Error: ${error}`);
+			}
+			finally
+			{
+				release();
+			}
+
+			throw new Error("Intentionally failed to upload file to temp url.");
+		 }
+
+		 return await super.uploadFileToTempUrl(buffer, putURL);
+	}
+
+	protected override fileUploadLog(message: string): void 
+	{
+		const superLog = super.fileUploadLog(message);
+
+		console.log(`FileUploadTestingService - ${superLog}`);
+	}
+
 }

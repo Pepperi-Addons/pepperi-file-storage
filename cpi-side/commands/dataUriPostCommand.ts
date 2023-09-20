@@ -12,7 +12,7 @@ export class DataUriPostCommand extends TemporaryFileUrlPostCommand implements I
 	public override async execute(): Promise<any> 
 	{
 		// Validate that the CPI version is higher than this.MINIMAL_CPI_VERSION
-		const shouldCreateTempFile: boolean = this.request.body?.URI 
+		const shouldCreateTempFile: boolean = this.request.body?.URI; 
 		
 		if(shouldCreateTempFile)
 		{
@@ -40,7 +40,17 @@ export class DataUriPostCommand extends TemporaryFileUrlPostCommand implements I
 		// software version is in the format of "x.y". Split by '.', take the first number and parse it to int.
 		// From the second number, take the first digit and parse it to int.
 		const minimalVersion = this.getSplittedVersion(this.MINIMAL_CPI_VERSION);
-		const actualVersion = this.getSplittedVersion((await pepperi.environment.info()).softwareVersion);
+		let actualVersion: { MajorVersion: number, MinorVersion: number };
+		try
+		{
+			actualVersion = this.getSplittedVersion((await pepperi.environment.info()).softwareVersion);
+		} 
+		catch (error)
+		{
+			// The function pepperi.environment.info() has been introduced in CPI version 17.2, 
+			// so if it doesn't exist, it means that the CPI version is lower than 17.2
+			actualVersion = { MajorVersion: -1, MinorVersion: -1 };
+		}
 
 		// Throw an exception if the version is lower than this.MINIMAL_CPI_VERSION
 		if(actualVersion.MajorVersion < minimalVersion.MajorVersion || 
@@ -68,10 +78,7 @@ export class DataUriPostCommand extends TemporaryFileUrlPostCommand implements I
 	{
 		const relativeAbsoluteKeyService = await this.getRelativeAbsoluteKeyService();
 		// Save the file to the FilesToUpload table
-		const fileToUpload: FileToUpload = {
-			Key: uuid(),
-			AbsolutePath: relativeAbsoluteKeyService.getAbsolutePath(res.Key!),
-		};
+		const fileToUpload: FileToUpload = this.createFileToUpload(relativeAbsoluteKeyService, res);
 
 		await this.filesToUploadDal.upsert(fileToUpload);
 
@@ -79,7 +86,7 @@ export class DataUriPostCommand extends TemporaryFileUrlPostCommand implements I
 		if(isLatestEntry)
 		{
 			// Upload file to temp file
-			const fileUploadService = new FileUploadService(this.pepperiDal, pepperi.papiClient, fileToUpload);
+			const fileUploadService = FileUploadService.getInstance(this.pepperiDal, pepperi.papiClient, fileToUpload);
 			fileUploadService.asyncUploadFile();
 		}
 		else
@@ -88,6 +95,14 @@ export class DataUriPostCommand extends TemporaryFileUrlPostCommand implements I
 			fileToUpload.Hidden = true;
 			this.filesToUploadDal.upsert(fileToUpload);
 		}
+	}
+
+	protected createFileToUpload(relativeAbsoluteKeyService: RelativeAbsoluteKeyService, res: any): FileToUpload
+	{
+		return {
+			Key: uuid(),
+			AbsolutePath: relativeAbsoluteKeyService.getAbsolutePath(res.Key!),
+		};
 	}
 
 	protected async getRelativeAbsoluteKeyService(): Promise<RelativeAbsoluteKeyService>

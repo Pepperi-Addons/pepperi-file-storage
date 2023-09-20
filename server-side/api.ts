@@ -211,7 +211,7 @@ export async function resource_import(client: Client, request: Request): Promise
 
 	const dal = ServerHelper.DalFactory(client, request);
 
-	const pfsCommand = new ImportResourcesCommand(request, dal);
+	const pfsCommand = new ImportResourcesCommand(request, dal, dal);
 
 	return await pfsCommand.execute();
 }
