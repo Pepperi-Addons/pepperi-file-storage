@@ -1,13 +1,13 @@
 import "@pepperi-addons/cpi-node";
 import { ListFolderContentsCommand, ListObjectsCommand, DownloadFileCommand, MAXIMAL_LOCK_TIME, IFetchCommand, BaseResourceFetcherService, IntegrationTestBody } from "pfs-shared";
-import { DataUriPostCommand } from "./commands/dataUriPostCommand";
+import { MobilePostCommand } from "./commands/mobilePostCommand";
 import CpiAwsDal from "./dal/awsDal";
-import { CpiIndexedDataS3PfsDal } from "./dal/cpiIndexedDataS3PfsDal";
+import { MobileCpiIndexedDataS3PfsDal } from "./dal/mobileCpiIndexedDataS3PfsDal";
 import CpiPepperiDal from "./dal/pepperiDal";
 import { PreSyncService } from "./preSync.service";
 import { PreSyncResult } from "./entities";
-import { TemporaryFileCpiIndexedDataS3PfsDal } from "./dal/temporaryFileCpiIndexedDataS3PfsDal";
-import { TemporaryFileUrlPostCommand } from "./commands/temporaryFileUrlPostCommand";
+import { WebAppCpiIndexedDataS3PfsDal } from "./dal/webAppCpiIndexedDataS3PfsDal";
+import { WebAppUrlPostCommand } from "./commands/webAppUrlPostCommand";
 import { FileUploadService } from "./fileUpload.service";
 import { IntegrationTestsPostCommand } from "./commands/integrationTestsPostCommand";
 
@@ -79,7 +79,7 @@ router.post("/files", async (req, res, next) =>
 		}
 		
 		const {PfsDal, PepperiDal} = await getDal(req);
-		const uploadFileCommand = getPostCommand(req, PfsDal, PepperiDal);
+		const uploadFileCommand = await getPostCommand(req, PfsDal, PepperiDal);
 		const result = await uploadFileCommand.execute();
 
 		res.json(result);
@@ -129,21 +129,21 @@ router.get("/files/find", async (req, res, next) =>
 	}
 });
 
-function getPostCommand(req, PfsDal: CpiIndexedDataS3PfsDal, PepperiDal: CpiPepperiDal): TemporaryFileUrlPostCommand
+async function getPostCommand(req, PfsDal: MobileCpiIndexedDataS3PfsDal, PepperiDal: CpiPepperiDal): Promise<WebAppUrlPostCommand>
 {
-	let postCommand: TemporaryFileUrlPostCommand;
+	let postCommand: WebAppUrlPostCommand;
 	const requestBody = req.body as IntegrationTestBody;
 	if(requestBody?.IntegrationTestData)
 	{
 		postCommand = new IntegrationTestsPostCommand(req, PfsDal, PfsDal, PepperiDal);
 	}
-	else if(Array.isArray(req.body?.TemporaryFileURLs))
+	else if(await global["app"]["wApp"]["isWebApp"]())
 	{
-		postCommand = new TemporaryFileUrlPostCommand(req, PfsDal, PfsDal, PepperiDal);
+		postCommand = new WebAppUrlPostCommand(req, PfsDal, PfsDal, PepperiDal);
 	}
 	else
 	{
-		postCommand = new DataUriPostCommand(req, PfsDal, PfsDal, PepperiDal);
+		postCommand = new MobilePostCommand(req, PfsDal, PfsDal, PepperiDal);
 	}
 	
 	return postCommand;
@@ -157,17 +157,17 @@ async function getDal(req)
 
 	const pepperiDal = new CpiPepperiDal();
 
-	let dal: CpiIndexedDataS3PfsDal;
+	let dal: MobileCpiIndexedDataS3PfsDal;
 
 	const requestBody = req.body as IntegrationTestBody;
 
 	if(requestBody?.IntegrationTestData?.IsWebApp ?? await global["app"]["wApp"]["isWebApp"]())
 	{
-		dal = new TemporaryFileCpiIndexedDataS3PfsDal(OAuthAccessToken, req, MAXIMAL_LOCK_TIME, awsDal, pepperiDal);
+		dal = new WebAppCpiIndexedDataS3PfsDal(OAuthAccessToken, req, MAXIMAL_LOCK_TIME, awsDal, pepperiDal);
 	}
 	else
 	{
-		dal = new CpiIndexedDataS3PfsDal(OAuthAccessToken, req, MAXIMAL_LOCK_TIME, awsDal, pepperiDal);
+		dal = new MobileCpiIndexedDataS3PfsDal(OAuthAccessToken, req, MAXIMAL_LOCK_TIME, awsDal, pepperiDal);
 	}
 
 	return {PfsDal: dal, PepperiDal: pepperiDal} ;

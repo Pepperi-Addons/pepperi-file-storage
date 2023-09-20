@@ -1,9 +1,9 @@
 import { AddonData } from "@pepperi-addons/papi-sdk";
 import { PfsService } from "../cpiPfs.service";
-import { CpiIndexedDataS3PfsDal } from "./cpiIndexedDataS3PfsDal";
+import { MobileCpiIndexedDataS3PfsDal } from "./mobileCpiIndexedDataS3PfsDal";
 
 
-export class TemporaryFileCpiIndexedDataS3PfsDal extends CpiIndexedDataS3PfsDal 
+export class WebAppCpiIndexedDataS3PfsDal extends MobileCpiIndexedDataS3PfsDal 
 {				
 
 	public override async mutateS3(newFileFields: any, existingFile: any): Promise<void> 

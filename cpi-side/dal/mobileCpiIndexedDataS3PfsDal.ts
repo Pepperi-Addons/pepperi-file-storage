@@ -8,7 +8,7 @@ import writeFile from "write-file-atomic";
 import { PfsService } from "../cpiPfs.service";
 import { IndexedDataS3PfsDal, IntegrationTestBody, SharedHelper } from "pfs-shared";
 
-export class CpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal 
+export class MobileCpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal 
 {    
 
 	//#region IPfsGetter

@@ -1,8 +1,8 @@
 import { FileToUpload, ICommand, IntegrationTestBody, RelativeAbsoluteKeyService } from "pfs-shared";
-import { DataUriPostCommand } from "./dataUriPostCommand";
+import { MobilePostCommand } from "./mobilePostCommand";
 
 
-export class IntegrationTestsPostCommand extends DataUriPostCommand implements ICommand
+export class IntegrationTestsPostCommand extends MobilePostCommand implements ICommand
 {
 	protected override createFileToUpload(relativeAbsoluteKeyService: RelativeAbsoluteKeyService, res: any): FileToUpload
 	{

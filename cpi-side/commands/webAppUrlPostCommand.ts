@@ -5,7 +5,7 @@ import { OfflinePostService } from "./offlinePostService";
 import { FilesToUploadDal } from "../dal/filesToUploadDal";
 
 
-export class TemporaryFileUrlPostCommand extends PfsService implements ICommand
+export class WebAppUrlPostCommand extends PfsService implements ICommand
 {
 	protected filesToUploadDal: FilesToUploadDal;
 
