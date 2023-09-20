@@ -1,7 +1,7 @@
-import { AddonData, PapiClient, SearchBody } from "@pepperi-addons/papi-sdk";
+import { AddonData, PapiClient, SearchBody, TemporaryFile } from "@pepperi-addons/papi-sdk";
 import fetch, { RequestInit, Response } from "node-fetch";
 import fs from "fs";
-import { FileToUpload, IPepperiDal, RelativeAbsoluteKeyService, SharedHelper, TempFile } from "pfs-shared";
+import { FileToUpload, IPepperiDal, RelativeAbsoluteKeyService, SharedHelper } from "pfs-shared";
 import { AddonUUID } from "../addon.config.json";
 import CpiPepperiDal from "./dal/pepperiDal";
 import PQueue from "p-queue";
@@ -107,13 +107,13 @@ export class FileUploadService
 
 		const fileMetadata  = await this.getFileMetadata();
 
-		let tempFileUrls: TempFile;
+		let tempFileUrls: TemporaryFile;
 
 		// Create a temporary file in the PFS.
 		// This is an online call to the PFS.
 		try
 		{
-			tempFileUrls = (await this.papiClient.post(`/addons/api/${AddonUUID}/api/temporary_file`, {})) as TempFile;
+			tempFileUrls = await this.papiClient.addons.pfs.temporaryFile();
 			if(tempFileUrls)
 			{
 				this.fileUploadLog(`Successfully created a temp file on S3.`);
@@ -197,7 +197,7 @@ export class FileUploadService
      * @param fileMetadata 
      * @param tempFileUrls 
      */
-	private async setTemporaryFileURLs(fileMetadata: { Key: string; MIME: string; URL: string; }, tempFileUrls: TempFile): Promise<void>
+	private async setTemporaryFileURLs(fileMetadata: { Key: string; MIME: string; URL: string; }, tempFileUrls: TemporaryFile): Promise<void>
 	{
 		this.fileUploadLog(`Updating file TemporaryFileURLs to point to the temporary file...`);
 
