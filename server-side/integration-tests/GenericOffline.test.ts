@@ -69,6 +69,7 @@ export class GenericOfflineTests extends ABaseOfflinePfsTests
 			Name: this.pfsSchemaName,
 			SyncData: {
 				Sync: true,
+				PushLocalChanges: true
 			},
 			Type: "pfs",
 		};
