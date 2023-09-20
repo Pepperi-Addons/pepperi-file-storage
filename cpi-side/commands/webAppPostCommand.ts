@@ -6,7 +6,7 @@ import { OfflinePostService } from "./offlinePostService";
 import { FilesToUploadDal } from "../dal/filesToUploadDal";
 
 
-export class WebAppUrlPostCommand extends PfsService implements ICommand
+export class WebAppPostCommand extends PfsService implements ICommand
 {
 	protected filesToUploadDal: FilesToUploadDal;
 
@@ -50,7 +50,7 @@ export class WebAppUrlPostCommand extends PfsService implements ICommand
 		// Since MobilePostCommand inherits from this class, we need to make sure we're in a web app.
 		// When on mobile, the URI-to-TemporaryFileURL conversion is done using the FileUploadService.
 		const isWebApp: boolean = (this.request.body as IntegrationTestBody)?.IntegrationTestData?.IsWebApp ?? await global["app"]["wApp"]["isWebApp"]();
-		
+
 		if(this.request.body?.URI && isWebApp)
 		{
 			// Create a temporary file
@@ -102,11 +102,22 @@ export class WebAppUrlPostCommand extends PfsService implements ICommand
 	 */
 	private getBufferFromDataUri(): Buffer
 	{
+		let buffer: Buffer;
 		const dataUri = this.request.body.URI;
-		const dataUriParts = dataUri.split(",");
-		const dataUriBuffer = Buffer.from(dataUriParts[1], "base64");
+		const dataUriRegex = /^data:.+\/(.+);base64,(.*)$/;
 
-		return dataUriBuffer;
+		const matches = dataUri.match(dataUriRegex);
+		if (matches?.length && matches?.length >= 3) 
+		{
+			const data = matches[2];
+			buffer = Buffer.from(data, "base64");
+		}
+		else 
+		{
+			throw new Error("Invalid file data");
+		}
+
+		return buffer;
 	}
 
 	protected validateNoThumbnailsAreUpserted(): void 

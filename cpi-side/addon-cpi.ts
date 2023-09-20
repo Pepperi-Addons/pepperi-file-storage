@@ -7,7 +7,7 @@ import CpiPepperiDal from "./dal/pepperiDal";
 import { PreSyncService } from "./preSync.service";
 import { PreSyncResult } from "./entities";
 import { WebAppCpiIndexedDataS3PfsDal } from "./dal/webAppCpiIndexedDataS3PfsDal";
-import { WebAppUrlPostCommand } from "./commands/webAppUrlPostCommand";
+import { WebAppPostCommand } from "./commands/webAppPostCommand";
 import { FileUploadService } from "./fileUpload.service";
 import { IntegrationTestsPostCommand } from "./commands/integrationTestsPostCommand";
 
@@ -129,9 +129,9 @@ router.get("/files/find", async (req, res, next) =>
 	}
 });
 
-async function getPostCommand(req, PfsDal: MobileCpiIndexedDataS3PfsDal, PepperiDal: CpiPepperiDal): Promise<WebAppUrlPostCommand>
+async function getPostCommand(req, PfsDal: MobileCpiIndexedDataS3PfsDal, PepperiDal: CpiPepperiDal): Promise<WebAppPostCommand>
 {
-	let postCommand: WebAppUrlPostCommand;
+	let postCommand: WebAppPostCommand;
 	const requestBody = req.body as IntegrationTestBody;
 	if(requestBody?.IntegrationTestData)
 	{
@@ -139,7 +139,7 @@ async function getPostCommand(req, PfsDal: MobileCpiIndexedDataS3PfsDal, Pepperi
 	}
 	else if(await global["app"]["wApp"]["isWebApp"]())
 	{
-		postCommand = new WebAppUrlPostCommand(req, PfsDal, PfsDal, PepperiDal);
+		postCommand = new WebAppPostCommand(req, PfsDal, PfsDal, PepperiDal);
 	}
 	else
 	{

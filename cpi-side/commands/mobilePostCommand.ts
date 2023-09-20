@@ -2,10 +2,10 @@ import { FileToUpload, ICommand, RelativeAbsoluteKeyService } from "pfs-shared";
 import { FileUploadService } from "../fileUpload.service";
 import jwtDecode from "jwt-decode";
 import { v4 as uuid } from "uuid";
-import { WebAppUrlPostCommand } from "./webAppUrlPostCommand";
+import { WebAppPostCommand } from "./webAppPostCommand";
 
 
-export class MobilePostCommand extends WebAppUrlPostCommand implements ICommand
+export class MobilePostCommand extends WebAppPostCommand implements ICommand
 {
 	protected readonly MINIMAL_CPI_VERSION = "17.2";
 	
