@@ -7,7 +7,8 @@
   "Endpoints": [
     "installation.ts",
     "api.ts",
-    "data-source-api.ts"
+    "data-source-api.ts",
+    "tests.ts"
   ],
   "Editors": [
     "main"
