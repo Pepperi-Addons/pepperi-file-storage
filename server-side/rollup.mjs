@@ -44,7 +44,7 @@ async function sequentialRollup()
             format: 'cjs',
         });
 
-        bundle.close();
+        await bundle.close();
 
         console.log(`Done ${endpoint}.`);
     }
