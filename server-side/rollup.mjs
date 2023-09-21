@@ -42,6 +42,7 @@ async function sequentialRollup()
         await bundle.write({
             dir: '../publish/',
             format: 'cjs',
+            manualChunks: {},
         });
 
         await bundle.close();
