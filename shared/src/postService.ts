@@ -36,6 +36,12 @@ export abstract class PostService extends PfsService
 			throw new Error("Fields 'URI' and 'TemporaryFileURLs' are mutually exclusive.");
 		}
 
+		// Validate that if TemporaryFileURLs is provided, it is an array of strings.
+		if (this.request.body.TemporaryFileURLs && !Array.isArray(this.request.body.TemporaryFileURLs))
+		{
+			throw new Error("Field 'TemporaryFileURLs' should be an array of strings.");
+		}
+
 		this.validateExtension();
 
 		if (this.getPathDepth() > MAXIMAL_TREE_DEPTH) 
