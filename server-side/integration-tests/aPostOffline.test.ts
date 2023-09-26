@@ -35,7 +35,8 @@ export abstract class APostOfflineTests extends ABaseOfflinePfsTests
 							Size: "200x200"
 						}
 					],
-					...(await this.getPostFileData())
+					// Since we use Thumbnails, TemporaryFileURLs cannot be used, and we must use URI
+					URI: testFileData,
 				};
 
 				await this.pfsOnlineService.post(this.pfsSchemaName, file);
