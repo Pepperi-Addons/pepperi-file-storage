@@ -45,7 +45,7 @@ export abstract class APostOfflineTests extends ABaseOfflinePfsTests
 				await this.sync(expect);
 
 				// Make sure it is synced
-				const offlineFile = await this.pfsOfflineService.getByKey(this.pfsSchemaName, this.onlineTestFileName);
+				const offlineFile = await this.pfsOfflineService.getByKey(this.pfsSchemaName, this.onlineTestFileName, this.getIntegrationTestBody());
 				expect(offlineFile).to.not.be.undefined;
 				expect(offlineFile.Key).to.equal(file.Key);
 
@@ -90,7 +90,7 @@ export abstract class APostOfflineTests extends ABaseOfflinePfsTests
 				await this.sync(expect);
 
 				// Get file offline and ensure description was updated
-				const offlineFile = await this.pfsOfflineService.getByKey(this.pfsSchemaName, this.onlineTestFileName);
+				const offlineFile = await this.pfsOfflineService.getByKey(this.pfsSchemaName, this.onlineTestFileName, this.getIntegrationTestBody());
 				expect(offlineFile).to.have.property("Description").that.equals(updateFile.Description);
 			});
 

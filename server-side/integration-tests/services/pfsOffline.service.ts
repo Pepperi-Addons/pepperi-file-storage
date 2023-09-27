@@ -8,7 +8,7 @@ import { FileFindOptions } from "@pepperi-addons/papi-sdk/dist/endpoint";
 
 export class PfsOfflineService extends BaseService
 {
-	protected clientApi;
+	protected clientApi : ReturnType<typeof CPISideService.prototype.pepperi.getClientApi>;
 	constructor(servicesContainer: ServicesContainer)
 	{
 		super(servicesContainer);
@@ -53,22 +53,28 @@ export class PfsOfflineService extends BaseService
 		return res;
 	}
 
-	public async get(schemaName: string, findOptions: FindOptions | FileFindOptions): Promise<AddonFile[]>
+	public async get(schemaName: string, findOptions: FindOptions | FileFindOptions, body?: any): Promise<AddonFile[]>
 	{
 		console.log(`Offline: Getting from schema ${schemaName}...`);
 
-		const res = await this.clientApi.addons.pfs.uuid(AddonUUID).schema(schemaName).find(findOptions);
+		let url = `/addon-cpi/files/find?addon_uuid=${AddonUUID}&resource_name=${schemaName}`;
+		const query = this.cpiSideService.pepperi.encodeQueryParams(findOptions);
+		url = query ? url + '&' + query : url;
+
+		const res = await this.cpiSideService.pepperi.iApiCallHandler.handleApiCall(AddonUUID, url,'GET', body, undefined);
 
 		console.log(`Offline: Got from schema ${schemaName}: ${JSON.stringify(res)}`);
 
 		return res;
 	}
 
-	public async getByKey(schemaName: string, key: string): Promise<AddonFile>
+	public async getByKey(schemaName: string, key: string, body?: any): Promise<AddonFile>
 	{
 		console.log(`Offline: Getting by key ${key} from schema ${schemaName}...`);
-
-		const res = await this.clientApi.addons.pfs.uuid(AddonUUID).schema(schemaName).key(key).get();
+		
+		const url = `/addon-cpi/file?addon_uuid=${AddonUUID}&resource_name=${schemaName}&key=${key}`;
+		// We cannot use the clientApi here because it doesn't support GET with body
+		const res = await this.cpiSideService.pepperi.iApiCallHandler.handleApiCall(AddonUUID, url,'GET', body, undefined);
 
 		console.log(`Offline: Got by key ${key} from schema ${schemaName}: ${JSON.stringify(res)}`);
 
