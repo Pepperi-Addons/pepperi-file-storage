@@ -149,23 +149,31 @@ export class MobileCpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal
 		const superRes = await super.uploadFileMetadata(newFileFields, existingFile);
 
 		// Cache the result, so we won't have to download the file again.
-		const cpiURL = await this.getCpiURL(newFileFields);
-		console.log(`PFS: uploadFileMetadata: cpiURL: ${cpiURL}`);
+		const wasDataPosted = newFileFields.FileSize || Array.isArray(newFileFields.TemporaryFileURLs);
+		if(wasDataPosted)
+		{
+			const cpiURL = await this.getCpiURL(newFileFields) || PfsService.downloadedFileKeysToLocalUrl.get(`${existingFile.Key!}${existingFile.ModificationDateTime!}`);
+			console.log(`PFS: uploadFileMetadata: cpiURL: ${cpiURL}`);
+	
+			PfsService.downloadedFileKeysToLocalUrl.set(`${superRes.Key!}${superRes.ModificationDateTime!}`, cpiURL ?? '');
 
-		PfsService.downloadedFileKeysToLocalUrl.set(`${superRes.Key!}${superRes.ModificationDateTime!}`, cpiURL);
+			// Set the URL to point to the local file.
+			superRes.URL = cpiURL;
+		}
 
 		// If this file has already been POSTed to the PFS table, has been uploaded, but not yet Synced,
 		// it will have a TemporaryFileURLs field. Since it is not needed in the response, delete it.
 		delete superRes.TemporaryFileURLs; 
-
-		// Set the URL to point to the local file.
-		superRes.URL = cpiURL;
 
 		return superRes;
 	}
 
 	protected async getCpiURL(newFileFields: any): Promise<string>
 	{
+		if(!newFileFields.FileSize && !Array.isArray(newFileFields.TemporaryFileURLs))
+		{
+			return "";
+		}
 		return `${await pepperi.files.baseURL()}/${this.relativeAbsoluteKeyService.getAbsolutePath(newFileFields.Key)}`;
 	}
 

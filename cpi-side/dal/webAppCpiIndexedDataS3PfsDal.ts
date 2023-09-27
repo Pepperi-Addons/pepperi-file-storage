@@ -16,7 +16,7 @@ export class WebAppCpiIndexedDataS3PfsDal extends MobileCpiIndexedDataS3PfsDal
 
 	protected override async getCpiURL(newFileFields: any): Promise<string>
 	{
-		return newFileFields.TemporaryFileURLs[0];
+		return Array.isArray(newFileFields.TemporaryFileURLs) ? newFileFields.TemporaryFileURLs[0] : "";
 	}
 
 	/**
