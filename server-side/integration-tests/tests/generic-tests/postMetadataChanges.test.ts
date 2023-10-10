@@ -5,7 +5,7 @@ import { APostOfflineTests } from "../../aPostOffline.test";
 
 export class PostMetadataChangesTest extends APostOfflineTests
 {
-    tests(describe: (suiteTitle: string, func: () => void) => void,
+	tests(describe: (suiteTitle: string, func: () => void) => void,
 		it: (name: string, fn: Mocha.Func) => void,
 		expect: Chai.ExpectStatic,
 	): void 
@@ -14,7 +14,7 @@ export class PostMetadataChangesTest extends APostOfflineTests
 		{
 			it("Update file description offline, and sync", async () => 
 			{
-				console.log(`${this.title} - Starting test ${it.name}`)
+				console.log(`${this.title} - Starting test ${it.name}`);
 
 				// Update file description offline
 				const updateFile: AddonFile = {
@@ -25,7 +25,8 @@ export class PostMetadataChangesTest extends APostOfflineTests
 				await this.pfsOfflineService.post(this.pfsSchemaName, updateFile);
 
 				// Sync
-				await this.syncWithValidation(expect, {finish: true, success: true}, async () => {
+				await this.syncWithValidation(expect, {finish: true, success: true}, async () => 
+				{
 					let res: boolean;
 					try
 					{
@@ -61,7 +62,8 @@ export class PostMetadataChangesTest extends APostOfflineTests
 				await this.waitForAsyncJob(10, `Awaiting online POST to propagate to Sync`);
 
 				// Sync
-				await this.syncWithValidation(expect, {finish: true, success: true}, async () => {
+				await this.syncWithValidation(expect, {finish: true, success: true}, async () => 
+				{
 					let res: boolean;
 					try
 					{
@@ -80,6 +82,6 @@ export class PostMetadataChangesTest extends APostOfflineTests
 				const offlineFile = await this.pfsOfflineService.getByKey(this.pfsSchemaName, await this.prefixedOnlineTestFileName, this.testsExecutor.getIntegrationTestBody());
 				expect(offlineFile).to.have.property("Description").that.equals(updateFile.Description);
 			});
-        });
-    }
+		});
+	}
 }

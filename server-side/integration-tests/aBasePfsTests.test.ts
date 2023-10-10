@@ -62,7 +62,7 @@ export abstract class ABasePfsTests extends BaseTest
 	 * Sleeps for the specified number of seconds
 	 * @param seconds - number of seconds to wait for the async job to finish. Default is 30 seconds.
 	 */
-	 protected async waitForAsyncJob(seconds: number = 30, message: string = ""): Promise<void> 
+	 protected async waitForAsyncJob(seconds = 30, message = ""): Promise<void> 
 	 {
 		if(message)
 		{

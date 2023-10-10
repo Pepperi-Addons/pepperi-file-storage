@@ -62,13 +62,13 @@ export class PfsOfflineService extends BaseService
 	{
 		console.log(`Offline: Getting from schema ${schemaName}...`);
 
-		let url = `/addon-cpi/files/find?addon_uuid=${AddonUUID}&resource_name=${schemaName}${body ? `&IntegrationTestData=${JSON.stringify(body.IntegrationTestData)}` : ''}`;
+		let url = `/addon-cpi/files/find?addon_uuid=${AddonUUID}&resource_name=${schemaName}${body ? `&IntegrationTestData=${JSON.stringify(body.IntegrationTestData)}` : ""}`;
 		const query = this.cpiSideService.pepperi.encodeQueryParams(findOptions);
-		url = query ? url + '&' + query : url;
+		url = query ? url + "&" + query : url;
 
 		// Since more data is passed as query param, we need to use the iApiCallHandler directly
 		// instead of this.clientApi.addons.pfs.uuid(AddonUUID).schema(schemaName).find(findOptions);
-		const cpiCallingFunction = async () => await this.cpiSideService.pepperi.iApiCallHandler.handleApiCall(AddonUUID, url,'GET', undefined, undefined);
+		const cpiCallingFunction = async () => await this.cpiSideService.pepperi.iApiCallHandler.handleApiCall(AddonUUID, url,"GET", undefined, undefined);
 		const res = await this.executeCpiEndpointWithRetries(cpiCallingFunction);
 
 		console.log(`Offline: Got from schema ${schemaName}: ${JSON.stringify(res)}`);
@@ -78,12 +78,12 @@ export class PfsOfflineService extends BaseService
 
 	public async getByKey(schemaName: string, key: string, body?: any): Promise<AddonFile>
 	{
-		const integrationTestsDataParam = body ? `&IntegrationTestData=${JSON.stringify(body.IntegrationTestData)}` : '';
+		const integrationTestsDataParam = body ? `&IntegrationTestData=${JSON.stringify(body.IntegrationTestData)}` : "";
 		const url = `/addon-cpi/file?addon_uuid=${AddonUUID}&resource_name=${schemaName}&key=${key}${integrationTestsDataParam}`;
 		
 		// Since more data is passed as query param, we need to use the iApiCallHandler directly
 		// instead of this.clientApi.addons.pfs.uuid(AddonUUID).schema(schemaName).key(key).get();
-		const cpiCallingFunction = async () => await this.cpiSideService.pepperi.iApiCallHandler.handleApiCall(AddonUUID, url,'GET', undefined, undefined);
+		const cpiCallingFunction = async () => await this.cpiSideService.pepperi.iApiCallHandler.handleApiCall(AddonUUID, url,"GET", undefined, undefined);
 		const res = await this.executeCpiEndpointWithRetries(cpiCallingFunction);
 
 		console.log(`Offline: Got by key ${key} from schema ${schemaName}: ${JSON.stringify(res)}`);
@@ -91,7 +91,7 @@ export class PfsOfflineService extends BaseService
 		return res;
 	}
 
-	protected async executeCpiEndpointWithRetries(cpiCallingFunction: () => Promise<any>, retries: number = 3): Promise<any>
+	protected async executeCpiEndpointWithRetries(cpiCallingFunction: () => Promise<any>, retries = 3): Promise<any>
 	{
 		let res;
 		for (let i = 0; i < retries; i++)

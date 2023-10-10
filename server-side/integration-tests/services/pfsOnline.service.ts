@@ -99,7 +99,7 @@ export class PfsOnlineService
 		
 		
 		// check every property listed on AddonFile interface
-		let res: boolean = !!file2;
+		let res = !!file2;
 
 		const propertiesToDisregard: string[] = ["Thumbnails", "IntegrationTestData"];
 

@@ -1,9 +1,6 @@
-import { AddonData, AddonDataScheme } from "@pepperi-addons/papi-sdk";
+import { AddonDataScheme } from "@pepperi-addons/papi-sdk";
 
 import { ABaseOfflinePfsTests } from "./aBaseOfflinePfsTests.test";
-import { ArbitraryPrefix } from "./constants";
-import { ArbitraryPrefixService } from "./services/arbitraryPrefix.service";
-import { AddonUUID } from "../../addon.config.json"
 
 
 export class GenericOfflineTests extends ABaseOfflinePfsTests
@@ -60,13 +57,17 @@ export class GenericOfflineTests extends ABaseOfflinePfsTests
 			this.waitForAsyncJob();
 
 			// Sync the purging of the schema to the device
-			await this.syncWithValidation(expect, {finish: true, success: true}, async () => {
+			await this.syncWithValidation(expect, {finish: true, success: true}, async () => 
+			{
 				let res: boolean;
-				try {
+				try 
+				{
 					await this.pfsOnlineService.getSchema(this.pfsSchemaName);
 					// Succeeding in getting the schema means it wasn't purged
 					res = false;
-				} catch (error) {
+				}
+				catch (error) 
+				{
 					res = true;
 				}
 

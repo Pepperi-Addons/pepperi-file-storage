@@ -6,9 +6,9 @@ import { AMobileOfflineTest } from "./aMobileOffline.test";
 
 export class MobilePostWhileOfflineTest extends AMobileOfflineTest
 {
-    subtitle: string = "Offline Post While Offline";
+	subtitle = "Offline Post While Offline";
 
-    public override tests(describe: (suiteTitle: string, func: () => void) => void, it: (name: string, fn: Mocha.Func) => void, expect: Chai.ExpectStatic): void 
+	public override tests(describe: (suiteTitle: string, func: () => void) => void, it: (name: string, fn: Mocha.Func) => void, expect: Chai.ExpectStatic): void 
 	{
 		describe(this.title, () => 
 		{
@@ -16,7 +16,7 @@ export class MobilePostWhileOfflineTest extends AMobileOfflineTest
 			{
 				console.log(`${this.title} - Starting test ${it.name}`);
 				
-                const offlineModePostFileName = `fail${await this.prefixedOfflineTestFileName}`;
+				const offlineModePostFileName = `fail${await this.prefixedOfflineTestFileName}`;
 				const integrationTestBody: IntegrationTestBody = {
 					IntegrationTestData: {
 						IsWebApp: false,
@@ -45,18 +45,21 @@ export class MobilePostWhileOfflineTest extends AMobileOfflineTest
 				await this.waitForAsyncJob(5); // wait for the upload process to succeed
 
 				// Sync should now succeed
-				await this.syncWithValidation(expect, {finish: true, success: true}, async() => {
-                    let res: boolean;
-                    try {
-                        await this.pfsOnlineService.getByKey(this.pfsSchemaName, offlineModePostFileName);
-                        res = true;
-                    } 
-                    catch (error) {
-                        res = false;
-                    }
+				await this.syncWithValidation(expect, {finish: true, success: true}, async() => 
+				{
+					let res: boolean;
+					try 
+					{
+						await this.pfsOnlineService.getByKey(this.pfsSchemaName, offlineModePostFileName);
+						res = true;
+					} 
+					catch (error) 
+					{
+						res = false;
+					}
 
-                    return res;
-                });
+					return res;
+				});
 
 				await this.validateOnlineFile(expect, offlineModePostFileName);
 			});

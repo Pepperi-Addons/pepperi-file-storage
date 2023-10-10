@@ -10,16 +10,16 @@ export abstract class ABaseOfflinePfsTests extends ABasePfsTests
 	private readonly _onlineTestFileName = "test.png";
 	private readonly _offlineTestFileName = "offlineTest.png";
 
-	private _arbitraryPrefixService: ArbitraryPrefixService | undefined
+	private _arbitraryPrefixService: ArbitraryPrefixService | undefined;
 
 	protected get prefixedOnlineTestFileName(): Promise<string>
 	{
-		return this.arbitraryPrefixService.addPrefixToString(this._onlineTestFileName);;
+		return this.arbitraryPrefixService.addPrefixToString(this._onlineTestFileName);
 	}
 
 	protected get prefixedOfflineTestFileName(): Promise<string>
 	{
-		return this.arbitraryPrefixService.addPrefixToString(this._offlineTestFileName);;
+		return this.arbitraryPrefixService.addPrefixToString(this._offlineTestFileName);
 	}
 
 	protected get arbitraryPrefixService(): ArbitraryPrefixService
@@ -46,7 +46,7 @@ export abstract class ABaseOfflinePfsTests extends ABasePfsTests
 	{
 		const numberOfSyncs = validationFunction ? 5 : 1;
 		// If no validation function is provided, we will sync only once
-		let syncValidated: boolean = !validationFunction;
+		let syncValidated = !validationFunction;
 		let syncCounter = 0;
 		do
 		{
@@ -81,7 +81,7 @@ export abstract class ABaseOfflinePfsTests extends ABasePfsTests
 	{
 		const numberOfSyncs = validationFunction ? 5 : 1;
 		// If no validation function is provided, we will sync only once
-		let syncValidated: boolean = !validationFunction;
+		let syncValidated = !validationFunction;
 		let syncCounter = 0;
 		do
 		{

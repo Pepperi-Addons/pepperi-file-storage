@@ -9,37 +9,37 @@ export abstract class AMobileOfflineTest extends APostOfflineTests implements IT
 {
     abstract subtitle: string;
 
-	public override get title(): string
-	{
-		return `Mobile Offline - ${this.subtitle}`;
-	}
-	//#region ITestsExecutor implementation
+    public override get title(): string
+    {
+    	return `Mobile Offline - ${this.subtitle}`;
+    }
+    //#region ITestsExecutor implementation
     public getExpectedOfflineUrlRegex(): RegExp
-	{
-		return /localhost/i;
-	}
+    {
+    	return /localhost/i;
+    }
 
-	public async getPostFileData(): Promise<{URI: string}>
-	{
-		return { URI: testFileData };
-	}
+    public async getPostFileData(): Promise<{URI: string}>
+    {
+    	return { URI: testFileData };
+    }
 
-	public async ensureLocalFileIsValid(offlineFile: AddonFile, expect: Chai.ExpectStatic): Promise<void>
-	{
-		// Since on mobile we expect localhost URLs, we cannot get the actual file from the URL.
-	}
+    public async ensureLocalFileIsValid(offlineFile: AddonFile, expect: Chai.ExpectStatic): Promise<void>
+    {
+    	// Since on mobile we expect localhost URLs, we cannot get the actual file from the URL.
+    }
 
-	public getIntegrationTestBody(): IntegrationTestBody
-	{
-		const integrationTestBody: IntegrationTestBody = {
-			IntegrationTestData: {
-				IsWebApp: false,
-				ShouldDeleteURLsCache: true,
-			}
-		};
+    public getIntegrationTestBody(): IntegrationTestBody
+    {
+    	const integrationTestBody: IntegrationTestBody = {
+    		IntegrationTestData: {
+    			IsWebApp: false,
+    			ShouldDeleteURLsCache: true,
+    		}
+    	};
 
-		return integrationTestBody;
-	}
+    	return integrationTestBody;
+    }
 
-    //#endregion
+	//#endregion
 }

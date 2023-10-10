@@ -156,7 +156,7 @@ export class MobileCpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal
 			const cpiURL = await this.getCpiURL(newFileFields) || PfsService.downloadedFileKeysToLocalUrl.get(`${existingFile.Key!}${existingFile.ModificationDateTime!}`);
 			console.log(`PFS: uploadFileMetadata: cpiURL: ${cpiURL}`);
 	
-			PfsService.downloadedFileKeysToLocalUrl.set(`${superRes.Key!}${superRes.ModificationDateTime!}`, cpiURL ?? '');
+			PfsService.downloadedFileKeysToLocalUrl.set(`${superRes.Key!}${superRes.ModificationDateTime!}`, cpiURL ?? "");
 
 			// Set the URL to point to the local file.
 			superRes.URL = cpiURL;

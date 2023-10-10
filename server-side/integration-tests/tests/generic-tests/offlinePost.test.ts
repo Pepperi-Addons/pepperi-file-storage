@@ -8,7 +8,7 @@ import { ArbitraryPrefixService } from "../../services/arbitraryPrefix.service";
 
 export class OfflinePostTest extends APostOfflineTests
 {
-    tests(describe: (suiteTitle: string, func: () => void) => void,
+	tests(describe: (suiteTitle: string, func: () => void) => void,
 		it: (name: string, fn: Mocha.Func) => void,
 		expect: Chai.ExpectStatic,
 	): void 
@@ -35,12 +35,16 @@ export class OfflinePostTest extends APostOfflineTests
 				this.waitForAsyncJob();
 
 				// Sync it
-				await this.syncWithValidation(expect, {finish: true, success: true}, async () =>{
+				await this.syncWithValidation(expect, {finish: true, success: true}, async () =>
+				{
 					let res: boolean;
-					try {
+					try 
+					{
 						await this.pfsOnlineService.getByKey(this.pfsSchemaName, await this.prefixedOfflineTestFileName);
 						res = true;
-					} catch (error) {
+					}
+					catch (error) 
+					{
 						res = false;
 					}
 
@@ -79,12 +83,16 @@ export class OfflinePostTest extends APostOfflineTests
 				});
 
 				// Sync it
-				await this.syncWithValidation(expect, {finish: true, success: true}, async () =>{
+				await this.syncWithValidation(expect, {finish: true, success: true}, async () =>
+				{
 					let res: boolean;
-					try {
+					try 
+					{
 						const validateOnlineFile = await this.pfsOnlineService.getByKey(this.pfsSchemaName, offlineFileToDeleteKey);
 						res = validateOnlineFile.Hidden!;
-					} catch (error) {
+					}
+					catch (error) 
+					{
 						res = false;
 					}
 
@@ -108,6 +116,6 @@ export class OfflinePostTest extends APostOfflineTests
 				const buffer: Buffer = await this.filesFetcherService.downloadFile(url);
 				expect(buffer.length).to.not.equal(onlineFile.FileSize);
 			});
-        });
-    }
+		});
+	}
 }

@@ -30,7 +30,8 @@ export class DeleteFileOfflineTest extends APostOfflineTests
 				await this.pfsOfflineService.post(this.pfsSchemaName, deleteFile);
 
 				// Sync
-				await this.syncWithValidation(expect, {finish: true, success: true}, async () => {
+				await this.syncWithValidation(expect, {finish: true, success: true}, async () => 
+				{
 					let res: boolean;
 					try
 					{
@@ -56,6 +57,6 @@ export class DeleteFileOfflineTest extends APostOfflineTests
 				expect(fileBufferAfterDeletion).to.not.deep.equal(fileBufferBeforeDeletion);
 				expect(thumbnailBufferAfterDeletion).to.not.deep.equal(thumbnailBufferBeforeDeletion);
 			});
-        });
-    }
+		});
+	}
 }

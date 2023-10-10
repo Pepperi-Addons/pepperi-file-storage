@@ -6,7 +6,7 @@ import { testFileData } from "../../constants";
 
 export class PostOnlineTest extends APostOfflineTests
 {
-    tests(describe: (suiteTitle: string, func: () => void) => void,
+	tests(describe: (suiteTitle: string, func: () => void) => void,
 		it: (name: string, fn: Mocha.Func) => void,
 		expect: Chai.ExpectStatic,
 	): void 
@@ -39,13 +39,16 @@ export class PostOnlineTest extends APostOfflineTests
 				await this.waitForAsyncJob(10, `Awaiting online POST to propagate to Sync`);
 
 				// Sync
-				await this.syncWithValidation(expect, {finish: true, success: true}, async () => {
+				await this.syncWithValidation(expect, {finish: true, success: true}, async () => 
+				{
 					let res: boolean;
-					try {
+					try 
+					{
 						await this.pfsOfflineService.getByKey(this.pfsSchemaName, await this.prefixedOnlineTestFileName, this.testsExecutor.getIntegrationTestBody());
 						res = true;
 					}
-					catch (error) {
+					catch (error) 
+					{
 						res = false;
 					}
 
@@ -67,6 +70,6 @@ export class PostOnlineTest extends APostOfflineTests
 				// Ensure the file exists in the provided URL
 				await this.testsExecutor.ensureLocalFileIsValid(offlineFile, expect);
 			});
-        });
-    }
+		});
+	}
 }

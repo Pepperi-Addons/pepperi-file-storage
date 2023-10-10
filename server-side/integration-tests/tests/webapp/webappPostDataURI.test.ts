@@ -6,9 +6,9 @@ import { AWebAppOfflineTest } from "./aWebAppOffline.test";
 
 export class WebAppPostDataUriTest extends AWebAppOfflineTest
 {
-    subtitle: string = "Post data URI";
+	subtitle = "Post data URI";
 
-    public override tests(describe: (suiteTitle: string, func: () => void) => void, it: (name: string, fn: Mocha.Func) => void, expect: Chai.ExpectStatic): void 
+	public override tests(describe: (suiteTitle: string, func: () => void) => void, it: (name: string, fn: Mocha.Func) => void, expect: Chai.ExpectStatic): void 
 	{
 		describe(this.title, () => 
 		{
@@ -33,12 +33,16 @@ export class WebAppPostDataUriTest extends AWebAppOfflineTest
 				await this.pfsOfflineService.post(this.pfsSchemaName, file);
 
 				// Sync it
-				await this.syncWithValidation(expect, {finish: true, success: true}, async () =>{
+				await this.syncWithValidation(expect, {finish: true, success: true}, async () =>
+				{
 					let res: boolean;
-					try {
+					try 
+					{
 						await this.pfsOnlineService.getByKey(this.pfsSchemaName, file.Key!);
 						res = true;
-					} catch (error) {
+					}
+					catch (error) 
+					{
 						res = false;
 					}
 
