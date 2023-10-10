@@ -62,10 +62,14 @@ export abstract class ABasePfsTests extends BaseTest
 	 * Sleeps for the specified number of seconds
 	 * @param seconds - number of seconds to wait for the async job to finish. Default is 30 seconds.
 	 */
-	 protected async waitForAsyncJob(seconds = 30): Promise<void> 
+	 protected async waitForAsyncJob(seconds: number = 30, message: string = ""): Promise<void> 
 	 {
-		 console.log(`Waiting for ${seconds} seconds for operation to catch up...`);
-		 Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, seconds * 1000);
-		 console.log(`Done waiting for operation`);
+		if(message)
+		{
+			console.log(message);
+		} 
+		console.log(`Waiting for ${seconds} seconds for operation to catch up...`);
+		Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, seconds * 1000);
+		console.log(`Done waiting for operation`);
 	 }
 }
