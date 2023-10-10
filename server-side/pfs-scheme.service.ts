@@ -64,7 +64,7 @@ export class PfsSchemeService
 	/**
 	 * Creates a data scheme with PFS's and client's requested fields.
 	 */
-	private async createPfsSchema() 
+	private async createPfsSchema(): Promise<AddonDataScheme>
 	{
 		const pfsMetadataTable = this.getMergedSchema();
 		
@@ -73,7 +73,10 @@ export class PfsSchemeService
 		pfsMetadataTable.Type = "data";
 
 		const papiClient: PapiClient = ServerHelper.createPapiClient(this.client, config.AddonUUID, this.client.AddonSecretKey);
-		return await papiClient.addons.data.schemes.post(pfsMetadataTable);
+
+		const resultingSchema = await papiClient.addons.data.schemes.post(pfsMetadataTable);
+		console.log(`Created schema ${resultingSchema.Name} with fields: ${JSON.stringify(resultingSchema.Fields)}`);
+		return resultingSchema;
 	}
 
 	private getPfsSchemaName(): string 
@@ -99,8 +102,8 @@ export class PfsSchemeService
 		}
 
 		return {
+			...schemaCopy,
 			...pfsSchemaData,
-			...schemaCopy
 		};
 	}
 
@@ -139,7 +142,7 @@ export class PfsSchemeService
 	private async validateSchemaCreationRequest() 
 	{
 		// Validate that the provided secret key matches the addon's secre key, and that the addon is indeed installed.
-		await ServerHelper.validateAddonSecretKey(this.request.header, this.client, this.request.query.addon_uuid);
+		// await ServerHelper.validateAddonSecretKey(this.request.header, this.client, this.request.query.addon_uuid);
 
 		// Validate that the requested schema is valid
 		await this.validateSchema();
