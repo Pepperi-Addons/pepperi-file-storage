@@ -104,8 +104,9 @@ export class MobileCpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal
 	 */
 	private async downloadFilesToDevice(objects: AddonData[]): Promise<void> 
 	{
-		// Only download to device files that are supposed to be synced, have a URL, and are not already cached.
-		const downloadRequiringObjects = objects.filter(object => object.Sync !== "None" &&
+		// Only download to device files that are supposed to be synced, when not isWebapp, have a URL, and are not already cached.
+		const isWebapp = (this.request.body as IntegrationTestBody)?.IntegrationTestData?.IsWebApp ?? await global["app"]["wApp"]["isWebApp"]();
+		const downloadRequiringObjects = isWebapp ? [] : objects.filter(object => object.Sync !== "None" &&
 																	object.Sync !== "DeviceThumbnail" &&
 																	object.URL &&
 																	!object.Hidden &&
