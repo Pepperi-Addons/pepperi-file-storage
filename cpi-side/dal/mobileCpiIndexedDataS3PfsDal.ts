@@ -29,13 +29,13 @@ export class MobileCpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal
 		// Set v={{modificationDateTime}} on each URL to avoid browser cache.
 		resultObjects.Objects = this.addVersionToObjectsUrl(resultObjects.Objects);
 
-		// Handle downloading files to device if needed
-		await this.downloadFilesToDevice(resultObjects.Objects);
-
 		if((this.request.body as IntegrationTestBody).IntegrationTestData?.ShouldDeleteURLsCache)
 		{
 			Array.from(PfsService.downloadedFileKeysToLocalUrl.keys()).map(key => PfsService.downloadedFileKeysToLocalUrl.delete(key));
 		}
+
+		// Handle downloading files to device if needed
+		await this.downloadFilesToDevice(resultObjects.Objects);
 		
 		this.setObjectsUrls(resultObjects.Objects);
 
