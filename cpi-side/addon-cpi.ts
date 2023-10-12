@@ -21,6 +21,27 @@ export async function load(configuration: any)
 	FileUploadService.initiatePeriodicUploadInterval();
 }
 
+/**
+ * This middleware is used for tests only.
+ * Since the CPI doesn't support GET requests with a body,
+ * GET requests send their IntegrationTestData as a stringified query parameter.
+ * This middleware parses the query parameter and adds it to the body.
+ */
+router.get("/:anyGetRequest", async (req, res, next) => 
+{
+	if(Object.keys(req.query).includes("IntegrationTestData"))
+	{
+		console.log("IntegrationTestData found in query parameters");
+
+		const parsedIntegrationTestData = JSON.parse(req.query.IntegrationTestData as string);
+		req.body = Object.assign(req.body ?? {}, { IntegrationTestData: parsedIntegrationTestData });
+
+		console.log(`IntegrationTestData added to body: ${JSON.stringify(req.body)}`);
+	}
+
+	next();
+});
+
 // will be called right before the sync started
 router.post(PreSyncService.endpointName, async (req, res) =>
 {
@@ -160,6 +181,10 @@ async function getDal(req)
 	let dal: MobileCpiIndexedDataS3PfsDal;
 
 	const requestBody = req.body as IntegrationTestBody;
+
+	console.log(`Getting DAL...`);
+	const isWebApp = requestBody?.IntegrationTestData?.IsWebApp ?? await global["app"]["wApp"]["isWebApp"]();
+	console.log(`Getting DAL: isWebApp = ${isWebApp}`);
 
 	if(requestBody?.IntegrationTestData?.IsWebApp ?? await global["app"]["wApp"]["isWebApp"]())
 	{

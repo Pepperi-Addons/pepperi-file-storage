@@ -29,13 +29,13 @@ export class MobileCpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal
 		// Set v={{modificationDateTime}} on each URL to avoid browser cache.
 		resultObjects.Objects = this.addVersionToObjectsUrl(resultObjects.Objects);
 
-		// Handle downloading files to device if needed
-		await this.downloadFilesToDevice(resultObjects.Objects);
-
 		if((this.request.body as IntegrationTestBody).IntegrationTestData?.ShouldDeleteURLsCache)
 		{
 			Array.from(PfsService.downloadedFileKeysToLocalUrl.keys()).map(key => PfsService.downloadedFileKeysToLocalUrl.delete(key));
 		}
+
+		// Handle downloading files to device if needed
+		await this.downloadFilesToDevice(resultObjects.Objects);
 		
 		this.setObjectsUrls(resultObjects.Objects);
 
@@ -104,8 +104,9 @@ export class MobileCpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal
 	 */
 	private async downloadFilesToDevice(objects: AddonData[]): Promise<void> 
 	{
-		// Only download to device files that are supposed to be synced, have a URL, and are not already cached.
-		const downloadRequiringObjects = objects.filter(object => object.Sync !== "None" &&
+		// Only download to device files that are supposed to be synced, when not isWebapp, have a URL, and are not already cached.
+		const isWebapp = (this.request.body as IntegrationTestBody)?.IntegrationTestData?.IsWebApp ?? await global["app"]["wApp"]["isWebApp"]();
+		const downloadRequiringObjects = isWebapp ? [] : objects.filter(object => object.Sync !== "None" &&
 																	object.Sync !== "DeviceThumbnail" &&
 																	object.URL &&
 																	!object.Hidden &&
@@ -155,7 +156,7 @@ export class MobileCpiIndexedDataS3PfsDal extends IndexedDataS3PfsDal
 			const cpiURL = await this.getCpiURL(newFileFields) || PfsService.downloadedFileKeysToLocalUrl.get(`${existingFile.Key!}${existingFile.ModificationDateTime!}`);
 			console.log(`PFS: uploadFileMetadata: cpiURL: ${cpiURL}`);
 	
-			PfsService.downloadedFileKeysToLocalUrl.set(`${superRes.Key!}${superRes.ModificationDateTime!}`, cpiURL ?? '');
+			PfsService.downloadedFileKeysToLocalUrl.set(`${superRes.Key!}${superRes.ModificationDateTime!}`, cpiURL ?? "");
 
 			// Set the URL to point to the local file.
 			superRes.URL = cpiURL;

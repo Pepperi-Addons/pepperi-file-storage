@@ -12,16 +12,19 @@ export class GenericOfflineTests extends ABaseOfflinePfsTests
 		expect: Chai.ExpectStatic,
 	): void 
 	{
-		describe(this.title, () => 
+		describe(this.title, async () => 
 		{
+			
+
 			it("Create an empty schema online and sync it", async () => 
 			{
 				await this.ensureSchemaDoesntExist(expect);
 
 				// Create a PFS schema online
 				await this.createPfsSchema();
+
 				// Sync it
-				await this.resync(expect);
+				await this.resync(expect,{finish: true, success: true});
 				// Make sure it is synced
 				const offlineSchema = await this.pfsOfflineService.getSchema(this.pfsSchemaName);
 
@@ -49,13 +52,27 @@ export class GenericOfflineTests extends ABaseOfflinePfsTests
 
 		if (existingSchema) 
 		{
-			await this.pfsOnlineService.purgePfsSchema(this.pfsSchemaName);
+			await this.pfsOnlineService.purgeSchema(this.pfsSchemaName);
 			// Await any PNS notifications to resolve.
 			this.waitForAsyncJob();
 
 			// Sync the purging of the schema to the device
-			await this.sync(expect);
+			await this.syncWithValidation(expect, {finish: true, success: true}, async () => 
+			{
+				let res: boolean;
+				try 
+				{
+					await this.pfsOnlineService.getSchema(this.pfsSchemaName);
+					// Succeeding in getting the schema means it wasn't purged
+					res = false;
+				}
+				catch (error) 
+				{
+					res = true;
+				}
 
+				return res;
+			});
 		}
 	}
 
@@ -74,6 +91,6 @@ export class GenericOfflineTests extends ABaseOfflinePfsTests
 			Type: "pfs",
 		};
 
-		return await this.pfsOnlineService.createPfsSchema(schema);
+		return await this.pfsOnlineService.createSchema(schema);
 	}
 }
