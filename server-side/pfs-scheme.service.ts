@@ -142,7 +142,7 @@ export class PfsSchemeService
 	private async validateSchemaCreationRequest() 
 	{
 		// Validate that the provided secret key matches the addon's secre key, and that the addon is indeed installed.
-		// await ServerHelper.validateAddonSecretKey(this.request.header, this.client, this.request.query.addon_uuid);
+		await ServerHelper.validateAddonSecretKey(this.request.header, this.client, this.request.query.addon_uuid);
 
 		// Validate that the requested schema is valid
 		await this.validateSchema();
