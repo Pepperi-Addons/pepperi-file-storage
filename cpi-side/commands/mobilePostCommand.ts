@@ -8,6 +8,7 @@ import { WebAppPostCommand } from "./webAppPostCommand";
 export class MobilePostCommand extends WebAppPostCommand implements ICommand
 {
 	protected readonly MINIMAL_CPI_VERSION = "17.2";
+	protected readonly JOURNEY_TRACKER_ADDON_UUID = "41011fbf-debf-40d8-8990-767738b8af03";
 	
 	public override async execute(): Promise<any> 
 	{
@@ -102,6 +103,7 @@ export class MobilePostCommand extends WebAppPostCommand implements ICommand
 		return {
 			Key: uuid(),
 			AbsolutePath: relativeAbsoluteKeyService.getAbsolutePath(res.Key!),
+			SkipSyncCheck: this.request.query.addon_uuid === this.JOURNEY_TRACKER_ADDON_UUID,
 		};
 	}
 

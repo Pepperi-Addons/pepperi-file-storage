@@ -48,7 +48,7 @@ export class PreSyncService
 	public async areAllFilesUploaded(): Promise<PreSyncResult>
 	{
 		const filesToUploadDal = new FilesToUploadDal(new CpiPepperiDal());
-		const filesToUpload = (await filesToUploadDal.search({})).Objects.filter(file => !file.Hidden);
+		const filesToUpload = (await filesToUploadDal.search({})).Objects.filter(file => !file.Hidden && !file.SkipSyncCheck);
 		const areAllFilesUploaded = filesToUpload.length === 0;
 
 		const res: PreSyncResult = {
