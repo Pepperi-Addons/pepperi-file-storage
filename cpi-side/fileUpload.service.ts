@@ -1,7 +1,7 @@
 import { AddonData, PapiClient, SearchBody, TemporaryFile } from "@pepperi-addons/papi-sdk";
 import fetch, { RequestInit, Response } from "node-fetch";
 import fs from "fs";
-import { createHash } from 'crypto';
+import { createHash } from "crypto";
 import { FileToUpload, IPepperiDal, RelativeAbsoluteKeyService, SharedHelper } from "pfs-shared";
 import { AddonUUID } from "../addon.config.json";
 import CpiPepperiDal from "./dal/pepperiDal";
@@ -232,8 +232,8 @@ export class FileUploadService
 	{
 		const newBuffer = await this.getFileDataBufferFromDisk();
 
-		const md5Old = createHash('md5').update(oldBuffer).digest('hex');
-		const md5New = createHash('md5').update(newBuffer).digest('hex');
+		const md5Old = createHash("md5").update(oldBuffer).digest("hex");
+		const md5New = createHash("md5").update(newBuffer).digest("hex");
 
 		return md5Old === md5New;
 	}
