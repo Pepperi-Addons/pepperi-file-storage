@@ -1,6 +1,7 @@
 import { AddonData, PapiClient, SearchBody, TemporaryFile } from "@pepperi-addons/papi-sdk";
 import fetch, { RequestInit, Response } from "node-fetch";
 import fs from "fs";
+import { createHash } from 'crypto';
 import { FileToUpload, IPepperiDal, RelativeAbsoluteKeyService, SharedHelper } from "pfs-shared";
 import { AddonUUID } from "../addon.config.json";
 import CpiPepperiDal from "./dal/pepperiDal";
@@ -179,6 +180,8 @@ export class FileUploadService
 
 				// Remove all older versions of the file from the FilesToUpload table (including this one).
 				await this.filesToUploadDal.hideOlderEntries(this.fileToUpload);
+
+				await this.deleteFileFromDisk(fileDataBuffer, fileMetadata);
 			}
 		}
 		finally
@@ -190,6 +193,54 @@ export class FileUploadService
 		// At this point we might or might not have already hidden this entry.
 		// Just to avoid another if-condition, go ahead and remove weather it was removed or not.
 		await this.removeFromFilesToUpload();
+	}
+
+	/**
+	 * Delete the file from the device's storage.
+	 * 
+	 * The file is deleted only if the oldBuffer and newBuffer have the same MD5 value,
+	 * and the ADAL entry is not marked Sync = "Device" | "Always".
+	 * 
+	 * Since the file might have been updated while the upload was in progress,
+	 * we need to make sure we delete the correct version of the file.
+	 * @param {Buffer} oldBuffer - The buffer of the file before the upload.
+	 */
+	protected async deleteFileFromDisk(oldBuffer: Buffer, fileMetadata: { Key: string; MIME: string; URL: string; Sync: "None" | "Device" | "DeviceThumbnail" | "Always"}): Promise<void>
+	{
+		// Validate the entry's Sync property, and that the file on the device's storage is up to date.
+		// If so, delete the file from the device's storage.
+		// The buffer check is done after the Sync check, to avoid unnecessary file reads.
+		if(!(this.shouldFileBeKeptOnDevice(fileMetadata)) && await this.isBufferUpToDate(oldBuffer))
+		{
+			this.fileUploadLog(`Deleting file from the device's storage...`);
+
+			const absolutePath = `${await pepperi.files.rootDir()}/${this.fileToUpload.AbsolutePath}`;
+
+			try
+			{
+				await fs.promises.unlink(absolutePath);
+				this.fileUploadLog(`Successfully deleted file from the device's storage.`);
+			}
+			catch(error)
+			{
+				this.fileUploadLog(`Failed to delete file from the device's storage. Error: ${error instanceof Error ? error.message : "Unknown error occurred"}`);
+			}
+		}
+	}
+
+	protected async isBufferUpToDate(oldBuffer: Buffer): Promise<boolean>
+	{
+		const newBuffer = await this.getFileDataBufferFromDisk();
+
+		const md5Old = createHash('md5').update(oldBuffer).digest('hex');
+		const md5New = createHash('md5').update(newBuffer).digest('hex');
+
+		return md5Old === md5New;
+	}
+
+	protected shouldFileBeKeptOnDevice(fileMetadata: { Key: string; MIME: string; URL: string; Sync: "None" | "Device" | "DeviceThumbnail" | "Always"}): boolean
+	{
+		return fileMetadata.Sync === "Device" || fileMetadata.Sync === "Always";
 	}
 
 	/**
@@ -217,13 +268,13 @@ export class FileUploadService
 	}
 
 
-	protected async getFileMetadata(): Promise<{ Key: string; MIME: string; URL: string; }> 
+	protected async getFileMetadata(): Promise<{ Key: string; MIME: string; URL: string; Sync: "None" | "Device" | "DeviceThumbnail" | "Always"}> 
 	{
 		const tableName = SharedHelper.getPfsTableName(this.clientAddonUUID, this.clientAddonSchemaName);
 		const relativePath = this.relativeAbsoluteKeyService.getRelativePath(this.fileToUpload.AbsolutePath);
 		const searchBody: SearchBody = {
 			KeyList: [relativePath],
-			Fields: ["Key", "MIME", "URL"],
+			Fields: ["Key", "MIME", "URL", "Sync"],
 		};
 		const fileMetadata = (await this.pepperiDal.searchDataInTable(tableName, searchBody)).Objects[0];
 
@@ -235,9 +286,9 @@ export class FileUploadService
 		return fileMetadata;
 	}
 
-	protected  varHasKeyMimeTypeAndUrl(fileMetadata: AddonData): fileMetadata is { Key: string, MIME: string, URL: string }
+	protected  varHasKeyMimeTypeAndUrl(fileMetadata: AddonData): fileMetadata is { Key: string, MIME: string, URL: string, Sync: "None" | "Device" | "DeviceThumbnail" | "Always"}
 	{
-		return fileMetadata?.Key && fileMetadata?.MIME && fileMetadata?.URL;
+		return fileMetadata?.Key && fileMetadata?.MIME && fileMetadata?.URL && fileMetadata?.Sync;
 	}
 
 	/**
