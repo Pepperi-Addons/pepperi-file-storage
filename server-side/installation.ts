@@ -94,6 +94,12 @@ export async function upgrade(client: Client, request: Request): Promise<any>
 
 		console.log("Migrating internal schemas to have SyncData.PushLocalChanges = true...");
 		await migrateSchemasToPushLocalChanges(papiClient, client);
+	}
+
+	if(request.body.FromVersion && semverLessThan(request.body.FromVersion, "1.4.2"))
+	{
+		console.log("Creating Resource Import relations for internal 'data' schemas");
+		await createResourceImportRelations(papiClient, client, request);
 
 	}
 
@@ -458,9 +464,7 @@ async function createResourceImportRelations(papiClient: PapiClient, client: Cli
 	{
 		// Since the schema name is in the format of "pfs-<owner_uuid>-<table_name>", we need to extract the owner uuid
 		// This is needed so that the created relation will have the owner uuid.
-		const splitSchemaName = schema.Name.split("_");
-		const schemaOwner = SharedHelper.addMinusesToUUID(splitSchemaName[1]);
-		const externalPfsSchemaName = splitSchemaName[2];
+		const { schemaOwner, externalPfsSchemaName } = getClientSchemaInfo(schema);
 
 		request.query = {
 			...request.query,
@@ -471,4 +475,14 @@ async function createResourceImportRelations(papiClient: PapiClient, client: Cli
 	};
 
 	await manipulateAllPfsSchemas(papiClient, manipulatorFunction);
+}
+
+function getClientSchemaInfo(schema: AddonDataScheme) {
+	const splitSchemaName = schema.Name.split("_");
+	const schemaOwner = SharedHelper.addMinusesToUUID(splitSchemaName[1]);
+	// Since the schema name is in the format of "pfs-<owner_uuid>-<table_name>", and 
+	// the external pfs schema name might include underscores, 
+	// we have to join the rest of the split schema name with underscores.
+	const externalPfsSchemaName = splitSchemaName.slice(2).join("_");
+	return { schemaOwner, externalPfsSchemaName };
 }
