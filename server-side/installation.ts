@@ -89,9 +89,6 @@ export async function upgrade(client: Client, request: Request): Promise<any>
 
 	if (request.body.FromVersion && semverLessThan(request.body.FromVersion, "1.3.24"))
 	{
-		console.log("Creating Resource Import relations for internal 'data' schemas");
-		await createResourceImportRelations(papiClient, client, request);
-
 		console.log("Migrating internal schemas to have SyncData.PushLocalChanges = true...");
 		await migrateSchemasToPushLocalChanges(papiClient, client);
 	}
@@ -101,6 +98,8 @@ export async function upgrade(client: Client, request: Request): Promise<any>
 		console.log("Creating Resource Import relations for internal 'data' schemas");
 		await createResourceImportRelations(papiClient, client, request);
 
+		console.log("Creating PNS subscription for Sync=true schemas");
+		await createUpsertRecordSubscriptionForSyncSchemas(papiClient, client, request);
 	}
 
 	return { success: true, resultObject: {} };
@@ -472,6 +471,17 @@ async function createResourceImportRelations(papiClient: PapiClient, client: Cli
 		};
 		const pfsSchemaService = new PfsSchemeService(client, request);
 		await pfsSchemaService.createResourceImportRelation(schema.Name, externalPfsSchemaName);
+	};
+
+	await manipulateAllPfsSchemas(papiClient, manipulatorFunction);
+}
+
+async function createUpsertRecordSubscriptionForSyncSchemas(papiClient: PapiClient, client: Client, request: Request)
+{
+	const manipulatorFunction = async (schema: AddonDataScheme) : Promise<void> => 
+	{
+		const pfsSchemaService = new PfsSchemeService(client, request);
+		await pfsSchemaService.subscribeToUpsertedRecords(schema);
 	};
 
 	await manipulateAllPfsSchemas(papiClient, manipulatorFunction);
