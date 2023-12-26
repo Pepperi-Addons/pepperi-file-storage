@@ -139,17 +139,17 @@ export class PfsSchemeService
 		});
 	}
 
-	async subscribeToUpsertedRecords()
+	public async subscribeToUpsertedRecords(schema: AddonDataScheme = this.schema)
 	{
-		if(this.schema.SyncData?.Sync)
+		if(schema.SyncData?.Sync)
 		{
 			const papiClient: PapiClient = ServerHelper.createPapiClient(this.client, config.AddonUUID, this.client.AddonSecretKey);
 			return await papiClient.notification.subscriptions.upsert({
 				AddonUUID: config.AddonUUID,
-				Name: `pfs-upserted-records-${this.getPfsSchemaName()}`, // Names of subscriptions should be unique
+				Name: `pfs-upserted-records-${schema.Name}`, // Names of subscriptions should be unique
 				Type: "data",
 				FilterPolicy: {
-					Resource: [this.getPfsSchemaName()],
+					Resource: [schema.Name],
 					Action: ["insert", "update"],
 					AddonUUID: [config.AddonUUID]
 				},
