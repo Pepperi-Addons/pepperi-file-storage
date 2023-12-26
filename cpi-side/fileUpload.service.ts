@@ -278,7 +278,7 @@ export class FileUploadService
 		};
 		const fileMetadata = (await this.pepperiDal.searchDataInTable(tableName, searchBody)).Objects[0];
 
-		if (!this.isVarFileMetadata(fileMetadata)) 
+		if (!this.isVariableOfTypeFileMetadata(fileMetadata)) 
 		{
 			throw new Error(`Failed to get file metadata for file "${this.fileToUpload.AbsolutePath}".`);
 		}
@@ -286,7 +286,7 @@ export class FileUploadService
 		return fileMetadata;
 	}
 
-	protected  isVarFileMetadata(fileMetadata: AddonData): fileMetadata is { Key: string, MIME: string, URL: string, Sync: "None" | "Device" | "DeviceThumbnail" | "Always" }
+	protected  isVariableOfTypeFileMetadata(fileMetadata: AddonData): fileMetadata is { Key: string, MIME: string, URL: string, Sync: "None" | "Device" | "DeviceThumbnail" | "Always" }
 	{
 		return fileMetadata?.Key && fileMetadata?.MIME && fileMetadata?.URL && fileMetadata?.Sync;
 	}
