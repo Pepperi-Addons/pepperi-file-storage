@@ -32,6 +32,9 @@ export class PfsSchemeService
 		// Subscribe to Remove events on the PFS's schema
 		await this.subscribeToExpiredRecords();
 
+		//Subscribe to update/insert events on the PFS's schema
+		await this.subscribeToUpsertedRecords();
+
 		// Return the client addon's scheme (of type 'pfs') with PFS's default fields.
 		// return this.getMergedSchema();
 		const res = this.getMergedSchema();
@@ -133,6 +136,22 @@ export class PfsSchemeService
 			},
 			AddonRelativeURL: "/api/record_removed",
 			Hidden: hidden,
+		});
+	}
+
+	async subscribeToUpsertedRecords()
+	{
+		const papiClient: PapiClient = ServerHelper.createPapiClient(this.client, config.AddonUUID, this.client.AddonSecretKey);
+		return await papiClient.notification.subscriptions.upsert({
+			AddonUUID: config.AddonUUID,
+			Name: `pfs-upserted-records-${this.getPfsSchemaName()}`, // Names of subscriptions should be unique
+			Type: "data",
+			FilterPolicy: {
+				Resource: [this.getPfsSchemaName()],
+				Action: ["insert", "update"],
+				AddonUUID: [config.AddonUUID]
+			},
+			AddonRelativeURL: "/sync_source/update_cache",
 		});
 	}
 
