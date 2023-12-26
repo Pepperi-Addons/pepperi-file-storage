@@ -48,7 +48,19 @@ export class PreSyncService
 	public async areAllFilesUploaded(): Promise<PreSyncResult>
 	{
 		const filesToUploadDal = new FilesToUploadDal(new CpiPepperiDal());
-		const filesToUpload = (await filesToUploadDal.search({})).Objects.filter(file => !file.Hidden && !file.SkipSyncCheck);
+		let filesToUpload: any[] = [];
+
+		try
+		{
+			filesToUpload = (await filesToUploadDal.search({})).Objects.filter(file => !file.Hidden && !file.SkipSyncCheck);
+		}
+		catch(error)
+		{
+			// Since not all dists have the filesToUpload table, we don't want to throw an error if the table doesn't exist.
+			// Instead, we just log the error.
+			// Success will be set to true, since if the table doesn't exist, there are no files to upload.
+			console.log(`Failed to get files to upload: ${error}`);
+		}
 		const areAllFilesUploaded = filesToUpload.length === 0;
 
 		const res: PreSyncResult = {
