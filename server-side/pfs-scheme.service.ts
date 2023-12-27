@@ -191,7 +191,9 @@ export class PfsSchemeService
 	protected async upsertSchemaToSyncCache(clientSchemaName: string): Promise<void>
 	{
 		const syncCacheSchema = {
-			SchemeAddonUUID: this.request.query.addon_uuid,
+			// Both SourceAddonUUID and SchemeAddonUUID should be the PFS's addon UUID
+			// This is due to the fact that the schemas are owned by the PFS, and not by the client addon.
+			SchemeAddonUUID: config.AddonUUID,
 			SourceAddonUUID: config.AddonUUID,
 			SchemeName: this.getPfsSchemaName(clientSchemaName),
 		}
