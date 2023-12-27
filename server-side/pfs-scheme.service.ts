@@ -7,11 +7,13 @@ import { pfsSchemaData, SharedHelper } from "pfs-shared";
 export class PfsSchemeService
 {
 	private schema: AddonDataScheme;
+	protected papiClient: PapiClient;
 
 	constructor(private client: Client, private request: Request)
 	{
 		this.schema = request.body;
 		this.request.header = ServerHelper.getLowerCaseHeaders(this.request.header);	
+		this.papiClient = ServerHelper.createPapiClient(this.client, config.AddonUUID, this.client.AddonSecretKey);
 	}
 
 	/**
@@ -60,8 +62,7 @@ export class PfsSchemeService
 			AddonRelativeURL: `/api/resource_import?addon_uuid=${this.request.query.addon_uuid}&resource_name=${externalPfsSchemaName}`,
 		};
 
-		const papiClient: PapiClient = ServerHelper.createPapiClient(this.client, config.AddonUUID, this.client.AddonSecretKey);
-		return await papiClient.addons.data.relations.upsert(relation);
+		return await this.papiClient.addons.data.relations.upsert(relation);
 	}
 
 	/**
@@ -75,16 +76,14 @@ export class PfsSchemeService
 		pfsMetadataTable.Name = this.getPfsSchemaName();
 		pfsMetadataTable.Type = "data";
 
-		const papiClient: PapiClient = ServerHelper.createPapiClient(this.client, config.AddonUUID, this.client.AddonSecretKey);
-
-		const resultingSchema = await papiClient.addons.data.schemes.post(pfsMetadataTable);
+		const resultingSchema = await this.papiClient.addons.data.schemes.post(pfsMetadataTable);
 		console.log(`Created schema ${resultingSchema.Name} with fields: ${JSON.stringify(resultingSchema.Fields)}`);
 		return resultingSchema;
 	}
 
-	private getPfsSchemaName(): string 
+	private getPfsSchemaName(clientSchemaName: string = this.schema.Name): string 
 	{
-		return SharedHelper.getPfsTableName(this.request.query.addon_uuid, this.schema.Name);
+		return SharedHelper.getPfsTableName(this.request.query.addon_uuid, clientSchemaName);
 	}
 
 	/**
@@ -124,8 +123,7 @@ export class PfsSchemeService
 
 	private async expiredRecordsSubscription(hidden: boolean): Promise<Subscription> 
 	{
-		const papiClient: PapiClient = ServerHelper.createPapiClient(this.client, config.AddonUUID, this.client.AddonSecretKey);
-		return await papiClient.notification.subscriptions.upsert({
+		return await this.papiClient.notification.subscriptions.upsert({
 			AddonUUID: config.AddonUUID,
 			Name: `pfs-expired-records-${this.getPfsSchemaName()}`, // Names of subscriptions should be unique
 			Type: "data",
@@ -139,21 +137,22 @@ export class PfsSchemeService
 		});
 	}
 
-	public async subscribeToUpsertedRecords(schema: AddonDataScheme = this.schema)
+	public async subscribeToUpsertedRecords(sync: boolean | undefined = this.schema.SyncData?.Sync, clientSchemaName: string = this.schema.Name)
 	{
-		if(schema.SyncData?.Sync)
+		if(sync)
 		{
-			const papiClient: PapiClient = ServerHelper.createPapiClient(this.client, config.AddonUUID, this.client.AddonSecretKey);
-			return await papiClient.notification.subscriptions.upsert({
+			const pfsSchemaName = this.getPfsSchemaName(clientSchemaName);
+
+			return await this.papiClient.notification.subscriptions.upsert({
 				AddonUUID: config.AddonUUID,
-				Name: `pfs-upserted-records-${schema.Name}`, // Names of subscriptions should be unique
+				Name: `pfs-upserted-records-${pfsSchemaName}`, // Names of subscriptions should be unique
 				Type: "data",
 				FilterPolicy: {
-					Resource: [schema.Name],
+					Resource: [pfsSchemaName],
 					Action: ["insert", "update"],
 					AddonUUID: [config.AddonUUID]
 				},
-				AddonRelativeURL: "/sync_source/update_cache",
+				AddonRelativeURL: `/sync_source/update_cache?resource_name=${pfsSchemaName}`,
 			});
 		}
 	}
@@ -222,10 +221,9 @@ export class PfsSchemeService
 	public async purge() 
 	{
 		// Delete the PFS's 'data' schema
-		const papiClient = ServerHelper.createPapiClient(this.client, config.AddonUUID, this.client.AddonSecretKey);
 		try
 		{
-			await papiClient.post(`/addons/data/schemes/${this.getPfsSchemaName()}/purge`);
+			await this.papiClient.post(`/addons/data/schemes/${this.getPfsSchemaName()}/purge`);
 		}
 		catch(error)
 		{

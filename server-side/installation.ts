@@ -481,13 +481,15 @@ async function createUpsertRecordSubscriptionForSyncSchemas(papiClient: PapiClie
 	const manipulatorFunction = async (schema: AddonDataScheme) : Promise<void> => 
 	{
 		const pfsSchemaService = new PfsSchemeService(client, request);
-		await pfsSchemaService.subscribeToUpsertedRecords(schema);
+		const clientSchemaName = getClientSchemaInfo(schema).externalPfsSchemaName;
+		await pfsSchemaService.subscribeToUpsertedRecords(schema.SyncData?.Sync, clientSchemaName);
 	};
 
 	await manipulateAllPfsSchemas(papiClient, manipulatorFunction);
 }
 
-function getClientSchemaInfo(schema: AddonDataScheme) {
+function getClientSchemaInfo(schema: AddonDataScheme) 
+{
 	const splitSchemaName = schema.Name.split("_");
 	const schemaOwner = SharedHelper.addMinusesToUUID(splitSchemaName[1]);
 	// Since the schema name is in the format of "pfs-<owner_uuid>-<table_name>", and 
