@@ -480,9 +480,17 @@ async function createUpsertRecordSubscriptionForSyncSchemas(papiClient: PapiClie
 {
 	const manipulatorFunction = async (schema: AddonDataScheme) : Promise<void> => 
 	{
+		const {schemaOwner, externalPfsSchemaName}= getClientSchemaInfo(schema);
+		
+
+		// Add a addon_uuid query param to the request, so that PfsSchemeService will work as expected.
+		request.query = {
+			...request.query,
+			addon_uuid: schemaOwner,
+		};
+
 		const pfsSchemaService = new PfsSchemeService(client, request);
-		const clientSchemaName = getClientSchemaInfo(schema).externalPfsSchemaName;
-		await pfsSchemaService.subscribeToUpsertedRecords(schema.SyncData?.Sync, clientSchemaName);
+		await pfsSchemaService.createOpenSyncResources(schema.SyncData?.Sync, externalPfsSchemaName);
 	};
 
 	await manipulateAllPfsSchemas(papiClient, manipulatorFunction);
