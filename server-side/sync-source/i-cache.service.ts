@@ -1,6 +1,6 @@
-import { ModifiedObjects } from "./update-cache/modified-objects";
+import { IModifiedObjects } from "./update-cache/i-modified-objects";
 
 export interface ICacheService
 {    
-    updateCache(modifiedObjects: ModifiedObjects): Promise<any>;
+    updateCache(modifiedObjects: IModifiedObjects): Promise<any>;
 }

@@ -3,7 +3,7 @@ import { SyncSourceService } from "./sync-source/sync-source.service";
 
 export async function rebuild_cache(client: Client, request: Request): Promise<any> 
 {
-	throw new Error('Not implemented');
+	throw new Error("Not implemented");
 }
 
 export async function update_cache(client: Client, request: Request): Promise<any> 

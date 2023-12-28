@@ -149,7 +149,7 @@ export class PfsSchemeService
 	public async createOpenSyncResources(
 		sync: boolean | undefined = this.schema.SyncData?.Sync,
 		clientSchemaName: string = this.schema.Name,
-		):
+	):
 		Promise<void>
 	{
 		if(sync)
@@ -196,7 +196,7 @@ export class PfsSchemeService
 			SchemeAddonUUID: config.AddonUUID,
 			SourceAddonUUID: config.AddonUUID,
 			SchemeName: this.getPfsSchemaName(clientSchemaName),
-		}
+		};
 
 		try
 		{
