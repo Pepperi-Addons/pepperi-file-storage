@@ -1,6 +1,6 @@
 {
   "AddonUUID": "00000000-0000-0000-0000-0000000f11e5",
-  "AddonVersion": "1.4.1",
+  "AddonVersion": "1.4.3",
   "DebugPort": 4500,
   "WebappBaseUrl": "https://app.sandbox.pepperi.com",
   "DefaultEditor": "main",
@@ -8,6 +8,7 @@
     "installation.ts",
     "api.ts",
     "data-source-api.ts",
+    "sync_source.ts",
     "tests.ts"
   ],
   "Editors": [
