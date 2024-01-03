@@ -1,5 +1,5 @@
 import { Client, Request } from "@pepperi-addons/debug-server/dist";
-import { AddonData, PapiClient, SearchBody, SearchData } from "@pepperi-addons/papi-sdk";
+import { AddonAPIAsyncResult, AddonData, PapiClient, SearchBody, SearchData } from "@pepperi-addons/papi-sdk";
 
 import { ServerHelper } from "../serverHelper";
 import { AddonUUID } from "../../addon.config.json";
@@ -8,6 +8,7 @@ import { NucCacheService } from "./nuc-cache.service";
 import { IModifiedObjects } from "./update-cache/i-modified-objects";
 import docDbDal from "../DAL/docDbDal";
 import { ModifiedObjects } from "./update-cache/modified-objects";
+import { ICrawlRequest } from "./rebuild-cache/i-crawl-request";
 
 
 export class SyncSourceService 
@@ -119,4 +120,9 @@ export class SyncSourceService
 			console.error( error instanceof Error ? error.message : "An unknown error occurred trying to send a system_health notification.");
 		}
 	}
+
+    public async rebuildCache(crawlRequest: ICrawlRequest): Promise<AddonAPIAsyncResult>
+    {
+        return await this.cacheService.crawl(crawlRequest);
+    }
 }
