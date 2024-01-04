@@ -46,6 +46,10 @@ export class CrawlingTargetService {
         console.log("Input validation successful.");
     }
 
+    /**
+     * Update the cache with the modified objects.
+     * @returns { Promise<any> } - The result of the cache update.
+     */
     public async updateCache(): Promise<any>
     {
         console.log("Updating cache...");
@@ -64,6 +68,10 @@ export class CrawlingTargetService {
         return result;
     }
 
+    /**
+     * Construct the modified objects to update the cache with.
+     * @returns { IModifiedObjects } - The modified objects to update the cache with.
+    */
     protected getModifiedObjects(): IModifiedObjects
     {
         console.log("Constructing modified objects...");
@@ -83,6 +91,10 @@ export class CrawlingTargetService {
         return result;
     }
 
+    /**
+     * Change the ModificationDateTime property to ObjectModificationDateTime.
+     * @returns { any[] } - The modified page.
+     */
     protected changeModificationDateTimeToObjectModificationDateTime(): any[] {
         console.log("Changing ModificationDateTime to ObjectModificationDateTime...");
 
@@ -94,6 +106,11 @@ export class CrawlingTargetService {
         });
     }
 
+    /**
+     * Remove the ObjectSourceSchema property from the page.
+     * @param pageToUpdate - The page to update.
+     * @returns { any[] } - The modified page.
+     */
     protected removeObjectSourceSchemaProperty(pageToUpdate: any[]): any[] {
         console.log("Removing ObjectSourceSchema property...");
 
@@ -104,6 +121,11 @@ export class CrawlingTargetService {
         });
     }
 
+    /**
+     * Construct the crawler outputs.
+     * @param { CacheUpdateResult[] } cacheUpdateResults - The cache update results.
+     * @returns { any } - The crawler outputs.
+     */
     protected constructCrawlerOutputs(cacheUpdateResults: CacheUpdateResult[]): { Outputs: { [key: string]: number }} {
         console.log("Constructing crawler outputs...");
 
