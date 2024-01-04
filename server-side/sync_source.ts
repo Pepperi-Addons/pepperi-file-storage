@@ -8,7 +8,10 @@ import { CrawlRequest } from "./sync-source/rebuild-cache/crawl-request";
 import { ServerHelper } from "./serverHelper";
 import { SchemaSearcher } from "./sync-source/rebuild-cache/schema-searcher";
 import docDbDal from "./DAL/docDbDal";
-import { CrawlingSourceService } from "./sync-source/crawling-source/crawling-source.service";
+import { CrawlingSourceService} from "./sync-source/handle-crawling/crawling-source.service";
+import { CrawlingTargetService } from "./sync-source/handle-crawling/crawling-target.service";
+import { ICacheService } from "./sync-source/i-cache.service";
+import { NucCacheService } from "./sync-source/nuc-cache.service";
 
 export async function rebuild_cache(client: Client, request: Request): Promise<AddonAPIAsyncResult> 
 {
@@ -36,5 +39,9 @@ export async function internal_crawler_source(client: Client, request: Request):
 
 export async function internal_crawler_target(client: Client, request: Request): Promise<any> 
 {
-	throw new Error("Not implemented");
+	const papiClient = ServerHelper.createPapiClient(client, PfsAddonUUID, client.AddonSecretKey);
+	const cacheService: ICacheService = new NucCacheService(papiClient);
+	const crawlingTargetService = new CrawlingTargetService(cacheService, request);
+
+	return await crawlingTargetService.updateCache();
 }
