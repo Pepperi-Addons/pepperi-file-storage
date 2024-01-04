@@ -121,8 +121,8 @@ export class SyncSourceService
 		}
 	}
 
-    public async rebuildCache(crawlRequest: ICrawlRequest): Promise<AddonAPIAsyncResult>
-    {
-        return await this.cacheService.crawl(crawlRequest);
-    }
+	public async rebuildCache(crawlRequest: ICrawlRequest): Promise<AddonAPIAsyncResult>
+	{
+		return await this.cacheService.crawl(crawlRequest);
+	}
 }

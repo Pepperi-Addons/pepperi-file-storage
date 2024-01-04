@@ -6,7 +6,7 @@ import { ICrawlRequest } from "./rebuild-cache/i-crawl-request";
 
 export class NucCacheService implements ICacheService
 {
-protected readonly CRAWLER_ADDON_UUID = "f489d076-381f-4cf7-aa63-33c6489eb017";
+	protected readonly CRAWLER_ADDON_UUID = "f489d076-381f-4cf7-aa63-33c6489eb017";
 
 	constructor(protected papiClient: PapiClient) 
 	{ }
