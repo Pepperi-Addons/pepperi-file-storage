@@ -57,13 +57,14 @@ export class CrawlRequest implements ICrawlRequest
     {
         const schemaNamesToCrawl = await this.getSchemaNamesToCrawl(request, schemaSearcher);
 
+        // Use SourceData to pass the schema names to crawl to the source.
         this.SourceData = {
             SchemaNames: schemaNamesToCrawl,
         };
 
         this.setTargetOutputs(schemaNamesToCrawl);
     }
-    
+
     private setTargetOutputs(schemaNamesToCrawl: string[]) {
         const fieldIds = ['TotalChanges', 'TotalChangesSuccess', 'TotalChangesFailed'];
       

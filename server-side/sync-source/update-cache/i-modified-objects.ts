@@ -11,3 +11,12 @@ export interface UpdatedObject {
     ObjectModificationDateTime: string;
     Hidden?: boolean;
 }
+
+export interface CacheUpdateResult {
+        InternalID: number;
+        UUID: string;
+        ExternalID: string;
+        Status: "Insert" | "Update" | "Ignore" | "Error";
+        Message: string;
+        URI: string;
+}
