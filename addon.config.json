@@ -19,7 +19,8 @@
     "Editors": [],
     "Dependencies": {
       "adal": "1.4.60",
-      "cpi_data": "0.6.12"
+      "cpi_data": "0.6.12",
+      "papi": "9.6.45"
     },
     "CPISide": [
       "addon-cpi.ts"
