@@ -493,7 +493,7 @@ async function createOpenSyncResources(papiClient: PapiClient, client: Client, r
 		};
 
 		const pfsSchemaService = new PfsSchemeService(client, request);
-		await pfsSchemaService.createOpenSyncResources(schema.SyncData?.Sync, externalPfsSchemaName);
+		await pfsSchemaService.createOpenSyncResources(schema.SyncData, externalPfsSchemaName);
 	};
 
 	await manipulateAllPfsSchemas(papiClient, manipulatorFunction);

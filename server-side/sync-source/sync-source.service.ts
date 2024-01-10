@@ -49,36 +49,46 @@ export class SyncSourceService
 	}
 
 	/**
-     * Set the Hidden field of the modifiedObjects to the up to date value.
-     * 
-     * @param { ModifiedObjects } modifiedObjects - The modifiedObjects to update.
-     */
-	protected async getUpToDateHiddenFields(modifiedObjects: IModifiedObjects): Promise<void>
-	{
-		const objectsWithHiddenField = modifiedObjects.Updates.filter(update => update.Hidden !== undefined);
+ * Set the Hidden field of the modifiedObjects to the up-to-date value.
+ * 
+ * @param { IModifiedObjects } modifiedObjects - The modifiedObjects to update.
+ */
+protected async getUpToDateHiddenFields(modifiedObjects: IModifiedObjects): Promise<void>
+{
+    // Filter out objects with defined Hidden field
+    const objectsWithHiddenField = modifiedObjects.Updates.filter(update => update.Hidden !== undefined);
 
-		const searchBody: SearchBody = {
-			KeyList: objectsWithHiddenField.map((update) => update.Key),
-			Fields: ["Hidden", "Key"]
-		};
+    // Retrieve up-to-date Hidden values from the database
+    const searchBody: SearchBody = {
+        KeyList: objectsWithHiddenField.map(update => update.Key),
+        Fields: ["Hidden", "Key", "ModificationDateTime"]
+    };
+    const upToDateHiddenValues: SearchData<AddonData> = await this.pepperiDal.searchDataInTable(modifiedObjects.SchemeName, searchBody);
 
-		const upToDateHiddenValues: SearchData<AddonData> = await this.pepperiDal.searchDataInTable(modifiedObjects.SchemeName, searchBody);
+    // Create a map of the up-to-date Hidden values for faster lookup
+    const upToDateHiddenValuesMap = new Map(upToDateHiddenValues.Objects.map(obj => [obj.Key, obj]));
 
-		// Create a map of the up to date Hidden values.
-		// This is just to make it faster to find the up to date Hidden value for a given object.
-		const upToDateHiddenValuesMap = new Map(upToDateHiddenValues.Objects.map((obj) => [obj.Key, obj.Hidden]));
+    // Update the modifiedObjects with up-to-date Hidden and ObjectModificationDateTime values
+    modifiedObjects.Updates.forEach(update => {
+        const upToDateHiddenObject = upToDateHiddenValuesMap.get(update.Key);
 
-		// Update the modifiedObjects with the up to date Hidden values.
-		modifiedObjects.Updates.map((update) => 
+        if (upToDateHiddenObject)
 		{
-			if (update.Hidden !== upToDateHiddenValuesMap.get(update.Key))
+            // Update Hidden field if different
+            if (update.Hidden !== upToDateHiddenObject.Hidden)
 			{
-				update.Hidden = upToDateHiddenValuesMap.get(update.Key);
-			}
+                update.Hidden = upToDateHiddenObject.Hidden;
+            }
 
-			return update;
-		});
-	}
+            // Update ObjectModificationDateTime if different
+            if (update.ObjectModificationDateTime !== upToDateHiddenObject.ModificationDateTime)
+			{
+                update.ObjectModificationDateTime = upToDateHiddenObject.ModificationDateTime!;
+            }
+        }
+    });
+}
+
 
 	protected async handleErrorOnUpdateCache(error: unknown, isAsync: boolean, modifiedObjects: IModifiedObjects)
 	{
