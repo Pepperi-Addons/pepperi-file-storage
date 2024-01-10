@@ -147,12 +147,13 @@ export class PfsSchemeService
 	 * @returns {Promise<void>}
 	 */
 	public async createOpenSyncResources(
-		sync: boolean | undefined = this.schema.SyncData?.Sync,
+		syncData: AddonDataScheme["SyncData"] = this.schema.SyncData,
 		clientSchemaName: string = this.schema.Name,
 	):
 		Promise<void>
-	{
-		if(sync)
+	{	
+		// SyncRecords is true by default, so we need to check if it's false
+		if(syncData?.Sync && syncData.SyncRecords !== false)
 		{
 			await this.subscribeToUpsertedRecords(clientSchemaName);
 			await this.upsertSchemaToSyncCache(clientSchemaName);
