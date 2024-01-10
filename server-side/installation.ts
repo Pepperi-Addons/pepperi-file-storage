@@ -93,13 +93,16 @@ export async function upgrade(client: Client, request: Request): Promise<any>
 		await migrateSchemasToPushLocalChanges(papiClient, client);
 	}
 
-	if(request.body.FromVersion && semverLessThan(request.body.FromVersion, "1.4.2"))
+	if(request.body.FromVersion && semverLessThan(request.body.FromVersion, "1.4.15"))
 	{
 		console.log("Creating Resource Import relations for internal 'data' schemas");
 		await createResourceImportRelations(papiClient, client, request);
 
 		console.log("Creating PNS subscription for Sync=true schemas");
-		await createUpsertRecordSubscriptionForSyncSchemas(papiClient, client, request);
+		await createOpenSyncResources(papiClient, client, request);
+
+		console.log("Initiating cache rebuild");
+		await rebuildCache(papiClient);
 	}
 
 	return { success: true, resultObject: {} };
@@ -476,7 +479,7 @@ async function createResourceImportRelations(papiClient: PapiClient, client: Cli
 	await manipulateAllPfsSchemas(papiClient, manipulatorFunction);
 }
 
-async function createUpsertRecordSubscriptionForSyncSchemas(papiClient: PapiClient, client: Client, request: Request)
+async function createOpenSyncResources(papiClient: PapiClient, client: Client, request: Request)
 {
 	const manipulatorFunction = async (schema: AddonDataScheme) : Promise<void> => 
 	{
@@ -496,7 +499,7 @@ async function createUpsertRecordSubscriptionForSyncSchemas(papiClient: PapiClie
 	await manipulateAllPfsSchemas(papiClient, manipulatorFunction);
 }
 
-function getClientSchemaInfo(schema: AddonDataScheme) 
+function getClientSchemaInfo(schema: AddonDataScheme): { schemaOwner: string, externalPfsSchemaName: string } 
 {
 	const splitSchemaName = schema.Name.split("_");
 	const schemaOwner = SharedHelper.addMinusesToUUID(splitSchemaName[1]);
@@ -505,4 +508,10 @@ function getClientSchemaInfo(schema: AddonDataScheme)
 	// we have to join the rest of the split schema name with underscores.
 	const externalPfsSchemaName = splitSchemaName.slice(2).join("_");
 	return { schemaOwner, externalPfsSchemaName };
+}
+
+async function rebuildCache(papiClient: PapiClient): Promise<void>
+{
+	const asyncExecution = papiClient.post(`/addons/api/${AddonUUID}/sync_source/rebuild_cache`, {});
+	console.log(`Rebuild cache response: ${JSON.stringify(asyncExecution)}`);
 }
