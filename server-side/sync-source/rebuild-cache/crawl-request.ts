@@ -4,6 +4,7 @@ import { AddonDataScheme, FindOptions } from "@pepperi-addons/papi-sdk";
 import { AddonUUID as PfsAddonUUID } from "../../../addon.config.json";
 import { ICrawlRequest, TargetOutput } from "./i-crawl-request";
 import { ISchemaSearcher } from "./i-schema-searcher";
+import { CrawlOutputsPrefixes } from "../handle-crawling/constants";
 
 
 export class CrawlRequest implements ICrawlRequest
@@ -26,6 +27,7 @@ export class CrawlRequest implements ICrawlRequest
 		this.Name = this.getCrawlName(request);
 		this.SourceRelativeURL = `/addons/api/${PfsAddonUUID}/sync_source/internal_crawler_source`;
 		this.TargetRelativeURL = `/addons/api/${PfsAddonUUID}/sync_source/internal_crawler_target`;
+		this.MaxPageSize = 250; // This is ADAL's limit, NUC could handle more, but why risk it?
 	}
 
 	public static async getInstance(request: Request, schemaSearcher: ISchemaSearcher): Promise<CrawlRequest>
@@ -83,11 +85,9 @@ export class CrawlRequest implements ICrawlRequest
 	{
 		console.log("Setting target outputs...");
 
-		const fieldIds = ["TotalChanges", "TotalChangesSuccess", "TotalChangesFailed"];
-
 		this.TargetOutputs = this.TargetOutputs.concat(
 			schemaNamesToCrawl.flatMap(schemaName =>
-				fieldIds.map(fieldId => ({
+				CrawlOutputsPrefixes.map(fieldId => ({
 					FieldID: `${fieldId}_${schemaName}`,
 					Type: "Sum",
 				}))

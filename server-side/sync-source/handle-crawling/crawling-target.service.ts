@@ -1,51 +1,23 @@
 import { Request } from "@pepperi-addons/debug-server/dist";
+import {mapLimit as asyncMapLimit} from "async";
 
 import { AddonUUID as PfsAddonUUID } from "../../../addon.config.json";
 import { ICacheService } from "../i-cache.service";
 import { CacheUpdateResult, IModifiedObjects } from "../update-cache/i-modified-objects";
+import { CrawlOutputsPrefixes, CrawlOutputsPrefixesEnum } from "./constants";
+
 
 export class CrawlingTargetService 
 {
+	protected schemaNameToModifiedObjects: Map<string, IModifiedObjects> = new Map<string, IModifiedObjects>();
 
-	protected sourceSchemaName: string;
-	protected targetData: { SchemaNames: string[] };
+	/**
+	 * The maximum number of concurrent update requests to the cache.
+	 */
+	protected readonly MAX_CONCURRENT_REQUESTS = 5;
 
 	constructor(protected cacheService: ICacheService, protected request: Request)
-	{
-		console.log("Initializing CrawlingTargetService...");
-
-		this.sourceSchemaName = this.request.body?.Page[0]?.ObjectSourceSchema;
-		this.targetData = this.request.body?.TargetData;
-
-		this.validateInput();
-	}
-
-	validateInput(): void
-	{
-		console.log("Validating input...");
-
-		if (!this.targetData)
-		{
-			throw new Error("TargetData is missing");
-		}
-
-		if (!this.targetData.SchemaNames)
-		{
-			throw new Error("SchemaNames is missing");
-		}
-
-		if (!this.targetData.SchemaNames.includes(this.sourceSchemaName))
-		{
-			throw new Error(`SchemaNames does not include ${this.sourceSchemaName}`);
-		}
-
-		if (!this.sourceSchemaName)
-		{
-			throw new Error("ObjectSourceSchema is missing");
-		}
-
-		console.log("Input validation successful.");
-	}
+	{}
 
 	/**
      * Update the cache with the modified objects.
@@ -55,41 +27,127 @@ export class CrawlingTargetService
 	{
 		console.log("Updating cache...");
 
-		const pageToUpdate: IModifiedObjects = this.getModifiedObjects();
+		this.populateModifiedObjectsSet();
 		console.log("Modified objects retrieved.");
 
-		const cacheUpdateResults: CacheUpdateResult[] = await this.cacheService.updateCache(pageToUpdate);
-		console.log("Cache updated.");
-
-		const result = this.constructCrawlerOutputs(cacheUpdateResults);
-		console.log("Crawler outputs constructed:", result);
+		// This function is defined as an arrow function so that it
+		// can be passed to asyncMapLimit and keep "this" context
+		const updateCacheForSchema = async (schemaName: string) => 
+		{
+			let crawlerOutput: { Outputs: { [key: string]: number }} = { Outputs: {}};
+	
+			const modifiedObjects = this.schemaNameToModifiedObjects.get(schemaName);
+			if (modifiedObjects)
+			{
+				const cacheUpdateResults: CacheUpdateResult[] = await this.cacheService.updateCache(modifiedObjects);
+				console.log(`Cache updated for schema ${schemaName}.`);
+	
+				crawlerOutput = this.constructCrawlerOutputs(cacheUpdateResults, schemaName);
+			}
+			else // should never happen
+			{
+				console.error(`Modified objects for schema ${schemaName} not found`);
+				crawlerOutput = { Outputs: {} };
+			}
+	
+			return crawlerOutput;
+		};
+		
+		// update the cache for each schema in parallel
+		const cacheUpdateResults = await asyncMapLimit(this.schemaNameToModifiedObjects.keys(), this.MAX_CONCURRENT_REQUESTS, updateCacheForSchema);
+		
+		// consolidate cacheUpdateResults into a single object, (e.g. { Outputs: { TotalChanges: 10, TotalChangesSuccess: 10, TotalChangesFailed: 0 } })
+		const consolidatedCacheUpdateResults = this.consolidateTargetOutputResults(cacheUpdateResults);
 
 		console.log("Cache update completed.");
 
-		return result;
+		return consolidatedCacheUpdateResults;
 	}
 
 	/**
-     * Construct the modified objects to update the cache with.
-     * @returns { IModifiedObjects } - The modified objects to update the cache with.
+	 * Consolidate the target output results.
+	 * @param { {Outputs: { [key:string] : number}}[] } cacheUpdateResults - The cache update results.
+	 * @returns 
+	 */
+	protected consolidateTargetOutputResults(cacheUpdateResults: {Outputs: { [key: string]: number }}[]): {Outputs: { [key: string]: number}}
+	{
+		return cacheUpdateResults.reduce((acc, curr) => 
+		{
+			Object.keys(curr.Outputs).forEach((key) => 
+			{
+				acc.Outputs[key] = (acc.Outputs[key] || 0) + curr.Outputs[key];
+			});
+
+			return acc;
+		}, { Outputs: {} });
+	}
+
+	/**
+	 * Update the cache for a specific schema.
+	 * @param {string} schemaName - The schema name. 
+	 * @returns {Promise<{ Outputs: { [key: string]: number }}>} - The crawler outputs.
+	 */
+	protected async updateCacheForSchema(schemaName: string): Promise<{ Outputs: { [key: string]: number }}>
+	{
+		let crawlerOutput: { Outputs: { [key: string]: number }} = { Outputs: {}};
+
+		const modifiedObjects = this.schemaNameToModifiedObjects.get(schemaName);
+		if (modifiedObjects)
+		{
+			const cacheUpdateResults: CacheUpdateResult[] = await this.cacheService.updateCache(modifiedObjects);
+			console.log("Cache updated.");
+
+			crawlerOutput = this.constructCrawlerOutputs(cacheUpdateResults, schemaName);
+			console.log("Crawler outputs constructed:", JSON.stringify(crawlerOutput));
+		}
+		else // should never happen
+		{
+			console.error(`Modified objects for schema ${schemaName} not found`);
+			crawlerOutput = { Outputs: {} };
+		}
+
+		return crawlerOutput;
+	}
+
+
+	/**
+    * Populate the modified objects set with the modified objects from the request.
+    * @returns { void }
     */
-	protected getModifiedObjects(): IModifiedObjects
+	protected populateModifiedObjectsSet(): void
 	{
 		console.log("Constructing modified objects...");
 
-		let pageToUpdate = this.changeModificationDateTimeToObjectModificationDateTime();
-		pageToUpdate = this.removeObjectSourceSchemaProperty(pageToUpdate);
+		const pageToUpdate = this.changeModificationDateTimeToObjectModificationDateTime();
 
-		const result: IModifiedObjects = {
-			AddonUUID: PfsAddonUUID,
-			SourceAddonUUID: PfsAddonUUID,
-			SchemeName: this.sourceSchemaName,
-			Updates: pageToUpdate
-		};
+		// Using a Map to efficiently store unique ObjectSourceSchema names and corresponding IModifiedObjects
+		this.schemaNameToModifiedObjects = pageToUpdate.reduce((map, entry) => 
+		{
+			const sourceSchemaName = entry.ObjectSourceSchema as string;
+
+			// Check if the Map already has an entry for the current sourceSchemaName
+			if (!map.has(sourceSchemaName))
+			{
+				// If not, initialize an entry with default IModifiedObjects
+				map.set(sourceSchemaName, {
+					AddonUUID: PfsAddonUUID,
+					SourceAddonUUID: PfsAddonUUID,
+					SchemeName: sourceSchemaName,
+					Updates: [],
+				});
+			}
+
+			// Retrieve the existing IModifiedObjects for the current sourceSchemaName
+			const schemaModifiedObjects = map.get(sourceSchemaName);
+
+			// Add the modified object to the Updates array for the current sourceSchemaName
+			schemaModifiedObjects?.Updates.push(this.removeObjectSourceSchemaProperty([entry])[0]);
+
+			// Return the updated Map for the next iteration
+			return map;
+		}, new Map<string, IModifiedObjects>());
 
 		console.log("Modified objects constructed.");
-
-		return result;
 	}
 
 	/**
@@ -116,8 +174,6 @@ export class CrawlingTargetService
      */
 	protected removeObjectSourceSchemaProperty(pageToUpdate: any[]): any[] 
 	{
-		console.log("Removing ObjectSourceSchema property...");
-
 		return pageToUpdate.map((entry: any) => 
 		{
 			const objectCopy = Object.assign({}, entry);
@@ -131,29 +187,45 @@ export class CrawlingTargetService
      * @param { CacheUpdateResult[] } cacheUpdateResults - The cache update results.
      * @returns { any } - The crawler outputs.
      */
-	protected constructCrawlerOutputs(cacheUpdateResults: CacheUpdateResult[]): { Outputs: { [key: string]: number }} 
+	protected constructCrawlerOutputs(cacheUpdateResults: CacheUpdateResult[], schemaName: string): { Outputs: { [key: string]: number }} 
 	{
 		console.log("Constructing crawler outputs...");
 
 		const result: { Outputs: { [key: string]: number }} = { Outputs: {}};
-		const fieldIds = ["TotalChanges", "TotalChangesSuccess", "TotalChangesFailed"];
 
-		fieldIds.forEach((fieldId) => 
+		CrawlOutputsPrefixes.forEach((fieldId) => 
 		{
-			result.Outputs[`${fieldId}_${this.sourceSchemaName}`] = 0;
+			result.Outputs[`${fieldId}_${schemaName}`] = 0;
 		});
 
 		cacheUpdateResults.forEach((cacheUpdateResult) => 
 		{
-			result.Outputs[`TotalChanges_${this.sourceSchemaName}`]++;
+			result.Outputs[`${CrawlOutputsPrefixesEnum.TotalChanges}_${schemaName}`]++;
 
-			if (cacheUpdateResult.Status === "Insert" || cacheUpdateResult.Status === "Update")
+			switch(cacheUpdateResult.Status)
 			{
-				result.Outputs[`TotalChangesSuccess_${this.sourceSchemaName}`]++;
-			}
-			else if (cacheUpdateResult.Status === "Error")
-			{
-				result.Outputs[`TotalChangesFailed_${this.sourceSchemaName}`]++;
+			case "Insert":
+			case "Update":
+				result.Outputs[`${CrawlOutputsPrefixesEnum.TotalChangesSuccess}_${schemaName}`]++;
+
+				break;
+
+			case "Ignore":
+				result.Outputs[`${CrawlOutputsPrefixesEnum.TotalIgnores}_${schemaName}`]++;
+				console.log(`Cache update ignored for internalID: ${cacheUpdateResult.InternalID}`);
+				console.log(`Cache update result: ${JSON.stringify(cacheUpdateResult)}`);
+
+				break;
+
+			case "Error":
+				result.Outputs[`${CrawlOutputsPrefixesEnum.TotalChangesFailed}_${schemaName}`]++;
+				console.error(`Cache update failed for InternalID ${cacheUpdateResult.InternalID} with error: ${cacheUpdateResult.Message}`);
+
+				break;
+
+			default:
+				console.error(`Unknown status: ${cacheUpdateResult.Status}`);
+				console.error(`Cache update result: ${JSON.stringify(cacheUpdateResult)}`);
 			}
 		});
 

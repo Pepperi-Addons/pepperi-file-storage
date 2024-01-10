@@ -18,7 +18,7 @@ export class NucCacheService implements ICacheService
 
 	public async crawl(crawlRequest: ICrawlRequest): Promise<AddonAPIAsyncResult> 
 	{
-		return await this.papiClient.post(`/addons/api/${this.CRAWLER_ADDON_UUID}/api/crawl`, crawlRequest);
+		return await this.papiClient.crawl.crawl(crawlRequest);
 	}
 }
 

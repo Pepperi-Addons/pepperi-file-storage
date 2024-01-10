@@ -101,11 +101,11 @@ export class CrawlingSourceService
 			nextPageKey.SchemaIndex++;
 			result.NextPageKey = JSON.stringify(nextPageKey);
 		}
-		// If there is no next page key, and there are no more schemas to crawl, use an empty string
+		// If there is no next page key, and there are no more schemas to crawl, use an undefined
 		// to indicate that there are no more pages.
 		else
 		{
-			result.NextPageKey = "";
+			result.NextPageKey = undefined;
 		}
 
 		console.log("Next page key set:", JSON.stringify(result.NextPageKey));
