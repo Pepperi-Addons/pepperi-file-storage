@@ -1,6 +1,7 @@
 import { Client, Request } from "@pepperi-addons/debug-server/dist";
 import { AddonAPIAsyncResult, AddonData, SearchData } from "@pepperi-addons/papi-sdk";
 
+import { PnsToModifiedObjectsConverter } from "./sync-source/update-cache/pns-to-modified-objects-converter";
 import { AddonUUID as PfsAddonUUID } from "../addon.config.json";
 import { SyncSourceService } from "./sync-source/sync-source.service";
 import { ICrawlRequest } from "./sync-source/rebuild-cache/i-crawl-request";
@@ -19,14 +20,19 @@ export async function rebuild_cache(client: Client, request: Request): Promise<A
 	const schemaSearcher = new SchemaSearcher(papiClient);
 	const crawlRequest: ICrawlRequest = await CrawlRequest.getInstance(request, schemaSearcher);
 
-	const syncSourceService = new SyncSourceService(client, request);
+	const syncSourceService = new SyncSourceService(client);
 	return await syncSourceService.rebuildCache(crawlRequest);
 }
 
 export async function update_cache(client: Client, request: Request): Promise<any> 
 {
-	const syncSourceService = new SyncSourceService(client, request);
-	return await syncSourceService.updateCache();
+	const pnsToModifiedObjectsConverter = new PnsToModifiedObjectsConverter(request.body);
+
+	const modifiedObjects = pnsToModifiedObjectsConverter.convert();
+
+	const syncSourceService = new SyncSourceService(client);
+	
+	return await syncSourceService.updateCache(modifiedObjects);
 }
 
 export async function internal_crawler_source(client: Client, request: Request): Promise<SearchData<AddonData>> 

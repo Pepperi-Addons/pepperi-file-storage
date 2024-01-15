@@ -1,4 +1,4 @@
-import { Client, Request } from "@pepperi-addons/debug-server/dist";
+import { Client } from "@pepperi-addons/debug-server/dist";
 import { AddonAPIAsyncResult, AddonData, PapiClient, SearchBody, SearchData } from "@pepperi-addons/papi-sdk";
 
 import { ServerHelper } from "../serverHelper";
@@ -7,7 +7,6 @@ import { ICacheService } from "./i-cache.service";
 import { NucCacheService } from "./nuc-cache.service";
 import { IModifiedObjects } from "./update-cache/i-modified-objects";
 import docDbDal from "../DAL/docDbDal";
-import { ModifiedObjects } from "./update-cache/modified-objects";
 import { ICrawlRequest } from "./rebuild-cache/i-crawl-request";
 
 
@@ -17,17 +16,15 @@ export class SyncSourceService
 	protected cacheService: ICacheService;
 	protected pepperiDal: docDbDal;
 
-	constructor(protected client: Client, protected request: Request, pepperiDal?: docDbDal)
+	constructor(protected client: Client, pepperiDal?: docDbDal)
 	{
 		this.papiClient = ServerHelper.createPapiClient(this.client, AddonUUID, this.client.AddonSecretKey);
 		this.cacheService = new NucCacheService(this.papiClient);
 		this.pepperiDal = pepperiDal || new docDbDal(this.papiClient);
 	}
 
-	public async updateCache(): Promise<any>
+	public async updateCache(modifiedObjects: IModifiedObjects): Promise<any>
 	{    
-		const modifiedObjects: IModifiedObjects = new ModifiedObjects(this.request);
-
 		// modifiedObject that has a Hidden field should be validated against the actual schema's data,
 		// to ensure the latest value of the Hidden field is used.
 		await this.getUpToDateHiddenFields(modifiedObjects);
@@ -42,7 +39,7 @@ export class SyncSourceService
 		}
 		catch (error)
 		{
-			await this.handleErrorOnUpdateCache(error, isAsync, modifiedObjects);
+			await this.handleErrorOnUpdateCache(modifiedObjects, error, isAsync);
 		}
 
 		return result;
@@ -53,44 +50,50 @@ export class SyncSourceService
  * 
  * @param { IModifiedObjects } modifiedObjects - The modifiedObjects to update.
  */
-protected async getUpToDateHiddenFields(modifiedObjects: IModifiedObjects): Promise<void>
-{
-    // Filter out objects with defined Hidden field
-    const objectsWithHiddenField = modifiedObjects.Updates.filter(update => update.Hidden !== undefined);
+	protected async getUpToDateHiddenFields(modifiedObjects: IModifiedObjects): Promise<void>
+	{
+		// Filter out objects with defined Hidden field
+		const objectsWithHiddenField = modifiedObjects.Updates.filter(update => update.Hidden !== undefined);
 
-    // Retrieve up-to-date Hidden values from the database
-    const searchBody: SearchBody = {
-        KeyList: objectsWithHiddenField.map(update => update.Key),
-        Fields: ["Hidden", "Key", "ModificationDateTime"]
-    };
-    const upToDateHiddenValues: SearchData<AddonData> = await this.pepperiDal.searchDataInTable(modifiedObjects.SchemeName, searchBody);
+		// Retrieve up-to-date Hidden values from the database
+		const searchBody: SearchBody = {
+			KeyList: objectsWithHiddenField.map(update => update.Key),
+			Fields: ["Hidden", "Key", "ModificationDateTime"]
+		};
+		const upToDateHiddenValues: SearchData<AddonData> = await this.pepperiDal.searchDataInTable(modifiedObjects.SchemeName, searchBody);
 
-    // Create a map of the up-to-date Hidden values for faster lookup
-    const upToDateHiddenValuesMap = new Map(upToDateHiddenValues.Objects.map(obj => [obj.Key, obj]));
+		// Create a map of the up-to-date Hidden values for faster lookup
+		const upToDateHiddenValuesMap = new Map(upToDateHiddenValues.Objects.map(obj => [obj.Key, obj]));
 
-    // Update the modifiedObjects with up-to-date Hidden and ObjectModificationDateTime values
-    modifiedObjects.Updates.forEach(update => {
-        const upToDateHiddenObject = upToDateHiddenValuesMap.get(update.Key);
-
-        if (upToDateHiddenObject)
+		// Update the modifiedObjects with up-to-date Hidden and ObjectModificationDateTime values
+		modifiedObjects.Updates.forEach(update => 
 		{
-            // Update Hidden field if different
-            if (update.Hidden !== upToDateHiddenObject.Hidden)
+			const upToDateHiddenObject = upToDateHiddenValuesMap.get(update.Key);
+
+			if (upToDateHiddenObject)
 			{
-                update.Hidden = upToDateHiddenObject.Hidden;
-            }
+				// Update Hidden field if different
+				if (update.Hidden !== upToDateHiddenObject.Hidden)
+				{
+					update.Hidden = upToDateHiddenObject.Hidden;
+				}
 
-            // Update ObjectModificationDateTime if different
-            if (update.ObjectModificationDateTime !== upToDateHiddenObject.ModificationDateTime)
-			{
-                update.ObjectModificationDateTime = upToDateHiddenObject.ModificationDateTime!;
-            }
-        }
-    });
-}
+				// Update ObjectModificationDateTime if different
+				if (update.ObjectModificationDateTime !== upToDateHiddenObject.ModificationDateTime)
+				{
+					update.ObjectModificationDateTime = upToDateHiddenObject.ModificationDateTime!;
+				}
+			}
+		});
+	}
 
-
-	protected async handleErrorOnUpdateCache(error: unknown, isAsync: boolean, modifiedObjects: IModifiedObjects)
+	/**
+	 * In case of an error, set a system_health notification if async, otherwise (this is a the first PNS sync call) throw the error.
+	 * @param error 
+	 * @param isAsync 
+	 * @param modifiedObjects 
+	 */
+	protected async handleErrorOnUpdateCache(modifiedObjects: IModifiedObjects, error: unknown, isAsync: boolean)
 	{
 		const errorMessage = error instanceof Error ? error.message : JSON.stringify(error);
 		console.error(`Failed to update cache: ${errorMessage}`);
