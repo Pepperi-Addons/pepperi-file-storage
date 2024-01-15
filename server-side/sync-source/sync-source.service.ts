@@ -7,7 +7,6 @@ import { ICacheService } from "./i-cache.service";
 import { NucCacheService } from "./nuc-cache.service";
 import { IModifiedObjects } from "./update-cache/i-modified-objects";
 import docDbDal from "../DAL/docDbDal";
-import { ModifiedObjects } from "./update-cache/modified-objects";
 
 
 export class SyncSourceService 
@@ -16,7 +15,7 @@ export class SyncSourceService
 	protected cacheService: ICacheService;
 	protected pepperiDal: docDbDal;
 
-	constructor(protected client: Client, protected request: Request, pepperiDal?: docDbDal)
+	constructor(protected client: Client, protected modifiedObjects: IModifiedObjects, pepperiDal?: docDbDal)
 	{
 		this.papiClient = ServerHelper.createPapiClient(this.client, AddonUUID, this.client.AddonSecretKey);
 		this.cacheService = new NucCacheService(this.papiClient);
@@ -25,11 +24,9 @@ export class SyncSourceService
 
 	public async updateCache(): Promise<any>
 	{    
-		const modifiedObjects: IModifiedObjects = new ModifiedObjects(this.request);
-
 		// modifiedObject that has a Hidden field should be validated against the actual schema's data,
 		// to ensure the latest value of the Hidden field is used.
-		await this.getUpToDateHiddenFields(modifiedObjects);
+		await this.getUpToDateHiddenFields();
     
 		const isAsync = this.client.isAsync ? this.client.isAsync() : false;
         
@@ -37,11 +34,11 @@ export class SyncSourceService
 
 		try
 		{
-			result = await this.cacheService.updateCache(modifiedObjects);
+			result = await this.cacheService.updateCache(this.modifiedObjects);
 		}
 		catch (error)
 		{
-			await this.handleErrorOnUpdateCache(error, isAsync, modifiedObjects);
+			await this.handleErrorOnUpdateCache(error, isAsync);
 		}
 
 		return result;
@@ -52,51 +49,57 @@ export class SyncSourceService
  * 
  * @param { IModifiedObjects } modifiedObjects - The modifiedObjects to update.
  */
-protected async getUpToDateHiddenFields(modifiedObjects: IModifiedObjects): Promise<void>
-{
-    // Filter out objects with defined Hidden field
-    const objectsWithHiddenField = modifiedObjects.Updates.filter(update => update.Hidden !== undefined);
+	protected async getUpToDateHiddenFields(): Promise<void>
+	{
+		// Filter out objects with defined Hidden field
+		const objectsWithHiddenField = this.modifiedObjects.Updates.filter(update => update.Hidden !== undefined);
 
-    // Retrieve up-to-date Hidden values from the database
-    const searchBody: SearchBody = {
-        KeyList: objectsWithHiddenField.map(update => update.Key),
-        Fields: ["Hidden", "Key", "ModificationDateTime"]
-    };
-    const upToDateHiddenValues: SearchData<AddonData> = await this.pepperiDal.searchDataInTable(modifiedObjects.SchemeName, searchBody);
+		// Retrieve up-to-date Hidden values from the database
+		const searchBody: SearchBody = {
+			KeyList: objectsWithHiddenField.map(update => update.Key),
+			Fields: ["Hidden", "Key", "ModificationDateTime"]
+		};
+		const upToDateHiddenValues: SearchData<AddonData> = await this.pepperiDal.searchDataInTable(this.modifiedObjects.SchemeName, searchBody);
 
-    // Create a map of the up-to-date Hidden values for faster lookup
-    const upToDateHiddenValuesMap = new Map(upToDateHiddenValues.Objects.map(obj => [obj.Key, obj]));
+		// Create a map of the up-to-date Hidden values for faster lookup
+		const upToDateHiddenValuesMap = new Map(upToDateHiddenValues.Objects.map(obj => [obj.Key, obj]));
 
-    // Update the modifiedObjects with up-to-date Hidden and ObjectModificationDateTime values
-    modifiedObjects.Updates.forEach(update => {
-        const upToDateHiddenObject = upToDateHiddenValuesMap.get(update.Key);
-
-        if (upToDateHiddenObject)
+		// Update the modifiedObjects with up-to-date Hidden and ObjectModificationDateTime values
+		this.modifiedObjects.Updates.forEach(update => 
 		{
-            // Update Hidden field if different
-            if (update.Hidden !== upToDateHiddenObject.Hidden)
+			const upToDateHiddenObject = upToDateHiddenValuesMap.get(update.Key);
+
+			if (upToDateHiddenObject)
 			{
-                update.Hidden = upToDateHiddenObject.Hidden;
-            }
+				// Update Hidden field if different
+				if (update.Hidden !== upToDateHiddenObject.Hidden)
+				{
+					update.Hidden = upToDateHiddenObject.Hidden;
+				}
 
-            // Update ObjectModificationDateTime if different
-            if (update.ObjectModificationDateTime !== upToDateHiddenObject.ModificationDateTime)
-			{
-                update.ObjectModificationDateTime = upToDateHiddenObject.ModificationDateTime!;
-            }
-        }
-    });
-}
+				// Update ObjectModificationDateTime if different
+				if (update.ObjectModificationDateTime !== upToDateHiddenObject.ModificationDateTime)
+				{
+					update.ObjectModificationDateTime = upToDateHiddenObject.ModificationDateTime!;
+				}
+			}
+		});
+	}
 
-
-	protected async handleErrorOnUpdateCache(error: unknown, isAsync: boolean, modifiedObjects: IModifiedObjects)
+	/**
+	 * In case of an error, set a system_health notification if async, otherwise (this is a the first PNS sync call) throw the error.
+	 * @param error 
+	 * @param isAsync 
+	 * @param modifiedObjects 
+	 */
+	protected async handleErrorOnUpdateCache(error: unknown, isAsync: boolean)
 	{
 		const errorMessage = error instanceof Error ? error.message : JSON.stringify(error);
 		console.error(`Failed to update cache: ${errorMessage}`);
 
 		if (isAsync)
 		{
-			await this.setSystemHealthNotification(modifiedObjects, errorMessage);
+			await this.setSystemHealthNotification(errorMessage);
 		}
 		else
 		{
@@ -104,13 +107,13 @@ protected async getUpToDateHiddenFields(modifiedObjects: IModifiedObjects): Prom
 		}
 	}
 
-	protected async setSystemHealthNotification(modifiedObjects: IModifiedObjects, message: string)
+	protected async setSystemHealthNotification(message: string)
 	{
 		const systemHealthNotificationBody = {
 			Name:  `PFS Cache update`,
-			Description: `PFS failed to update cache for schema '${modifiedObjects.SchemeName}'.`,
+			Description: `PFS failed to update cache for schema '${this.modifiedObjects.SchemeName}'.`,
 			Status: "ERROR",
-			Message: `Failed to update cache for schema '${modifiedObjects.SchemeName}' with error: ${message}`,
+			Message: `Failed to update cache for schema '${this.modifiedObjects.SchemeName}' with error: ${message}`,
 			BroadcastChannel: ["System"]
 		};
 
