@@ -93,7 +93,7 @@ export async function upgrade(client: Client, request: Request): Promise<any>
 		await migrateSchemasToPushLocalChanges(papiClient, client);
 	}
 
-	if(request.body.FromVersion && semverLessThan(request.body.FromVersion, "1.4.15"))
+	if(request.body.FromVersion && semverLessThan(request.body.FromVersion, "1.4.16"))
 	{
 		console.log("Creating Resource Import relations for internal 'data' schemas");
 		await createResourceImportRelations(papiClient, client, request);
