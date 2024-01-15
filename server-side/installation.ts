@@ -89,12 +89,17 @@ export async function upgrade(client: Client, request: Request): Promise<any>
 
 	if (request.body.FromVersion && semverLessThan(request.body.FromVersion, "1.3.24"))
 	{
+		console.log("Migrating internal schemas to have SyncData.PushLocalChanges = true...");
+		await migrateSchemasToPushLocalChanges(papiClient, client);
+	}
+
+	if(request.body.FromVersion && semverLessThan(request.body.FromVersion, "1.4.2"))
+	{
 		console.log("Creating Resource Import relations for internal 'data' schemas");
 		await createResourceImportRelations(papiClient, client, request);
 
-		console.log("Migrating internal schemas to have SyncData.PushLocalChanges = true...");
-		await migrateSchemasToPushLocalChanges(papiClient, client);
-
+		console.log("Creating PNS subscription for Sync=true schemas");
+		await createUpsertRecordSubscriptionForSyncSchemas(papiClient, client, request);
 	}
 
 	return { success: true, resultObject: {} };
@@ -458,9 +463,7 @@ async function createResourceImportRelations(papiClient: PapiClient, client: Cli
 	{
 		// Since the schema name is in the format of "pfs-<owner_uuid>-<table_name>", we need to extract the owner uuid
 		// This is needed so that the created relation will have the owner uuid.
-		const splitSchemaName = schema.Name.split("_");
-		const schemaOwner = SharedHelper.addMinusesToUUID(splitSchemaName[1]);
-		const externalPfsSchemaName = splitSchemaName[2];
+		const { schemaOwner, externalPfsSchemaName } = getClientSchemaInfo(schema);
 
 		request.query = {
 			...request.query,
@@ -471,4 +474,35 @@ async function createResourceImportRelations(papiClient: PapiClient, client: Cli
 	};
 
 	await manipulateAllPfsSchemas(papiClient, manipulatorFunction);
+}
+
+async function createUpsertRecordSubscriptionForSyncSchemas(papiClient: PapiClient, client: Client, request: Request)
+{
+	const manipulatorFunction = async (schema: AddonDataScheme) : Promise<void> => 
+	{
+		const {schemaOwner, externalPfsSchemaName}= getClientSchemaInfo(schema);
+		
+
+		// Add a addon_uuid query param to the request, so that PfsSchemeService will work as expected.
+		request.query = {
+			...request.query,
+			addon_uuid: schemaOwner,
+		};
+
+		const pfsSchemaService = new PfsSchemeService(client, request);
+		await pfsSchemaService.createOpenSyncResources(schema.SyncData, externalPfsSchemaName);
+	};
+
+	await manipulateAllPfsSchemas(papiClient, manipulatorFunction);
+}
+
+function getClientSchemaInfo(schema: AddonDataScheme) 
+{
+	const splitSchemaName = schema.Name.split("_");
+	const schemaOwner = SharedHelper.addMinusesToUUID(splitSchemaName[1]);
+	// Since the schema name is in the format of "pfs-<owner_uuid>-<table_name>", and 
+	// the external pfs schema name might include underscores, 
+	// we have to join the rest of the split schema name with underscores.
+	const externalPfsSchemaName = splitSchemaName.slice(2).join("_");
+	return { schemaOwner, externalPfsSchemaName };
 }
