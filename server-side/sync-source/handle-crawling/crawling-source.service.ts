@@ -55,24 +55,16 @@ export class CrawlingSourceService
      */
 	protected formatResult(result: SearchData<AddonData>, schemaName: string, currentPageKey: CrawlerPageKey): void
 	{
-		console.log("Formatting result...");
-
 		this.setOriginSchemaOnObjects(result, schemaName);
 		this.setNextPageKey(result, currentPageKey);
-
-		console.log("Result formatted.");
 	}
 
 	protected setOriginSchemaOnObjects(result: SearchData<AddonData>, schemaName: string)
 	{
-		console.log("Setting origin schema on objects...");
-
 		result.Objects.forEach(object => 
 		{
 			object["ObjectSourceSchema"] = schemaName;
 		});
-
-		console.log("Origin schema set on objects.");
 	}
 
 	/**
@@ -82,9 +74,7 @@ export class CrawlingSourceService
      */
 	protected setNextPageKey(result: SearchData<AddonData>, currentCrawlerPageKey: CrawlerPageKey): void
 	{
-		console.log("Setting next page key...");
-
-		const nextPageKey: CrawlerPageKey = {
+		let nextPageKey: CrawlerPageKey | undefined = {
 			SchemaIndex: currentCrawlerPageKey.SchemaIndex,
 			SpecificSchemaPageKey: "",
 		};
@@ -93,22 +83,20 @@ export class CrawlingSourceService
 		if (result.NextPageKey)
 		{
 			nextPageKey.SpecificSchemaPageKey = result.NextPageKey;
-			result.NextPageKey = JSON.stringify(nextPageKey);
 		}
 		// If there is no next page key, and there are more schemas to crawl, use the next schema.
 		else if(currentCrawlerPageKey.SchemaIndex + 1 < this.request.body.SchemaNames.length)
 		{
 			nextPageKey.SchemaIndex++;
-			result.NextPageKey = JSON.stringify(nextPageKey);
 		}
 		// If there is no next page key, and there are no more schemas to crawl, use an undefined
 		// to indicate that there are no more pages.
 		else
 		{
-			result.NextPageKey = undefined;
+			nextPageKey = undefined;
 		}
 
-		console.log("Next page key set:", JSON.stringify(result.NextPageKey));
+		result.NextPageKey = nextPageKey ? JSON.stringify(nextPageKey) : undefined;
 	}
 
 	/**
@@ -117,8 +105,6 @@ export class CrawlingSourceService
      */
 	protected parsePageKey(): CrawlerPageKey
 	{
-		console.log("Parsing page key...");
-
 		const result: CrawlerPageKey = { SchemaIndex: 0, SpecificSchemaPageKey: "" };
 
 		const passedPageKey: string = this.request.body.PageKey;
@@ -134,8 +120,6 @@ export class CrawlingSourceService
 				throw new Error("Error parsing PageKey: SchemaIndex is required");
 			}
 		}
-
-		console.log("Page key parsed:", JSON.stringify(result));
 
 		return result;
 	}

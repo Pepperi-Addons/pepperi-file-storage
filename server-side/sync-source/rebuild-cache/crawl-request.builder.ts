@@ -94,28 +94,14 @@ export class CrawlRequest
 	{
 		console.log("Getting all syncable resource names...");
 
-		const findOptions: FindOptions = {
-			fields: ["Name", "SyncData"],
-			page_size: 1000,
-			page: 1,
-		};
+		const requiredFields = ["Name", "SyncData"];
+		const schemasWithSyncData: AddonDataScheme[] = await this.schemaSearcher.searchSchemas(requiredFields);
 
-		const resourceNames: Set<string> = new Set<string>();
-		let resourcesPage: AddonDataScheme[] = [];
+		// Filter out schemas that are not syncable.
+		const syncableSchemas = schemasWithSyncData.filter(schema => schema.SyncData?.Sync && schema.SyncData?.SyncRecords);
 
-		do
-		{
-			resourcesPage = await this.schemaSearcher.searchSchemas(findOptions);
-
-			// Add the syncable schema names to the set.
-			const resourceNamesPage = resourcesPage
-				.filter(resource => resource.SyncData?.Sync && resource.SyncData?.SyncRecords)
-				.map(resource => resource.Name);
-			resourceNamesPage.map(resourceName => resourceNames.add(resourceName));
-
-			(findOptions.page!)++;
-		}
-		while(resourcesPage.length > 0);
+		// Add the syncable schema names to the set.
+		const resourceNames = new Set<string>(syncableSchemas.map(schema => schema.Name));
 
 		console.log("All syncable resource names:", resourceNames);
 

@@ -2,5 +2,9 @@ import { AddonDataScheme, FindOptions } from "@pepperi-addons/papi-sdk";
 
 export interface ISchemaSearcher
 {
-    searchSchemas(findOptions: FindOptions): Promise<AddonDataScheme[]>
+    /**
+     * Retrieve all addon's schemas (no external pagination is needed)
+     * @param { string[] } fields - The schema fields that will be returned
+     */
+    searchSchemas(fields: string[]): Promise<AddonDataScheme[]>
 }
