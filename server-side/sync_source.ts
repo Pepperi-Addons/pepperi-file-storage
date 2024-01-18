@@ -22,7 +22,9 @@ export async function rebuild_cache(client: Client, request: Request): Promise<A
 	const crawlRequestBuilder = new CrawlRequest(request.body, schemaSearcher);
 	const crawlRequest = await crawlRequestBuilder.build();
 
-	const crawlService: ICrawlService = new CrawlService(papiClient);
+	const shouldKeepActionUUID = false;
+	const noActionUUIDPapiClient = ServerHelper.createPapiClient(client, PfsAddonUUID, client.AddonSecretKey, shouldKeepActionUUID);
+	const crawlService: ICrawlService = new CrawlService(noActionUUIDPapiClient);
 	return await crawlService.crawl(crawlRequest);
 }
 

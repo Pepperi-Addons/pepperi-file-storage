@@ -92,13 +92,13 @@ export class ServerHelper
 		}
 	}
 
-	public static createPapiClient(client: Client, addonUUID: string, secretKey = "") 
+	public static createPapiClient(client: Client, addonUUID: string, secretKey = "", keepActionUUID = true) 
 	{
 		return new PapiClient({
 			baseURL: client.BaseURL,
 			token: client.OAuthAccessToken,
 			addonUUID: addonUUID,
-			actionUUID: client.ActionUUID,
+			...(keepActionUUID && {actionUUID: client.ActionUUID}),
 			...(secretKey && {addonSecretKey: secretKey})
 		});
 	}
