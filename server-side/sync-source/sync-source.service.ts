@@ -110,9 +110,9 @@ export class SyncSourceService
 	{
 		const systemHealthNotificationBody = {
 			Name:  `PFS Cache update`,
-			Description: `PFS failed to update cache for schema '${modifiedObjects.SchemeName}'.`,
+			Description: `PFS failed to update cache for schema "${modifiedObjects.SchemeName}".`,
 			Status: "ERROR",
-			Message: `Failed to update cache for schema '${modifiedObjects.SchemeName}' with error: ${message}`,
+			Message: `Failed to update cache for schema "${modifiedObjects.SchemeName}", ActionUUID: "${this.client.ActionUUID}" with error: ${message}`,
 			BroadcastChannel: ["System"]
 		};
 

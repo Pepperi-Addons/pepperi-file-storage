@@ -72,9 +72,7 @@ export class CrawlRequest
 		}
 		else
 		{
-			const unsyncableResourceNames = [...resourceNamesToCrawl].filter(
-				schemaName => !allSyncableResourceName.has(schemaName)
-			);
+			const unsyncableResourceNames = resourceNamesToCrawl.filter(schemaName => !allSyncableResourceName.has(schemaName));
 			if(unsyncableResourceNames.length > 0)
 			{
 				throw new Error(`The following resources are not syncable: ${unsyncableResourceNames.join(", ")}`);
@@ -83,7 +81,7 @@ export class CrawlRequest
 
 		// Remove excluded resources.
 		const excludedSchemaNames = new Set<string>(this.cacheRebuildRequest.ExcludedResources || []);
-		const result: string[] = [...resourceNamesToCrawl].filter(schemaName => !excludedSchemaNames.has(schemaName));
+		const result: string[] = resourceNamesToCrawl.filter(schemaName => !excludedSchemaNames.has(schemaName));
 
 		console.log("Schema names to crawl:", result);
 
