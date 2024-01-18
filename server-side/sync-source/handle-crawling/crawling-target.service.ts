@@ -2,9 +2,9 @@ import { Request } from "@pepperi-addons/debug-server/dist";
 import {mapLimit as asyncMapLimit} from "async";
 
 import { AddonUUID as PfsAddonUUID } from "../../../addon.config.json";
-import { ICacheService } from "../i-cache.service";
-import { CacheUpdateResult, IModifiedObjects } from "../update-cache/i-modified-objects";
+
 import { CrawlOutputsPrefixes, CrawlOutputsPrefixesEnum } from "./constants";
+import { CacheUpdateResult, ICacheService, IModifiedObjects } from "../entities";
 
 
 export class CrawlingTargetService 

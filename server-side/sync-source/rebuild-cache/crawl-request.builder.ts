@@ -3,7 +3,7 @@ import { AddonDataScheme, FindOptions, CrawlerInput, CrawlerTargetOutputBlueprin
 import { AddonUUID as PfsAddonUUID } from "../../../addon.config.json";
 import { ISchemaSearcher } from "./i-schema-searcher";
 import { CrawlOutputsPrefixes } from "../handle-crawling/constants";
-import { CacheRebuildRequest } from "../entities/crawler";
+import { CacheRebuildRequest } from "../entities";
 
 
 export class CrawlRequest

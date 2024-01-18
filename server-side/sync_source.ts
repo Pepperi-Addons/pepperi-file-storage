@@ -10,8 +10,9 @@ import { SchemaSearcher } from "./sync-source/rebuild-cache/schema-searcher";
 import docDbDal from "./DAL/docDbDal";
 import { CrawlingSourceService} from "./sync-source/handle-crawling/crawling-source.service";
 import { CrawlingTargetService } from "./sync-source/handle-crawling/crawling-target.service";
-import { ICacheService } from "./sync-source/i-cache.service";
 import { NucCacheService } from "./sync-source/nuc-cache.service";
+import { ICacheService, ICrawlService } from "./sync-source/entities";
+import { CrawlService } from "./sync-source/rebuild-cache/crawl.service";
 
 export async function rebuild_cache(client: Client, request: Request): Promise<AddonAPIAsyncResult> 
 {
@@ -21,8 +22,8 @@ export async function rebuild_cache(client: Client, request: Request): Promise<A
 	const crawlRequestBuilder = new CrawlRequest(request.body, schemaSearcher);
 	const crawlRequest = await crawlRequestBuilder.build();
 
-	const syncSourceService = new SyncSourceService(client);
-	return await syncSourceService.rebuildCache(crawlRequest);
+	const crawlService: ICrawlService = new CrawlService(papiClient);
+	return await crawlService.crawl(crawlRequest);
 }
 
 export async function update_cache(client: Client, request: Request): Promise<any> 

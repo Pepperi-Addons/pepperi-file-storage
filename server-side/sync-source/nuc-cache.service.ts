@@ -1,8 +1,7 @@
-import { AddonAPIAsyncResult, PapiClient } from "@pepperi-addons/papi-sdk";
+import { PapiClient } from "@pepperi-addons/papi-sdk";
 
-import { ICacheService } from "./i-cache.service";
-import { CacheUpdateResult, IModifiedObjects } from "./update-cache/i-modified-objects";
-import { ICrawlRequest } from "./rebuild-cache/i-crawl-request";
+import { CacheUpdateResult, ICacheService, IModifiedObjects } from "./entities";
+
 
 export class NucCacheService implements ICacheService
 {
@@ -14,11 +13,6 @@ export class NucCacheService implements ICacheService
 	public async updateCache(modifiedObjects: IModifiedObjects): Promise<CacheUpdateResult[]> 
 	{
 		return await this.papiClient.post("/cache/changes", modifiedObjects);
-	}
-
-	public async crawl(crawlRequest: ICrawlRequest): Promise<AddonAPIAsyncResult> 
-	{
-		return await this.papiClient.crawl.crawl(crawlRequest);
 	}
 }
 

@@ -20,3 +20,8 @@ export interface CacheUpdateResult {
         Message: string;
         URI: string;
 }
+
+export interface ICacheService
+{    
+    updateCache(modifiedObjects: IModifiedObjects): Promise<CacheUpdateResult[]>;
+}
