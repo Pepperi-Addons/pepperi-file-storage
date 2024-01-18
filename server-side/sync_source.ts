@@ -4,8 +4,7 @@ import { AddonAPIAsyncResult, AddonData, SearchData } from "@pepperi-addons/papi
 import { PnsToModifiedObjectsConverter } from "./sync-source/update-cache/pns-to-modified-objects-converter";
 import { AddonUUID as PfsAddonUUID } from "../addon.config.json";
 import { SyncSourceService } from "./sync-source/sync-source.service";
-import { ICrawlRequest } from "./sync-source/rebuild-cache/i-crawl-request";
-import { CrawlRequest } from "./sync-source/rebuild-cache/crawl-request";
+import { CrawlRequest } from "./sync-source/rebuild-cache/crawl-request.builder";
 import { ServerHelper } from "./serverHelper";
 import { SchemaSearcher } from "./sync-source/rebuild-cache/schema-searcher";
 import docDbDal from "./DAL/docDbDal";
@@ -18,7 +17,9 @@ export async function rebuild_cache(client: Client, request: Request): Promise<A
 {
 	const papiClient = ServerHelper.createPapiClient(client, PfsAddonUUID, client.AddonSecretKey);
 	const schemaSearcher = new SchemaSearcher(papiClient);
-	const crawlRequest: ICrawlRequest = await CrawlRequest.getInstance(request, schemaSearcher);
+
+	const crawlRequestBuilder = new CrawlRequest(request.body, schemaSearcher);
+	const crawlRequest = await crawlRequestBuilder.build();
 
 	const syncSourceService = new SyncSourceService(client);
 	return await syncSourceService.rebuildCache(crawlRequest);
