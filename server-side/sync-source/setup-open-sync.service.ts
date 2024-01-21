@@ -27,6 +27,17 @@ export class SetupOpenSyncService
 
 		return await this.initializeSyncCache(asyncPapiClient);
 	}
+
+	public async destructSyncSource(): Promise<void>
+	{
+		const syncableSchemas: AddonDataScheme[] = await this.getSchemas();
+		
+		for (const dataTypedSchema of syncableSchemas)
+		{
+			await this.unsubscribeFromUpsertedRecords(dataTypedSchema);
+			await this.removeSchemaFromSyncCache(dataTypedSchema);
+		}
+	}
 	protected async getSchemas(): Promise<AddonDataScheme[]>
 	{
 		const schemaSearcher = new SchemaSearcher(this.papiClient);
@@ -96,12 +107,6 @@ export class SetupOpenSyncService
 			console.error(errorMessage);
 			throw new Error(errorMessage); // Should we throw an error here, or just log it?
 		}
-	}
-
-	public async removeOpenSyncResources(dataTypedSchema: AddonDataScheme): Promise<void>
-	{
-		await this.unsubscribeFromUpsertedRecords(dataTypedSchema);
-		await this.removeSchemaFromSyncCache(dataTypedSchema);
 	}
 
 	/**

@@ -1,12 +1,12 @@
 import { PapiClient, AddonAPIAsyncResult } from "@pepperi-addons/papi-sdk";
 import { CacheRebuildRequest } from "../entities";
 import { SchemaSearcher } from "./schema-searcher";
-import { CrawlRequest } from "./crawl-request.builder";
+import { CrawlRequestBuilder } from "./crawl-request.builder";
 
 export class InitiateCrawlCommand
 {
 	protected schemaSearcher: SchemaSearcher;
-	protected crawlRequestBuilder: CrawlRequest;
+	protected crawlRequestBuilder: CrawlRequestBuilder;
 
 	
 	/**
@@ -17,13 +17,17 @@ export class InitiateCrawlCommand
 	constructor(protected papiClient: PapiClient, protected asyncPapiClient: PapiClient, protected cacheRebuildRequest: CacheRebuildRequest) 
 	{ 
 		this.schemaSearcher = new SchemaSearcher(papiClient);
-		this.crawlRequestBuilder = new CrawlRequest(this.cacheRebuildRequest, this.schemaSearcher);
+		this.crawlRequestBuilder = new CrawlRequestBuilder(this.cacheRebuildRequest, this.schemaSearcher);
 
 	}
 
 	public async execute(): Promise<AddonAPIAsyncResult> 
 	{
 		const crawlRequest = await this.crawlRequestBuilder.build();
-		return await this.asyncPapiClient.addons.crawler.crawl(crawlRequest);
+		const crawlResponse = await this.asyncPapiClient.addons.crawler.crawl(crawlRequest);
+		
+		console.log("Crawl was initiated to rebuild the cache. For more information, See ActionUUID:",  crawlResponse.ExecutionUUID);
+
+		return crawlResponse;
 	}
 }

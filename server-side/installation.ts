@@ -17,6 +17,7 @@ import { PfsSchemeService } from "./pfs-scheme.service";
 import { SharedHelper } from "pfs-shared";
 import { SetupOpenSyncService } from "./sync-source/setup-open-sync.service";
 import { ServerHelper } from "./serverHelper";
+import { Server } from "http";
 
 export async function install(client: Client, request: Request): Promise<any> 
 {
@@ -31,7 +32,22 @@ export async function install(client: Client, request: Request): Promise<any>
 
 export async function uninstall(client: Client, request: Request): Promise<any> 
 {
-	return { success: true, resultObject: {} };
+	const res = { success: true, resultObject: {} };
+
+	try
+	{
+		const papiClient = ServerHelper.createPapiClient(client, AddonUUID, client.AddonSecretKey);
+		const setupOpenSyncService = new SetupOpenSyncService(papiClient);
+
+		await setupOpenSyncService.destructSyncSource();
+	}
+	catch (error)
+	{
+		res.success = false;
+		res.resultObject = { errorMessage: error instanceof Error ? error.message : `Unknown error has occurred destructing sync source: ${JSON.stringify(error)}` };
+	}
+	
+	return res;
 }
 
 export async function upgrade(client: Client, request: Request): Promise<any> 
