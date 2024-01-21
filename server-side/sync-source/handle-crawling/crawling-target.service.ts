@@ -1,10 +1,10 @@
-import { Request } from "@pepperi-addons/debug-server/dist";
 import {mapLimit as asyncMapLimit} from "async";
+import { AddonData, CrawlerTargetInput } from "@pepperi-addons/papi-sdk";
 
 import { AddonUUID as PfsAddonUUID } from "../../../addon.config.json";
-
 import { CrawlOutputsPrefixes, CrawlOutputsPrefixesEnum } from "./constants";
 import { CacheUpdateResult, ICacheService, IModifiedObjects } from "../entities";
+import { UpdatedObjectsBuilder } from "./updated-object.builder";
 
 
 export class CrawlingTargetService 
@@ -15,9 +15,12 @@ export class CrawlingTargetService
 	 * The maximum number of concurrent update requests to the cache.
 	 */
 	protected readonly MAX_CONCURRENT_REQUESTS = 5;
+	protected pageToUpdate: AddonData[];
 
-	constructor(protected cacheService: ICacheService, protected request: Request)
-	{}
+	constructor(protected cacheService: ICacheService, targetInput: CrawlerTargetInput)
+	{
+		this.pageToUpdate = targetInput.Page as AddonData[];
+	}
 
 	/**
      * Update the cache with the modified objects.
@@ -30,31 +33,8 @@ export class CrawlingTargetService
 		this.populateModifiedObjectsSet();
 		console.log("Modified objects retrieved.");
 
-		// This function is defined as an arrow function so that it
-		// can be passed to asyncMapLimit and keep "this" context
-		const updateCacheForSchema = async (schemaName: string) => 
-		{
-			let crawlerOutput: { Outputs: { [key: string]: number }} = { Outputs: {}};
-	
-			const modifiedObjects = this.schemaNameToModifiedObjects.get(schemaName);
-			if (modifiedObjects)
-			{
-				const cacheUpdateResults: CacheUpdateResult[] = await this.cacheService.updateCache(modifiedObjects);
-				console.log(`Cache updated for schema ${schemaName}.`);
-	
-				crawlerOutput = this.constructCrawlerOutputs(cacheUpdateResults, schemaName);
-			}
-			else // should never happen
-			{
-				console.error(`Modified objects for schema ${schemaName} not found`);
-				crawlerOutput = { Outputs: {} };
-			}
-	
-			return crawlerOutput;
-		};
-		
 		// update the cache for each schema in parallel
-		const cacheUpdateResults = await asyncMapLimit(this.schemaNameToModifiedObjects.keys(), this.MAX_CONCURRENT_REQUESTS, updateCacheForSchema);
+		const cacheUpdateResults = await asyncMapLimit(this.schemaNameToModifiedObjects.keys(), this.MAX_CONCURRENT_REQUESTS, async (schemaName) => this.updateSchemaCache(schemaName));
 		
 		// consolidate cacheUpdateResults into a single object, (e.g. { Outputs: { TotalChanges: 10, TotalChangesSuccess: 10, TotalChangesFailed: 0 } })
 		const consolidatedCacheUpdateResults = this.consolidateTargetOutputResults(cacheUpdateResults);
@@ -62,6 +42,27 @@ export class CrawlingTargetService
 		console.log("Cache update completed.");
 
 		return consolidatedCacheUpdateResults;
+	}
+
+	private async updateSchemaCache(schemaName: string) 
+	{
+		let crawlerOutput: { Outputs: { [key: string]: number; }; } = { Outputs: {} };
+
+		const modifiedObjects = this.schemaNameToModifiedObjects.get(schemaName);
+		if (modifiedObjects)
+		{
+			const cacheUpdateResults: CacheUpdateResult[] = await this.cacheService.updateCache(modifiedObjects);
+			console.log(`Cache updated for schema ${schemaName}.`);
+
+			crawlerOutput = this.constructCrawlerOutputs(cacheUpdateResults, schemaName);
+		}
+		else // should never happen
+		{
+			console.error(`Modified objects for schema ${schemaName} not found`);
+			crawlerOutput = { Outputs: {} };
+		}
+
+		return crawlerOutput;
 	}
 
 	/**
@@ -82,33 +83,6 @@ export class CrawlingTargetService
 		}, { Outputs: {} });
 	}
 
-	/**
-	 * Update the cache for a specific schema.
-	 * @param {string} schemaName - The schema name. 
-	 * @returns {Promise<{ Outputs: { [key: string]: number }}>} - The crawler outputs.
-	 */
-	protected async updateCacheForSchema(schemaName: string): Promise<{ Outputs: { [key: string]: number }}>
-	{
-		let crawlerOutput: { Outputs: { [key: string]: number }} = { Outputs: {}};
-
-		const modifiedObjects = this.schemaNameToModifiedObjects.get(schemaName);
-		if (modifiedObjects)
-		{
-			const cacheUpdateResults: CacheUpdateResult[] = await this.cacheService.updateCache(modifiedObjects);
-			console.log("Cache updated.");
-
-			crawlerOutput = this.constructCrawlerOutputs(cacheUpdateResults, schemaName);
-			console.log("Crawler outputs constructed:", JSON.stringify(crawlerOutput));
-		}
-		else // should never happen
-		{
-			console.error(`Modified objects for schema ${schemaName} not found`);
-			crawlerOutput = { Outputs: {} };
-		}
-
-		return crawlerOutput;
-	}
-
 
 	/**
     * Populate the modified objects set with the modified objects from the request.
@@ -117,11 +91,10 @@ export class CrawlingTargetService
 	protected populateModifiedObjectsSet(): void
 	{
 		console.log("Constructing modified objects...");
-
-		const pageToUpdate = this.changeModificationDateTimeToObjectModificationDateTime();
+		const updatedObjectBuilder = new UpdatedObjectsBuilder();
 
 		// Using a Map to efficiently store unique ObjectSourceSchema names and corresponding IModifiedObjects
-		this.schemaNameToModifiedObjects = pageToUpdate.reduce((map, entry) => 
+		this.schemaNameToModifiedObjects = this.pageToUpdate.reduce((map, entry) => 
 		{
 			const sourceSchemaName = entry.ObjectSourceSchema as string;
 
@@ -141,45 +114,13 @@ export class CrawlingTargetService
 			const schemaModifiedObjects = map.get(sourceSchemaName);
 
 			// Add the modified object to the Updates array for the current sourceSchemaName
-			schemaModifiedObjects?.Updates.push(this.removeObjectSourceSchemaProperty([entry])[0]);
+			schemaModifiedObjects?.Updates.push(updatedObjectBuilder.build(entry));
 
 			// Return the updated Map for the next iteration
 			return map;
 		}, new Map<string, IModifiedObjects>());
 
 		console.log("Modified objects constructed.");
-	}
-
-	/**
-     * Change the ModificationDateTime property to ObjectModificationDateTime.
-     * @returns { any[] } - The modified page.
-     */
-	protected changeModificationDateTimeToObjectModificationDateTime(): any[] 
-	{
-		console.log("Changing ModificationDateTime to ObjectModificationDateTime...");
-
-		return this.request.body.Page.map((entry: any) => 
-		{
-			const objectCopy = Object.assign({}, entry);
-			objectCopy.ObjectModificationDateTime = objectCopy.ModificationDateTime;
-			delete objectCopy.ModificationDateTime;
-			return objectCopy;
-		});
-	}
-
-	/**
-     * Remove the ObjectSourceSchema property from the page.
-     * @param pageToUpdate - The page to update.
-     * @returns { any[] } - The modified page.
-     */
-	protected removeObjectSourceSchemaProperty(pageToUpdate: any[]): any[] 
-	{
-		return pageToUpdate.map((entry: any) => 
-		{
-			const objectCopy = Object.assign({}, entry);
-			delete objectCopy.ObjectSourceSchema;
-			return objectCopy;
-		});
 	}
 
 	/**

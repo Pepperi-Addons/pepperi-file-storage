@@ -6,7 +6,7 @@ import { CrawlOutputsPrefixes } from "../handle-crawling/constants";
 import { CacheRebuildRequest } from "../entities";
 
 
-export class CrawlRequest
+export class CrawlRequestBuilder
 {
 	constructor(protected cacheRebuildRequest: CacheRebuildRequest, protected schemaSearcher: ISchemaSearcher)
 	{ }
