@@ -12,8 +12,8 @@ import { SchemaSearcher } from "./rebuild-cache/schema-searcher";
  */
 export class SetupOpenSyncService
 {
-    constructor(protected papiClient: PapiClient)
-    { }
+	constructor(protected papiClient: PapiClient)
+	{ }
 
 
 	public async setupSyncSource(asyncPapiClient: PapiClient): Promise<AddonAPIAsyncResult>
@@ -35,7 +35,7 @@ export class SetupOpenSyncService
 
 		return schemas;
 	}
-    /**
+	/**
 	 * Set up any resources needed to sync the schema.
 	 * 
 	 * If SyncData.Sync == true && SyncData.SyncRecords !== false,
@@ -78,7 +78,7 @@ export class SetupOpenSyncService
 	 */
 	protected async upsertSchemaToSyncCache(dataTypedSchema: AddonDataScheme): Promise<void>
 	{
-        const syncCacheSchema = {
+		const syncCacheSchema = {
 			// Both SourceAddonUUID and SchemeAddonUUID should be the PFS's addon UUID
 			// This is due to the fact that the schemas are owned by the PFS, and not by the client addon.
 			SchemeAddonUUID: PfsAddonUUID,
@@ -98,49 +98,49 @@ export class SetupOpenSyncService
 		}
 	}
 
-    public async removeOpenSyncResources(dataTypedSchema: AddonDataScheme): Promise<void>
-    {
-        await this.unsubscribeFromUpsertedRecords(dataTypedSchema);
-        await this.removeSchemaFromSyncCache(dataTypedSchema);
-    }
+	public async removeOpenSyncResources(dataTypedSchema: AddonDataScheme): Promise<void>
+	{
+		await this.unsubscribeFromUpsertedRecords(dataTypedSchema);
+		await this.removeSchemaFromSyncCache(dataTypedSchema);
+	}
 
-    /**
+	/**
      * Unsubscribe from upserted records on the PFS's schema.
      * @returns {Promise<void>}
      */
-    protected async unsubscribeFromUpsertedRecords(dataTypedSchema: AddonDataScheme)
-    {
-        const subscriptions = await this.papiClient.notification.subscriptions.find({
-            where: `Name LIKE 'pfs-upserted-records-${dataTypedSchema.Name}'`
-        });
+	protected async unsubscribeFromUpsertedRecords(dataTypedSchema: AddonDataScheme)
+	{
+		const subscriptions = await this.papiClient.notification.subscriptions.find({
+			where: `Name LIKE 'pfs-upserted-records-${dataTypedSchema.Name}'`
+		});
 
-        for (const subscription of subscriptions)
-        {
-            subscription.Hidden = true;
-            await this.papiClient.notification.subscriptions.upsert(subscription);
-        }
-    }
+		for (const subscription of subscriptions)
+		{
+			subscription.Hidden = true;
+			await this.papiClient.notification.subscriptions.upsert(subscription);
+		}
+	}
 
-    /**
+	/**
      * Remove the schema from the sync cache.
      */
-    protected async removeSchemaFromSyncCache(dataTypedSchema: AddonDataScheme)
-    {
-        // *** This is not currently implemented in NUC cache. ***
+	protected async removeSchemaFromSyncCache(dataTypedSchema: AddonDataScheme)
+	{
+		// *** This is not currently implemented in NUC cache. ***
 
-        // const syncCacheSchema = {
+		// const syncCacheSchema = {
 		// 	SchemeAddonUUID: PfsAddonUUID,
 		// 	SourceAddonUUID: PfsAddonUUID,
 		// 	SchemeName: dataTypedSchema.Name,
 		// };
 
-        // await this.papiClient.post(`/cache/purge`, syncCacheSchema);
-    }
+		// await this.papiClient.post(`/cache/purge`, syncCacheSchema);
+	}
 
 	/**
 	 * Initialize the sync cache for all the schemas that are synced by the PFS.
 	 */
-    public async initializeSyncCache(asyncPapiClient: PapiClient): Promise<AddonAPIAsyncResult>
+	public async initializeSyncCache(asyncPapiClient: PapiClient): Promise<AddonAPIAsyncResult>
 	{
 		const cacheRebuildRequest: CacheRebuildRequest = {}; // Rebuild all syncable resources 
 		const initiateCrawlCommand = new InitiateCrawlCommand(this.papiClient, asyncPapiClient, cacheRebuildRequest);

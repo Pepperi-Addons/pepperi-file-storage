@@ -26,8 +26,6 @@ export class CrawlingSourceService
 		const pageKey: PfsCrawlerPageKey = this.parsePageKey();
 		console.log("Parsed page key:", pageKey);
 
-		// const schemaName = this.crawlerSourceInput.SchemaNames[pageKey.SchemaIndex];
-
 		const result = await this.getPageFromSchema(pageKey);
 		console.log("Data fetched.");
 
