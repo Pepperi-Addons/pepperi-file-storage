@@ -1,10 +1,10 @@
-import { Request } from "@pepperi-addons/debug-server/dist";
-import { SearchData, AddonData, SearchBody } from "@pepperi-addons/papi-sdk";
+import { SearchData, AddonData, SearchBody, CrawlerSourceOutput } from "@pepperi-addons/papi-sdk";
 
 import docDbDal from "../../DAL/docDbDal";
+import { PfsCrawlerSourceInput } from "../entities";
 
 
-export interface CrawlerPageKey {
+export interface PfsCrawlerPageKey {
     SchemaIndex: number;
     SpecificSchemaPageKey?: string;
 }
@@ -12,19 +12,37 @@ export interface CrawlerPageKey {
 
 export class CrawlingSourceService
 {
-	constructor(protected docDbDal: docDbDal, protected request: Request)
+	constructor(protected docDbDal: docDbDal, protected crawlerSourceInput: PfsCrawlerSourceInput)
 	{}
 
 	/**
      * Get the next page of data to crawl.
-     * @returns {Promise<SearchData<AddonData>>} The next page of data to crawl.
+     * @returns {Promise<CrawlerSourceOutput>} The next page of data.
      */
-	public async getNextPage(): Promise<SearchData<AddonData>>
+	public async getNextPage(): Promise<CrawlerSourceOutput>
 	{
 		console.log("Getting the next page...");
 
-		const pageKey: CrawlerPageKey = this.parsePageKey();
+		const pageKey: PfsCrawlerPageKey = this.parsePageKey();
 		console.log("Parsed page key:", pageKey);
+
+		// const schemaName = this.crawlerSourceInput.SchemaNames[pageKey.SchemaIndex];
+
+		const result = await this.getPageFromSchema(pageKey);
+		console.log("Data fetched.");
+
+		// Since we can't pass to the crawl target the actual schema from which the data was taken,
+		// a transformation of the objects is required.
+		this.formatResult(result, pageKey);
+
+		console.log("Next page retrieved.");
+
+		return result as CrawlerSourceOutput;
+	}
+
+	protected async getPageFromSchema(pageKey: PfsCrawlerPageKey): Promise<SearchData<AddonData>>
+	{
+		const schemaName = this.crawlerSourceInput.SchemaNames[pageKey.SchemaIndex];
 
 		const searchBody: SearchBody = {
 			PageKey: pageKey.SpecificSchemaPageKey,
@@ -32,18 +50,10 @@ export class CrawlingSourceService
 			IncludeDeleted: true,
 		};
 
-		const schemaName = this.request.body.SchemaNames[pageKey.SchemaIndex];
+
 		console.log("Fetching data from schema:", schemaName);
 
 		const result = await this.docDbDal.searchDataInTable(schemaName, searchBody);
-		console.log("Data fetched.");
-
-		// Since we can't pass to the crawl target the actual schema from which the data was taken,
-		// a transformation of the objects is required.
-		this.formatResult(result, schemaName, pageKey);
-
-		console.log("Next page retrieved.");
-
 		return result;
 	}
 
@@ -51,10 +61,12 @@ export class CrawlingSourceService
      * Format the result to be passed to the crawl target.
      * @param {SearchData<AddonData>} result - The result to format.
      * @param {string} schemaName - The name of the schema from which the data was taken.
-     * @param {CrawlerPageKey} currentPageKey - The page key of the current crawler page.
+     * @param {PfsCrawlerPageKey} currentPageKey - The page key of the current crawler page.
      */
-	protected formatResult(result: SearchData<AddonData>, schemaName: string, currentPageKey: CrawlerPageKey): void
+	protected formatResult(result: SearchData<AddonData>, currentPageKey: PfsCrawlerPageKey): void
 	{
+		const schemaName = this.crawlerSourceInput.SchemaNames[currentPageKey.SchemaIndex];
+		
 		this.setOriginSchemaOnObjects(result, schemaName);
 		this.setNextPageKey(result, currentPageKey);
 	}
@@ -70,11 +82,11 @@ export class CrawlingSourceService
 	/**
      * Set the next page key on the result.
      * @param {SearchData<AddonData>} result - The result to set the next page key on.
-     * @param {CrawlerPageKey} currentCrawlerPageKey - The page key of the current crawler page.
+     * @param {PfsCrawlerPageKey} currentCrawlerPageKey - The page key of the current crawler page.
      */
-	protected setNextPageKey(result: SearchData<AddonData>, currentCrawlerPageKey: CrawlerPageKey): void
+	protected setNextPageKey(result: SearchData<AddonData>, currentCrawlerPageKey: PfsCrawlerPageKey): void
 	{
-		let nextPageKey: CrawlerPageKey | undefined = {
+		let nextPageKey: PfsCrawlerPageKey | undefined = {
 			SchemaIndex: currentCrawlerPageKey.SchemaIndex,
 			SpecificSchemaPageKey: "",
 		};
@@ -85,7 +97,7 @@ export class CrawlingSourceService
 			nextPageKey.SpecificSchemaPageKey = result.NextPageKey;
 		}
 		// If there is no next page key, and there are more schemas to crawl, use the next schema.
-		else if(currentCrawlerPageKey.SchemaIndex + 1 < this.request.body.SchemaNames.length)
+		else if(currentCrawlerPageKey.SchemaIndex + 1 < this.crawlerSourceInput.SchemaNames.length)
 		{
 			nextPageKey.SchemaIndex++;
 		}
@@ -101,16 +113,16 @@ export class CrawlingSourceService
 
 	/**
      * Parse the page key from the request.
-     * @returns {CrawlerPageKey} The parsed crawler page key.
+     * @returns {PfsCrawlerPageKey} The parsed crawler page key.
      */
-	protected parsePageKey(): CrawlerPageKey
+	protected parsePageKey(): PfsCrawlerPageKey
 	{
-		const result: CrawlerPageKey = { SchemaIndex: 0, SpecificSchemaPageKey: "" };
+		const result: PfsCrawlerPageKey = { SchemaIndex: 0, SpecificSchemaPageKey: "" };
 
-		const passedPageKey: string = this.request.body.PageKey;
+		const passedPageKey: string | undefined = this.crawlerSourceInput.PageKey;
 		if (passedPageKey)
 		{
-			const parsedPageKey: CrawlerPageKey = JSON.parse(passedPageKey);
+			const parsedPageKey: PfsCrawlerPageKey = JSON.parse(passedPageKey);
 
 			result.SchemaIndex = parsedPageKey.SchemaIndex;
 			result.SpecificSchemaPageKey = parsedPageKey.SpecificSchemaPageKey ?? "";

@@ -15,6 +15,8 @@ import { FILES_TO_UPLOAD_TABLE_NAME, LOCK_ADAL_TABLE_NAME, pfsSchemaData, PFS_TA
 import { AddonUUID } from "../addon.config.json";
 import { PfsSchemeService } from "./pfs-scheme.service";
 import { SharedHelper } from "pfs-shared";
+import { SetupOpenSyncService } from "./sync-source/setup-open-sync.service";
+import { ServerHelper } from "./serverHelper";
 
 export async function install(client: Client, request: Request): Promise<any> 
 {
@@ -98,14 +100,21 @@ export async function upgrade(client: Client, request: Request): Promise<any>
 		console.log("Creating Resource Import relations for internal 'data' schemas");
 		await createResourceImportRelations(papiClient, client, request);
 
-		console.log("Creating PNS subscription for Sync=true schemas");
-		await createOpenSyncResources(papiClient, client, request);
-
-		console.log("Initiating cache rebuild");
-		await rebuildCache(papiClient);
+		console.log("Setting up OpenSync for internal schemas");
+		await setupOpenSync(papiClient, client);
 	}
 
 	return { success: true, resultObject: {} };
+}
+
+async function setupOpenSync(papiClient: PapiClient, client: Client)
+{
+	const setupOpenSyncService = new SetupOpenSyncService(papiClient);
+
+	const shouldKeepActionUUID = false;
+	const asyncPapiClient = ServerHelper.createPapiClient(client, AddonUUID, client.AddonSecretKey, shouldKeepActionUUID);
+
+	await setupOpenSyncService.setupSyncSource(asyncPapiClient);
 }
 
 export async function downgrade(client: Client, request: Request): Promise<any> 
@@ -479,26 +488,6 @@ async function createResourceImportRelations(papiClient: PapiClient, client: Cli
 	await manipulateAllPfsSchemas(papiClient, manipulatorFunction);
 }
 
-async function createOpenSyncResources(papiClient: PapiClient, client: Client, request: Request)
-{
-	const manipulatorFunction = async (schema: AddonDataScheme) : Promise<void> => 
-	{
-		const {schemaOwner, externalPfsSchemaName}= getClientSchemaInfo(schema);
-		
-
-		// Add a addon_uuid query param to the request, so that PfsSchemeService will work as expected.
-		request.query = {
-			...request.query,
-			addon_uuid: schemaOwner,
-		};
-
-		const pfsSchemaService = new PfsSchemeService(client, request);
-		await pfsSchemaService.createOpenSyncResources(schema.SyncData, externalPfsSchemaName);
-	};
-
-	await manipulateAllPfsSchemas(papiClient, manipulatorFunction);
-}
-
 function getClientSchemaInfo(schema: AddonDataScheme): { schemaOwner: string, externalPfsSchemaName: string } 
 {
 	const splitSchemaName = schema.Name.split("_");
@@ -508,10 +497,4 @@ function getClientSchemaInfo(schema: AddonDataScheme): { schemaOwner: string, ex
 	// we have to join the rest of the split schema name with underscores.
 	const externalPfsSchemaName = splitSchemaName.slice(2).join("_");
 	return { schemaOwner, externalPfsSchemaName };
-}
-
-async function rebuildCache(papiClient: PapiClient): Promise<void>
-{
-	const asyncExecution = papiClient.post(`/addons/api/${AddonUUID}/sync_source/rebuild_cache`, {});
-	console.log(`Rebuild cache response: ${JSON.stringify(asyncExecution)}`);
 }

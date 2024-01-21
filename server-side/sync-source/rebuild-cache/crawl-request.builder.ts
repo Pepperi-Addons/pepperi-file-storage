@@ -1,4 +1,4 @@
-import { AddonDataScheme, FindOptions, CrawlerInput, CrawlerTargetOutputBlueprint } from "@pepperi-addons/papi-sdk";
+import { AddonDataScheme, CrawlerInput, CrawlerTargetOutputBlueprint } from "@pepperi-addons/papi-sdk";
 
 import { AddonUUID as PfsAddonUUID } from "../../../addon.config.json";
 import { ISchemaSearcher } from "./i-schema-searcher";

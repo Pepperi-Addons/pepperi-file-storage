@@ -3,6 +3,7 @@ import { AddonDataScheme, PapiClient, Relation, Subscription } from "@pepperi-ad
 import config from "./../addon.config.json";
 import { ServerHelper } from "./serverHelper";
 import { pfsSchemaData, SharedHelper } from "pfs-shared";
+import { SetupOpenSyncService } from "./sync-source/setup-open-sync.service";
 
 export class PfsSchemeService
 {
@@ -35,7 +36,9 @@ export class PfsSchemeService
 		await this.subscribeToExpiredRecords();
 
 		// Set up any resources needed to sync the schema.
-		await this.createOpenSyncResources();
+		// await this.createOpenSyncResources();
+		const openSyncSetupService = new SetupOpenSyncService(this.papiClient);
+		await openSyncSetupService.createOpenSyncResourcesForSchema(internalDataSchema);
 
 		// Return the client addon's scheme (of type 'pfs') with PFS's default fields.
 		// return this.getMergedSchema();
@@ -135,80 +138,6 @@ export class PfsSchemeService
 			AddonRelativeURL: "/api/record_removed",
 			Hidden: hidden,
 		});
-	}
-
-	/**
-	 * Set up any resources needed to sync the schema.
-	 * 
-	 * If SyncData.Sync == true, subscribes to upserted records on the PFS's schema, and upserts the schema to the sync cache.
-	 * 
-	 * @param {boolean | undefined} sync Whether or not the schema is synced
-	 * @param {string} clientSchemaName The name of the client's schema
-	 * @returns {Promise<void>}
-	 */
-	public async createOpenSyncResources(
-		syncData: AddonDataScheme["SyncData"] = this.schema.SyncData,
-		clientSchemaName: string = this.schema.Name,
-	):
-		Promise<void>
-	{	
-		// SyncRecords is true by default, so we need to check if it's false
-		if(syncData?.Sync && syncData.SyncRecords !== false)
-		{
-			await this.subscribeToUpsertedRecords(clientSchemaName);
-			await this.upsertSchemaToSyncCache(clientSchemaName);
-		}	
-	}
-
-	/**
-	 * Subscribe to upserted records on the PFS's schema.
-	 * @param {boolean | undefined} sync Whether or not the schema is synced
-	 * @param {string} clientSchemaName The name of the client's schema
-	 * @returns {Promise<void>}
-	 */
-	protected async subscribeToUpsertedRecords(clientSchemaName: string): Promise<Subscription>
-	{
-		const pfsSchemaName = this.getPfsSchemaName(clientSchemaName);
-
-		return await this.papiClient.notification.subscriptions.upsert({
-			AddonUUID: config.AddonUUID,
-			Name: `pfs-upserted-records-${pfsSchemaName}`, // Names of subscriptions should be unique
-			Type: "data",
-			FilterPolicy: {
-				Resource: [pfsSchemaName],
-				Action: ["insert", "update"],
-				AddonUUID: [config.AddonUUID]
-			},
-			AddonRelativeURL: `/sync_source/update_cache?resource_name=${pfsSchemaName}`,
-		});
-	}
-
-	/**
-	 * Upsert the schema to the sync cache.
-	 * @param {string} clientSchemaName The name of the client's schema
-	 * @param {string} schemaAddonUUID The client schema's owner addon UUID
-	 * @returns {Promise<void>}
-	 */
-	protected async upsertSchemaToSyncCache(clientSchemaName: string): Promise<void>
-	{
-		const syncCacheSchema = {
-			// Both SourceAddonUUID and SchemeAddonUUID should be the PFS's addon UUID
-			// This is due to the fact that the schemas are owned by the PFS, and not by the client addon.
-			SchemeAddonUUID: config.AddonUUID,
-			SourceAddonUUID: config.AddonUUID,
-			SchemeName: this.getPfsSchemaName(clientSchemaName),
-		};
-
-		try
-		{
-			await this.papiClient.post(`/cache/schemes`, syncCacheSchema);
-		}
-		catch(error)
-		{
-			const errorMessage = `Failed to upsert schema to sync cache. Error: ${error instanceof Error ? error.message : error}`;
-			console.error(errorMessage);
-			throw new Error(errorMessage); // Should we throw an error here, or just log it?
-		}
 	}
 
 	/**

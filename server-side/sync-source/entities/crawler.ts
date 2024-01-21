@@ -1,4 +1,4 @@
-import { AddonAPIAsyncResult, CrawlerInput } from "@pepperi-addons/papi-sdk";
+import { AddonAPIAsyncResult, CrawlerInput, CrawlerSourceInput } from "@pepperi-addons/papi-sdk";
 
 export interface CacheRebuildRequest {
     IncludedResources?: string[];
@@ -7,4 +7,9 @@ export interface CacheRebuildRequest {
 
 export interface ICrawlService {
     crawl(crawlRequest: CrawlerInput): Promise<AddonAPIAsyncResult>;
+}
+
+export interface PfsCrawlerSourceInput extends CrawlerSourceInput
+{
+    SchemaNames: string[];
 }
