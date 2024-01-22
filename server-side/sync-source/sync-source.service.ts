@@ -1,22 +1,18 @@
-import { Client } from "@pepperi-addons/debug-server/dist";
 import { AddonData, PapiClient, SearchBody, SearchData } from "@pepperi-addons/papi-sdk";
 
-import { ServerHelper } from "../serverHelper";
-import { AddonUUID } from "../../addon.config.json";
 import { NucCacheService } from "./nuc-cache.service";
 import docDbDal from "../DAL/docDbDal";
 import { ICacheService, IModifiedObjects } from "./entities";
+import { BaseCacheUpdateErrorHandler } from "./update-cache/error-handlers/base-cache-update-error-handler";
 
 
 export class SyncSourceService 
 {
-	protected papiClient: PapiClient;
 	protected cacheService: ICacheService;
 	protected pepperiDal: docDbDal;
 
-	constructor(protected client: Client, pepperiDal?: docDbDal)
+	constructor(protected papiClient: PapiClient, protected errorHandler: BaseCacheUpdateErrorHandler, pepperiDal?: docDbDal)
 	{
-		this.papiClient = ServerHelper.createPapiClient(this.client, AddonUUID, this.client.AddonSecretKey);
 		this.cacheService = new NucCacheService(this.papiClient);
 		this.pepperiDal = pepperiDal || new docDbDal(this.papiClient);
 	}
@@ -26,8 +22,6 @@ export class SyncSourceService
 		// modifiedObject that has a Hidden field should be validated against the actual schema's data,
 		// to ensure the latest value of the Hidden field is used.
 		await this.getUpToDateHiddenFields(modifiedObjects);
-    
-		const isAsync = this.client.isAsync ? this.client.isAsync() : false;
         
 		let result;
 
@@ -37,7 +31,7 @@ export class SyncSourceService
 		}
 		catch (error)
 		{
-			await this.handleErrorOnUpdateCache(modifiedObjects, error, isAsync);
+			await this.errorHandler.handle(error);
 		}
 
 		return result;
@@ -83,52 +77,5 @@ export class SyncSourceService
 				}
 			}
 		});
-	}
-
-	/**
-	 * In case of an error, set a system_health notification if async, otherwise (this is a the first PNS sync call) throw the error.
-	 * @param error 
-	 * @param isAsync 
-	 * @param modifiedObjects 
-	 */
-	protected async handleErrorOnUpdateCache(modifiedObjects: IModifiedObjects, error: unknown, isAsync: boolean)
-	{
-		const errorMessage = error instanceof Error ? error.message : JSON.stringify(error);
-		console.error(`Failed to update cache: ${errorMessage}`);
-
-		if (isAsync)
-		{
-			await this.setSystemHealthNotification(modifiedObjects, errorMessage);
-		}
-		else
-		{
-			throw error;
-		}
-	}
-
-	protected async setSystemHealthNotification(modifiedObjects: IModifiedObjects, message: string)
-	{
-		const systemHealthNotificationBody = {
-			Name:  `PFS Cache update`,
-			Description: `PFS failed to update cache for schema "${modifiedObjects.SchemeName}".`,
-			Status: "ERROR",
-			Message: `Failed to update cache for schema "${modifiedObjects.SchemeName}", ActionUUID: "${this.client.ActionUUID}" with error: ${message}`,
-			BroadcastChannel: ["System"]
-		};
-
-		try
-		{
-			await this.papiClient.post("/system_health/notifications", systemHealthNotificationBody);
-		}
-		catch (error)
-		{
-			// Since PFS doesn't have a dependency on system_health just try to send the error.
-			if ((error as Error).message.includes("404 - Not Found error"))
-			{
-				console.error("Could not find system_health/notifications endpoint, this is probably because the system_health addon is not installed.");
-			}
-			
-			console.error( error instanceof Error ? error.message : "An unknown error occurred trying to send a system_health notification.");
-		}
 	}
 }

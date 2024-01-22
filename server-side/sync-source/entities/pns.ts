@@ -91,4 +91,6 @@ export interface ModifiedField {
 export interface ModifiedObjectNotification extends Omit<PnsNotification, "FilterAttributes" | "Message" | "Type"> {
     FilterAttributes: Omit<PnsNotification["FilterAttributes"], "ModifiedObjects">;
     Message: Omit<PnsNotification["Message"], "ActionUUID">;
+
+    ManuallyInitiated?: boolean;
 } 

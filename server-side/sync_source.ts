@@ -11,6 +11,7 @@ import { CrawlingTargetService } from "./sync-source/handle-crawling/crawling-ta
 import { NucCacheService } from "./sync-source/nuc-cache.service";
 import { ICacheService } from "./sync-source/entities";
 import { InitiateCrawlCommand } from "./sync-source/rebuild-cache/initiate-crawl.command";
+import { CacheUpdateErrorHandlerFactory } from "./sync-source/update-cache/error-handlers/cache-update-error-handler.factory";
 
 export async function rebuild_cache(client: Client, request: Request): Promise<AddonAPIAsyncResult> 
 {
@@ -26,11 +27,13 @@ export async function rebuild_cache(client: Client, request: Request): Promise<A
 
 export async function update_cache(client: Client, request: Request): Promise<any> 
 {
+	const papiClient = ServerHelper.createPapiClient(client, PfsAddonUUID, client.AddonSecretKey);
 	const pnsToModifiedObjectsConverter = new PnsToModifiedObjectsConverter(request.body);
-
 	const modifiedObjects = pnsToModifiedObjectsConverter.convert();
 
-	const syncSourceService = new SyncSourceService(client);
+	const errorHandler = new CacheUpdateErrorHandlerFactory().getErrorHandler(client, modifiedObjects, request.body); 
+
+	const syncSourceService = new SyncSourceService(papiClient, errorHandler);
 	
 	return await syncSourceService.updateCache(modifiedObjects);
 }
