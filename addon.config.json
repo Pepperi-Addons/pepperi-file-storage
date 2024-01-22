@@ -1,6 +1,6 @@
 {
   "AddonUUID": "00000000-0000-0000-0000-0000000f11e5",
-  "AddonVersion": "1.4.3",
+  "AddonVersion": "1.4.15",
   "DebugPort": 4500,
   "WebappBaseUrl": "https://app.sandbox.pepperi.com",
   "DefaultEditor": "main",
@@ -20,6 +20,7 @@
     "Dependencies": {
       "adal": "1.4.60",
       "cpi_data": "0.6.12",
+      "crawler": "0.0.22",
       "papi": "9.6.45"
     },
     "CPISide": [

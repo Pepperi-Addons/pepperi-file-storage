@@ -15,6 +15,9 @@ import { FILES_TO_UPLOAD_TABLE_NAME, LOCK_ADAL_TABLE_NAME, pfsSchemaData, PFS_TA
 import { AddonUUID } from "../addon.config.json";
 import { PfsSchemeService } from "./pfs-scheme.service";
 import { SharedHelper } from "pfs-shared";
+import { SetupOpenSyncService } from "./sync-source/setup-open-sync.service";
+import { ServerHelper } from "./serverHelper";
+import { Server } from "http";
 
 export async function install(client: Client, request: Request): Promise<any> 
 {
@@ -29,7 +32,22 @@ export async function install(client: Client, request: Request): Promise<any>
 
 export async function uninstall(client: Client, request: Request): Promise<any> 
 {
-	return { success: true, resultObject: {} };
+	const res = { success: true, resultObject: {} };
+
+	try
+	{
+		const papiClient = ServerHelper.createPapiClient(client, AddonUUID, client.AddonSecretKey);
+		const setupOpenSyncService = new SetupOpenSyncService(papiClient);
+
+		await setupOpenSyncService.destructSyncSource();
+	}
+	catch (error)
+	{
+		res.success = false;
+		res.resultObject = { errorMessage: error instanceof Error ? error.message : `Unknown error has occurred destructing sync source: ${JSON.stringify(error)}` };
+	}
+	
+	return res;
 }
 
 export async function upgrade(client: Client, request: Request): Promise<any> 
@@ -93,16 +111,26 @@ export async function upgrade(client: Client, request: Request): Promise<any>
 		await migrateSchemasToPushLocalChanges(papiClient, client);
 	}
 
-	if(request.body.FromVersion && semverLessThan(request.body.FromVersion, "1.4.2"))
+	if(request.body.FromVersion && semverLessThan(request.body.FromVersion, "1.4.16"))
 	{
 		console.log("Creating Resource Import relations for internal 'data' schemas");
 		await createResourceImportRelations(papiClient, client, request);
 
-		console.log("Creating PNS subscription for Sync=true schemas");
-		await createUpsertRecordSubscriptionForSyncSchemas(papiClient, client, request);
+		console.log("Setting up OpenSync for internal schemas");
+		await setupOpenSync(papiClient, client);
 	}
 
 	return { success: true, resultObject: {} };
+}
+
+async function setupOpenSync(papiClient: PapiClient, client: Client)
+{
+	const setupOpenSyncService = new SetupOpenSyncService(papiClient);
+
+	const shouldKeepActionUUID = false;
+	const asyncPapiClient = ServerHelper.createPapiClient(client, AddonUUID, client.AddonSecretKey, shouldKeepActionUUID);
+
+	await setupOpenSyncService.setupSyncSource(asyncPapiClient);
 }
 
 export async function downgrade(client: Client, request: Request): Promise<any> 
@@ -476,27 +504,7 @@ async function createResourceImportRelations(papiClient: PapiClient, client: Cli
 	await manipulateAllPfsSchemas(papiClient, manipulatorFunction);
 }
 
-async function createUpsertRecordSubscriptionForSyncSchemas(papiClient: PapiClient, client: Client, request: Request)
-{
-	const manipulatorFunction = async (schema: AddonDataScheme) : Promise<void> => 
-	{
-		const {schemaOwner, externalPfsSchemaName}= getClientSchemaInfo(schema);
-		
-
-		// Add a addon_uuid query param to the request, so that PfsSchemeService will work as expected.
-		request.query = {
-			...request.query,
-			addon_uuid: schemaOwner,
-		};
-
-		const pfsSchemaService = new PfsSchemeService(client, request);
-		await pfsSchemaService.createOpenSyncResources(schema.SyncData, externalPfsSchemaName);
-	};
-
-	await manipulateAllPfsSchemas(papiClient, manipulatorFunction);
-}
-
-function getClientSchemaInfo(schema: AddonDataScheme) 
+function getClientSchemaInfo(schema: AddonDataScheme): { schemaOwner: string, externalPfsSchemaName: string } 
 {
 	const splitSchemaName = schema.Name.split("_");
 	const schemaOwner = SharedHelper.addMinusesToUUID(splitSchemaName[1]);

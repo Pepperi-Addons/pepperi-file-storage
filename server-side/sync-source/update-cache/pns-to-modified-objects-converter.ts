@@ -1,5 +1,5 @@
 import { AddonUUID as PfsAddonUUID } from "../../../addon.config.json";
-import { IModifiedObjects, UpdatedObject } from "./i-modified-objects";
+import { IModifiedObjects, ModifiedObjectNotification, UpdatedObject } from "../entities";
 
 export class PnsToModifiedObjectsConverter
 {

@@ -1,13 +1,14 @@
 import { PapiClient } from "@pepperi-addons/papi-sdk";
-import { ICacheService } from "./i-cache.service";
-import { IModifiedObjects } from "./update-cache/i-modified-objects";
+
+import { CacheUpdateResult, ICacheService, IModifiedObjects } from "./entities";
+
 
 export class NucCacheService implements ICacheService
 {
 	constructor(protected papiClient: PapiClient) 
 	{ }
 
-	public async updateCache(modifiedObjects: IModifiedObjects): Promise<any> 
+	public async updateCache(modifiedObjects: IModifiedObjects): Promise<CacheUpdateResult[]> 
 	{
 		return await this.papiClient.post("/cache/changes", modifiedObjects);
 	}

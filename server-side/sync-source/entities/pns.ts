@@ -2,7 +2,7 @@
  * Represents a PNS notification.
  * @interface
  */
-interface PnsNotification {
+export interface PnsNotification {
     Type: "data";
     FilterAttributes: {
         /**
@@ -50,7 +50,7 @@ interface PnsNotification {
  * Represents a modified object.
  * @interface
  */
-interface ModifiedObject {
+export interface ModifiedObject {
     /**
      * Key of the object.
      */
@@ -69,7 +69,7 @@ interface ModifiedObject {
  * Represents a modified field.
  * @interface
  */
-interface ModifiedField {
+export interface ModifiedField {
     /**
      * ID of the field.
      */
@@ -88,7 +88,7 @@ interface ModifiedField {
  * Represents a subset of {@link PnsNotification}, having only the necessary properties.
  * @interface
  */
-interface ModifiedObjectNotification extends Omit<PnsNotification, "FilterAttributes" | "Message" | "Type"> {
+export interface ModifiedObjectNotification extends Omit<PnsNotification, "FilterAttributes" | "Message" | "Type"> {
     FilterAttributes: Omit<PnsNotification["FilterAttributes"], "ModifiedObjects">;
     Message: Omit<PnsNotification["Message"], "ActionUUID">;
 } 
