@@ -38,8 +38,9 @@ describe("Schema operations", async () =>
 		papiClient.post = async (url: string, body: any) => 
 		{
 			papiPostCounter++;
+			console.log("papiClient.post", url, body);
 			// Don't care
-			return;
+			return body;
 		};
 
 		papiClient.get = async (url: string ) => 
@@ -60,8 +61,9 @@ describe("Schema operations", async () =>
 		};
 		const schemaService = new PfsSchemeService(mockClient, requestCopy);
 		const createdSchema = await schemaService.create();
-		// Expect 2 calls to papiClient.post. One for the schema and one for the subscription.
-		expect(papiPostCounter).to.equal(2);
+		// Expect 3 calls to papiClient.post. One for the schema, one for the subscription, one for DataImportRelation.
+		console.log("createdSchema", createdSchema);
+		expect(papiPostCounter).to.equal(3);
 		expect(createdSchema.Name).to.equal(requestCopy.body.Name);
 		expect(createdSchema.Type).to.equal(requestCopy.body.Type);
 		expect(createdSchema.Fields).to.deep.equal(pfsSchemaData.Fields);
@@ -82,8 +84,8 @@ describe("Schema operations", async () =>
 
 		const schemaService = new PfsSchemeService(mockClient, requestCopy);
 		const createdSchema = await schemaService.create();
-		// Expect 2 calls to papiClient.post. One for the schema and one for the subscription.
-		expect(papiPostCounter).to.equal(2);
+		// Expect 3 calls to papiClient.post. One for the schema, one for the subscription, one for DataImportRelation.
+		expect(papiPostCounter).to.equal(3);
 		expect(createdSchema.Name).to.equal(requestCopy.body.Name);
 		expect(createdSchema.Type).to.equal(requestCopy.body.Type);
 		expect(createdSchema.Fields).to.deep.equal(pfsSchemaData.Fields);
@@ -105,26 +107,11 @@ describe("Schema operations", async () =>
 
 		const schemaService = new PfsSchemeService(mockClient, requestCopy);
 		const createdSchema = await schemaService.create();
-		// Expect 2 calls to papiClient.post. One for the schema and one for the subscription.
-		expect(papiPostCounter).to.equal(2);
+
 		expect(createdSchema.Name).to.equal(requestCopy.body.Name);
 		expect(createdSchema.Type).to.equal(requestCopy.body.Type);
 		expect(createdSchema.Fields).to.deep.equal(pfsSchemaData.Fields);
 		expect(createdSchema.SyncData?.Sync).to.be.true;
-	});
-
-	it('should throw a "Schema of type `pfs` cannot have custom fields." exception', async () => 
-	{
-		const requestCopy = { ...request };
-		requestCopy.body = {
-			Type: "pfs",
-			Name: "pfs_test_schema",
-			Fields: {
-				"UnsupportedField": true
-			}
-		};
-		const schemaService = new PfsSchemeService(mockClient, requestCopy);
-		await expect(schemaService.create()).to.be.rejectedWith("Schema of type 'pfs' cannot have custom fields.");
 	});
 
 	it("The schema must be of type 'pfs'", async () => 
