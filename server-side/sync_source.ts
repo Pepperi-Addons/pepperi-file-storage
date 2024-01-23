@@ -1,16 +1,11 @@
 import { Client, Request } from "@pepperi-addons/debug-server/dist";
 import { AddonAPIAsyncResult, CrawlerSourceOutput } from "@pepperi-addons/papi-sdk";
 
-import { PnsToModifiedObjectsConverter } from "./sync-source/update-cache/pns-to-modified-objects-converter";
+
 import { AddonUUID as PfsAddonUUID } from "../addon.config.json";
-import { SyncSourceService } from "./sync-source/sync-source.service";
+import { CrawlingSourceService, CrawlingTargetService, ICacheService, InitiateCrawlCommand, NucCacheService, PnsToModifiedObjectsConverter, SyncSourceService } from "pfs-open-sync";
 import { ServerHelper } from "./serverHelper";
 import docDbDal from "./DAL/docDbDal";
-import { CrawlingSourceService} from "./sync-source/handle-crawling/crawling-source.service";
-import { CrawlingTargetService } from "./sync-source/handle-crawling/crawling-target.service";
-import { NucCacheService } from "./sync-source/nuc-cache.service";
-import { ICacheService } from "./sync-source/entities";
-import { InitiateCrawlCommand } from "./sync-source/rebuild-cache/initiate-crawl.command";
 
 export async function rebuild_cache(client: Client, request: Request): Promise<AddonAPIAsyncResult> 
 {
@@ -30,7 +25,12 @@ export async function update_cache(client: Client, request: Request): Promise<an
 
 	const modifiedObjects = pnsToModifiedObjectsConverter.convert();
 
-	const syncSourceService = new SyncSourceService(client);
+
+	const papiClient = ServerHelper.createPapiClient(client, PfsAddonUUID, client.AddonSecretKey);
+
+	const pepperiDal = new docDbDal(papiClient);
+
+	const syncSourceService = new SyncSourceService(client, pepperiDal);
 	
 	return await syncSourceService.updateCache(modifiedObjects);
 }

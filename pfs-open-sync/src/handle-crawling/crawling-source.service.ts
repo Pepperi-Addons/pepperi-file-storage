@@ -1,7 +1,7 @@
 import { SearchData, AddonData, SearchBody, CrawlerSourceOutput } from "@pepperi-addons/papi-sdk";
 
-import docDbDal from "../../DAL/docDbDal";
 import { PfsCrawlerSourceInput } from "../entities";
+import { DataSearcher } from "../entities/data-searcher";
 
 
 export interface PfsCrawlerPageKey {
@@ -12,7 +12,7 @@ export interface PfsCrawlerPageKey {
 
 export class CrawlingSourceService
 {
-	constructor(protected docDbDal: docDbDal, protected crawlerSourceInput: PfsCrawlerSourceInput)
+	constructor(protected docDbDal: DataSearcher, protected crawlerSourceInput: PfsCrawlerSourceInput)
 	{}
 
 	/**

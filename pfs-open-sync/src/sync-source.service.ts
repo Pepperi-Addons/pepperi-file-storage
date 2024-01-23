@@ -1,24 +1,23 @@
 import { Client } from "@pepperi-addons/debug-server/dist";
 import { AddonData, PapiClient, SearchBody, SearchData } from "@pepperi-addons/papi-sdk";
 
-import { ServerHelper } from "../serverHelper";
+import { PapiClientBuilder } from "./utilities/papi-client.builder";
 import { AddonUUID } from "../../addon.config.json";
 import { NucCacheService } from "./nuc-cache.service";
-import docDbDal from "../DAL/docDbDal";
 import { ICacheService, IModifiedObjects } from "./entities";
+import { DataSearcher } from "./entities/data-searcher";
 
 
 export class SyncSourceService 
 {
 	protected papiClient: PapiClient;
 	protected cacheService: ICacheService;
-	protected pepperiDal: docDbDal;
 
-	constructor(protected client: Client, pepperiDal?: docDbDal)
+	constructor(protected client: Client, protected pepperiDal: DataSearcher)
 	{
-		this.papiClient = ServerHelper.createPapiClient(this.client, AddonUUID, this.client.AddonSecretKey);
+		const papiClientBuilder = new PapiClientBuilder();
+		this.papiClient = papiClientBuilder.build(this.client, AddonUUID, this.client.AddonSecretKey);
 		this.cacheService = new NucCacheService(this.papiClient);
-		this.pepperiDal = pepperiDal || new docDbDal(this.papiClient);
 	}
 
 	public async updateCache(modifiedObjects: IModifiedObjects): Promise<any>
