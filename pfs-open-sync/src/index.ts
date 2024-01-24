@@ -5,3 +5,5 @@ export * from "./update-cache/pns-to-modified-objects-converter";
 export * from "./handle-crawling/";
 export * from "./rebuild-cache/initiate-crawl.command";
 export * from "./setup-open-sync.service";
+export * from "./utilities/default-data-searcher";
+export * from "./utilities/papi-client.builder";

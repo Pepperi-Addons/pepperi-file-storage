@@ -6,18 +6,21 @@ import { AddonUUID } from "../../addon.config.json";
 import { NucCacheService } from "./nuc-cache.service";
 import { ICacheService, IModifiedObjects } from "./entities";
 import { DataSearcher } from "./entities/data-searcher";
+import { DefaultDataSearcher } from "./utilities/default-data-searcher";
 
 
 export class SyncSourceService 
 {
 	protected papiClient: PapiClient;
 	protected cacheService: ICacheService;
+	protected pepperiDal: DataSearcher;
 
-	constructor(protected client: Client, protected pepperiDal: DataSearcher)
+	constructor(protected client: Client, pepperiDal?: DataSearcher)
 	{
 		const papiClientBuilder = new PapiClientBuilder();
 		this.papiClient = papiClientBuilder.build(this.client, AddonUUID, this.client.AddonSecretKey);
 		this.cacheService = new NucCacheService(this.papiClient);
+		this.pepperiDal = pepperiDal ? pepperiDal : new DefaultDataSearcher(this.papiClient);
 	}
 
 	public async updateCache(modifiedObjects: IModifiedObjects): Promise<any>
