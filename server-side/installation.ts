@@ -15,9 +15,8 @@ import { FILES_TO_UPLOAD_TABLE_NAME, LOCK_ADAL_TABLE_NAME, pfsSchemaData, PFS_TA
 import { AddonUUID } from "../addon.config.json";
 import { PfsSchemeService } from "./pfs-scheme.service";
 import { SharedHelper } from "pfs-shared";
-import { SetupOpenSyncService } from "./sync-source/setup-open-sync.service";
 import { ServerHelper } from "./serverHelper";
-import { Server } from "http";
+import { SetupOpenSyncService } from "pfs-open-sync";
 
 export async function install(client: Client, request: Request): Promise<any> 
 {
@@ -46,14 +45,14 @@ export async function uninstall(client: Client, request: Request): Promise<any>
 		res.success = false;
 		res.resultObject = { errorMessage: error instanceof Error ? error.message : `Unknown error has occurred destructing sync source: ${JSON.stringify(error)}` };
 	}
-	
+
 	return res;
 }
 
 export async function upgrade(client: Client, request: Request): Promise<any> 
 {
 	const papiClient = createPapiClient(client);
-
+	const upgradeResult: any = { success: true, resultObject: {} };
 	if(request.body.FromVersion && semverLessThan(request.body.FromVersion, "1.0.1"))
 	{
 		throw new Error("Upgrading from versions earlier than 1.0.1 is not supported. Please uninstall the addon and install it again.");
@@ -111,16 +110,27 @@ export async function upgrade(client: Client, request: Request): Promise<any>
 		await migrateSchemasToPushLocalChanges(papiClient, client);
 	}
 
-	if(request.body.FromVersion && semverLessThan(request.body.FromVersion, "1.4.16"))
+	if(request.body.FromVersion && semverLessThan(request.body.FromVersion, "1.4.19"))
 	{
-		console.log("Creating Resource Import relations for internal 'data' schemas");
-		await createResourceImportRelations(papiClient, client, request);
-
-		console.log("Setting up OpenSync for internal schemas");
-		await setupOpenSync(papiClient, client);
+		if(request.body.FromVersion && semverLessThan(request.body.FromVersion, "1.4.18"))
+		{
+			// Fail the upgrade process, endpoints introduced in 1.4.18 are required for the upgrade to 1.4.19
+			const errorMessage = `Upgrading to  version ${request.body.ToVersion} from versions earlier than 1.4.18 is not supported. Please upgrade to 1.4.18 before upgrading to ${request.body.ToVersion}.`;
+			console.error(errorMessage);
+			upgradeResult.success = false;
+			upgradeResult.errorMessage = errorMessage;
+		}
+		else
+		{
+			console.log("Creating Resource Import relations for internal 'data' schemas");
+			await createResourceImportRelations(papiClient, client, request);
+	
+			console.log("Setting up OpenSync for internal schemas");
+			await setupOpenSync(papiClient, client);
+		}
 	}
 
-	return { success: true, resultObject: {} };
+	return upgradeResult;
 }
 
 async function setupOpenSync(papiClient: PapiClient, client: Client)

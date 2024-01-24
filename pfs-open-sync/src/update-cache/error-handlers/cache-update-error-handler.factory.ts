@@ -4,9 +4,10 @@ import { IModifiedObjects, ModifiedObjectNotification } from "../../entities";
 import { BaseCacheUpdateErrorHandler } from "./base-cache-update-error-handler";
 import { UngracefulCacheErrorHandler } from "./ungraceful-cache-update-error-handler";
 import { PnsAsyncCacheErrorHandler } from "./pns-async-cache-update-error-handler";
-import { ServerHelper } from "../../../serverHelper";
 import { NUMBER_OF_ASYNC_RETRIES } from "./constants";
 import { AsyncNoRetriesCacheErrorHandler } from "./async-no-retries-cache-update-error-handler";
+import { PapiClientBuilder } from "../..";
+import { AddonUUID as PfsAddonUUID } from "../../../../addon.config.json";
 
 
 export class CacheUpdateErrorHandlerFactory 
@@ -29,15 +30,18 @@ export class CacheUpdateErrorHandlerFactory
 				}
 				else
 				{
-					const papiClient = ServerHelper.createPapiClient(client, client.AddonUUID, client.AddonSecretKey);
+					const papiClientBuilder = new PapiClientBuilder();
+					const papiClient = papiClientBuilder.build(client, PfsAddonUUID, client.AddonSecretKey);
+
 					errorHandler = new AsyncNoRetriesCacheErrorHandler(papiClient, client, modifiedObjects);
 				}
 			}
 			else
 			{
+				const papiClientBuilder = new PapiClientBuilder();
         
 				const shouldKeepActionUUID = false;
-				const asyncPapiClient = ServerHelper.createPapiClient(client, client.AddonUUID, client.AddonSecretKey, shouldKeepActionUUID);
+				const asyncPapiClient = papiClientBuilder.build(client, PfsAddonUUID, client.AddonSecretKey, shouldKeepActionUUID);
 
 				errorHandler = new PnsAsyncCacheErrorHandler(asyncPapiClient, pnsNotification);
 			}

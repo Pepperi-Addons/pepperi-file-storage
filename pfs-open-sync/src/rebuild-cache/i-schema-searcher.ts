@@ -1,4 +1,4 @@
-import { AddonDataScheme, FindOptions } from "@pepperi-addons/papi-sdk";
+import { AddonDataScheme } from "@pepperi-addons/papi-sdk";
 
 export interface ISchemaSearcher
 {

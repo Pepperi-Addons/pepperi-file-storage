@@ -1,0 +1,22 @@
+{
+	"compilerOptions": {
+	  "target": "es2017",
+	  "module": "commonjs",
+	  "strict": true,
+	  "outDir": "lib",
+	  "esModuleInterop": true,
+	  "declaration": true,
+	  "sourceMap": true,
+	  "noImplicitAny": false,
+	  "noImplicitOverride": true,
+	  "allowJs": true,
+	  "resolveJsonModule": true,
+	  "lib": ["ES2020"]
+	},
+	"exclude": [
+	  "./build/**",
+	  "./dest/**",
+	  "./lib/**",
+	  "./tests/**"
+	]
+  }

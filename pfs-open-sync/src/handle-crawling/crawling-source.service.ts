@@ -1,7 +1,7 @@
 import { SearchData, AddonData, SearchBody, CrawlerSourceOutput } from "@pepperi-addons/papi-sdk";
 
-import docDbDal from "../../DAL/docDbDal";
 import { PfsCrawlerSourceInput } from "../entities";
+import { DataSearcher } from "../entities/data-searcher";
 
 
 export interface PfsCrawlerPageKey {
@@ -12,8 +12,8 @@ export interface PfsCrawlerPageKey {
 
 export class CrawlingSourceService
 {
-	constructor(protected docDbDal: docDbDal, protected crawlerSourceInput: PfsCrawlerSourceInput)
-	{}
+	constructor(protected crawlerSourceInput: PfsCrawlerSourceInput, protected dataSearcher: DataSearcher)
+	{ }
 
 	/**
      * Get the next page of data to crawl.
@@ -51,7 +51,7 @@ export class CrawlingSourceService
 
 		console.log("Fetching data from schema:", schemaName);
 
-		const result = await this.docDbDal.searchDataInTable(schemaName, searchBody);
+		const result = await this.dataSearcher.searchDataInTable(schemaName, searchBody);
 		return result;
 	}
 

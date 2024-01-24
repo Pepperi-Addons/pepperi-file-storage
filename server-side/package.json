@@ -41,7 +41,7 @@
         "@pepperi-addons/addon-testing-framework": "^0.0.36",
         "@pepperi-addons/cpi-node": "^1.4.1",
         "@pepperi-addons/debug-server": "*",
-        "@pepperi-addons/papi-sdk": "^1.66.1",
+        "@pepperi-addons/papi-sdk": "^1.67.0",
         "@types/node-fetch": "^2.5.7",
         "async": "^3.2.5",
         "aws-sdk": "^2.1045.0",
@@ -50,6 +50,7 @@
         "jwt-decode": "^2.2.0",
         "lodash.clonedeep": "^4.5.0",
         "lodash.isequal": "^4.5.0",
+        "pfs-open-sync": "file:../pfs-open-sync",
         "pfs-shared": "file:../shared",
         "semver": "^7.3.5",
         "url-parse": "^1.5.10"
