@@ -24,7 +24,7 @@
 		"@jimp/tiff": "^0.22.7",
 		"@jimp/types": "^0.22.7",
 		"@pepperi-addons/debug-server": "*",
-		"@pepperi-addons/papi-sdk": "^1.67.0",
+		"@pepperi-addons/papi-sdk": "^1.67.1",
 		"node-fetch": "^2.6.9",
 		"uuid": "^9.0.0"
 	},

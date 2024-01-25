@@ -16,7 +16,7 @@
 	"license": "ISC",
 	"dependencies": {
 		"@pepperi-addons/debug-server": "*",
-		"@pepperi-addons/papi-sdk": "^1.67.0",
+		"@pepperi-addons/papi-sdk": "^1.67.1",
 		"async": "^3.2.5"
 	},
 	"devDependencies": {
