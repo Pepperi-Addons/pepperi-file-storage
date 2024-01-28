@@ -3,7 +3,8 @@ import { AddonDataScheme, PapiClient, Relation, Subscription } from "@pepperi-ad
 import config from "./../addon.config.json";
 import { ServerHelper } from "./serverHelper";
 import { pfsSchemaData, SharedHelper } from "pfs-shared";
-import { SetupOpenSyncService } from "./sync-source/setup-open-sync.service";
+import { SetupOpenSyncService } from "pfs-open-sync";
+
 
 export class PfsSchemeService
 {

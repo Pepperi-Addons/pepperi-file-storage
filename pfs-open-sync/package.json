@@ -1,13 +1,13 @@
 {
-	"name": "pfs-shared",
+	"name": "pfs-open-sync",
 	"version": "1.0.0",
 	"description": "",
-	"main": "./lib/shared/src/index.js",
+	"main": "./lib/pfs-open-sync/src/index.js",
 	"scripts": {
 		"test": "ts-mocha \"./{,!(node_modules)/**/}*.spec.ts\" -R mochawesome --reporter-options reportDir=tests/reports,reportFilename=SurveyTestsReport,reportTitle=Survey_Tests_Report",
 		"test-noReport": "ts-mocha \"./{,!(node_modules)/**/}*.spec.ts\"",
 		"build": "tsc",
-		"lint": "eslint --fix  ./server-side/*.ts",
+		"lint": "eslint --fix  ./src/*.ts",
 		"prepublish": "npm run build",
 		"clean-init": "rm -rf node_modules && rm -rf package-lock.json && npm install"
 	},
@@ -15,19 +15,9 @@
 	"author": "",
 	"license": "ISC",
 	"dependencies": {
-		"@jimp/bmp": "^0.22.7",
-		"@jimp/custom": "^0.22.7",
-		"@jimp/jpeg": "^0.22.7",
-		"@jimp/plugin-resize": "^0.22.7",
-		"@jimp/plugins": "^0.22.7",
-		"@jimp/png": "^0.22.7",
-		"@jimp/tiff": "^0.22.7",
-		"@jimp/types": "^0.22.7",
-		"@pepperi-addons/cpi-node": "^1.1.11",
 		"@pepperi-addons/debug-server": "*",
 		"@pepperi-addons/papi-sdk": "^1.67.0",
-		"node-fetch": "^2.6.9",
-		"uuid": "^9.0.0"
+		"async": "^3.2.5"
 	},
 	"devDependencies": {
 		"@types/chai-as-promised": "^7.1.5",
@@ -47,5 +37,5 @@
 		"./bin/*",
 		"./src/*"
 	],
-	"typings": "./lib/shared/src/index.d.ts"
+	"typings": "./lib/pfs-open-sync/src/index.d.ts"
 }
