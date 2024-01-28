@@ -12,7 +12,7 @@ import { AddonUUID as PfsAddonUUID } from "../../../../addon.config.json";
 
 export class CacheUpdateErrorHandlerFactory 
 {
-	getErrorHandler(client: Client, modifiedObjects: IModifiedObjects, pnsNotification: ModifiedObjectNotification): BaseCacheUpdateErrorHandler
+	create(client: Client, modifiedObjects: IModifiedObjects, pnsNotification: ModifiedObjectNotification): BaseCacheUpdateErrorHandler
 	{
 		let errorHandler: BaseCacheUpdateErrorHandler;
 

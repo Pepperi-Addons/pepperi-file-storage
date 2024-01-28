@@ -38,7 +38,7 @@ export async function update_cache(client: Client, request: Request): Promise<an
 	const pnsToModifiedObjectsConverter = new PnsToModifiedObjectsConverter(request.body);
 	const modifiedObjects = pnsToModifiedObjectsConverter.convert();
 
-	const errorHandler = new CacheUpdateErrorHandlerFactory().getErrorHandler(client, modifiedObjects, request.body); 
+	const errorHandler = new CacheUpdateErrorHandlerFactory().create(client, modifiedObjects, request.body); 
 
 	const syncSourceService = new SyncSourceService(papiClient, errorHandler);
 	
