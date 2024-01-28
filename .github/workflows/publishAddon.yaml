@@ -1,5 +1,6 @@
 name: PublishAddon
-
+permissions:
+      contents: write
 on:
   push:
     branches:
