@@ -12,7 +12,8 @@ import {
 	SyncSourceService,
 	DataSearcher,
 	DefaultDataSearcher,
-	PapiClientBuilder
+	PapiClientBuilder,
+	CacheUpdateErrorHandlingStrategyFactory
 } from "pfs-open-sync";
 
 
@@ -31,11 +32,15 @@ export async function rebuild_cache(client: Client, request: Request): Promise<A
 
 export async function update_cache(client: Client, request: Request): Promise<any> 
 {
-	const pnsToModifiedObjectsConverter = new PnsToModifiedObjectsConverter(request.body);
+	const papiClientBuilder = new PapiClientBuilder();
+	const papiClient = papiClientBuilder.build(client, PfsAddonUUID, client.AddonSecretKey);
 
+	const pnsToModifiedObjectsConverter = new PnsToModifiedObjectsConverter(request.body);
 	const modifiedObjects = pnsToModifiedObjectsConverter.convert();
 
-	const syncSourceService = new SyncSourceService(client);
+	const errorHandler = new CacheUpdateErrorHandlingStrategyFactory().create(client, modifiedObjects, request.body); 
+
+	const syncSourceService = new SyncSourceService(papiClient, errorHandler);
 	
 	return await syncSourceService.updateCache(modifiedObjects);
 }

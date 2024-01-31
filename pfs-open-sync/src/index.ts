@@ -7,3 +7,4 @@ export * from "./rebuild-cache/initiate-crawl.command";
 export * from "./setup-open-sync.service";
 export * from "./utilities/default-data-searcher";
 export * from "./utilities/papi-client.builder";
+export * from "./update-cache/error-handlers/";
