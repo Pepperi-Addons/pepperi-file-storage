@@ -1,2 +1,2 @@
-export * from './base-cache-update-error-handler';
-export * from './cache-update-error-handler.factory';
+export * from './base-cache-update-error-handling.strategy';
+export * from './cache-update-error-handling-strategy.factory';

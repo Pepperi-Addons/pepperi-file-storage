@@ -16,4 +16,10 @@ export class PapiClientBuilder
 			...(secretKey && {addonSecretKey: secretKey})
 		});
     }
+
+    public buildWithoutActionUUID(client: Client, addonUUID: string, secretKey = ""): PapiClient
+    {
+        const shouldKeepActionUUID = false;
+        return this.build(client, addonUUID, secretKey, shouldKeepActionUUID);
+    }
 }

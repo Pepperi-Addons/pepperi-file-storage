@@ -1,29 +1,24 @@
 import { PapiClient } from "@pepperi-addons/papi-sdk";
 import { Client } from "@pepperi-addons/debug-server/dist";
 
-import { BaseCacheUpdateErrorHandler } from "./base-cache-update-error-handler";
+import { BaseCacheUpdateErrorHandlingStrategy } from "./base-cache-update-error-handling.strategy";
 import { IModifiedObjects } from "../../entities";
 
 
-export class AsyncNoRetriesCacheErrorHandler extends BaseCacheUpdateErrorHandler
+export class NotifySystemHealthStrategy extends BaseCacheUpdateErrorHandlingStrategy
 {
 	constructor(protected papiClient: PapiClient, protected client: Client, protected modifiedObjects: IModifiedObjects)
 	{
 		super();
 	}
 
-	protected override async internalHandle(error: any): Promise<void>
-	{
-		await this.setSystemHealthNotification(error.message);
-	}
-
-	protected async setSystemHealthNotification(message: string): Promise<void>
+	protected override async internalHandle(error: Error): Promise<void>
 	{
 		const systemHealthNotificationBody = {
 			Name:  `PFS Cache update`,
 			Description: `PFS failed to update cache for schema "${this.modifiedObjects.SchemeName}".`,
 			Status: "ERROR",
-			Message: `Failed to update cache for schema "${this.modifiedObjects.SchemeName}", ActionUUID: "${this.client.ActionUUID}" with error: ${message}`,
+			Message: `Failed to update cache for schema "${this.modifiedObjects.SchemeName}", ActionUUID: "${this.client.ActionUUID}" with error: ${error.message}`,
 			BroadcastChannel: ["System"]
 		};
 

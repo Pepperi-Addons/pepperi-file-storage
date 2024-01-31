@@ -1,11 +1,11 @@
 import { PapiClient } from "@pepperi-addons/papi-sdk";
 
 import { AddonUUID as PfsAddonUUID } from "../../../../addon.config.json";
-import { BaseCacheUpdateErrorHandler } from "./base-cache-update-error-handler";
+import { BaseCacheUpdateErrorHandlingStrategy } from "./base-cache-update-error-handling.strategy";
 import { ModifiedObjectNotification } from "../../entities";
 import { NUMBER_OF_ASYNC_RETRIES } from "./constants";
 
-export class PnsAsyncCacheErrorHandler extends BaseCacheUpdateErrorHandler
+export class InitiateAsyncCacheUpdateStrategy extends BaseCacheUpdateErrorHandlingStrategy
 {
 	constructor(protected papiClient: PapiClient, protected pnsNotification: ModifiedObjectNotification)
 	{
@@ -13,11 +13,6 @@ export class PnsAsyncCacheErrorHandler extends BaseCacheUpdateErrorHandler
 	}
 
 	protected override async internalHandle(error: any): Promise<void>
-	{
-		await this.callUpdateCacheAsynchronously();
-	}
-
-	protected async callUpdateCacheAsynchronously(): Promise<void>
 	{
 		// Set number of retries
 		const queryParams = {

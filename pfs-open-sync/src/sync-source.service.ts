@@ -2,7 +2,7 @@ import { AddonData, PapiClient, SearchBody, SearchData } from "@pepperi-addons/p
 
 import { NucCacheService } from "./nuc-cache.service";
 import { ICacheService, IModifiedObjects } from "./entities";
-import { BaseCacheUpdateErrorHandler } from "./update-cache/error-handlers/base-cache-update-error-handler";
+import { BaseCacheUpdateErrorHandlingStrategy } from "./update-cache/error-handlers/base-cache-update-error-handling.strategy";
 import { DataSearcher } from "./entities/data-searcher";
 import { DefaultDataSearcher } from "./utilities/default-data-searcher";
 
@@ -12,7 +12,7 @@ export class SyncSourceService
 	protected cacheService: ICacheService;
 	protected pepperiDal: DataSearcher;
 
-	constructor(protected papiClient: PapiClient, protected errorHandler: BaseCacheUpdateErrorHandler, pepperiDal?: DataSearcher)
+	constructor(protected papiClient: PapiClient, protected errorHandler: BaseCacheUpdateErrorHandlingStrategy, pepperiDal?: DataSearcher)
 	{
 		this.cacheService = new NucCacheService(this.papiClient);
 		this.pepperiDal = pepperiDal ? pepperiDal : new DefaultDataSearcher(this.papiClient);
@@ -32,7 +32,7 @@ export class SyncSourceService
 		}
 		catch (error)
 		{
-			await this.errorHandler.handle(error);
+			await this.errorHandler.handle(error as Error);
 		}
 
 		return result;
