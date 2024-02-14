@@ -9,7 +9,7 @@ export interface ITestsExecutor
 {
 	getPostFileData(): Promise<{URI: string} | {TemporaryFileURLs: string[]}>;
 	getExpectedOfflineUrlRegex(): RegExp;
-	ensureLocalFileIsValid(offlineFile: AddonFile, expect: Chai.ExpectStatic): Promise<void>;
+	ensureLocalFileIsValid(offlineFile: AddonFile, expectedFileMD5: string, expect: Chai.ExpectStatic): Promise<void>;
 	getIntegrationTestBody(): IntegrationTestBody
 	title: string;
 }

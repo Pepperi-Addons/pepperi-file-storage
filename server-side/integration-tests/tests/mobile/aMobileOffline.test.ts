@@ -24,7 +24,7 @@ export abstract class AMobileOfflineTest extends APostOfflineTests implements IT
     	return { URI: testFileData };
     }
 
-    public async ensureLocalFileIsValid(offlineFile: AddonFile, expect: Chai.ExpectStatic): Promise<void>
+    public async ensureLocalFileIsValid(offlineFile: AddonFile, expectedFileMD5: string, expect: Chai.ExpectStatic): Promise<void>
     {
     	// Since on mobile we expect localhost URLs, we cannot get the actual file from the URL.
     }

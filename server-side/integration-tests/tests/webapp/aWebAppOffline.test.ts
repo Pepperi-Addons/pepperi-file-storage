@@ -4,6 +4,7 @@ import fetch from "node-fetch";
 import { IntegrationTestBody } from "pfs-shared";
 import { APostOfflineTests, ITestsExecutor } from "../../aPostOffline.test";
 import { testFileData } from "../../constants";
+import { BufferToMD5Builder } from "../../utilities/buffer-to-md5.builder";
 
 
 export abstract class AWebAppOfflineTest extends APostOfflineTests implements ITestsExecutor
@@ -64,12 +65,15 @@ export abstract class AWebAppOfflineTest extends APostOfflineTests implements IT
     	}
     }
 
-    public async ensureLocalFileIsValid(offlineFile: AddonFile, expect: Chai.ExpectStatic): Promise<void>
+    public async ensureLocalFileIsValid(offlineFile: AddonFile, expectedFileMD5: string, expect: Chai.ExpectStatic): Promise<void>
     {
     	const url = offlineFile.URL!;
     	const buffer: Buffer = await this.filesFetcherService.downloadFile(url);
     	expect(buffer).to.not.be.undefined;
-    	expect(buffer.length).to.be.equal(offlineFile.FileSize);
+
+    	const bufferToMD5Builder = new BufferToMD5Builder();
+    	const actualFileMD5 = bufferToMD5Builder.build(buffer);
+    	expect(actualFileMD5).to.be.equal(expectedFileMD5);
     }
 
     public getIntegrationTestBody(): IntegrationTestBody

@@ -113,7 +113,7 @@ export class CrawlingSourceService
      * Parse the page key from the request.
      * @returns {PfsCrawlerPageKey} The parsed crawler page key.
      */
-	protected parsePageKey(): PfsCrawlerPageKey
+	public parsePageKey(): PfsCrawlerPageKey
 	{
 		const result: PfsCrawlerPageKey = { SchemaIndex: 0, SpecificSchemaPageKey: "" };
 

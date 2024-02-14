@@ -2,6 +2,7 @@ import { AddonFile } from "@pepperi-addons/papi-sdk";
 
 import { APostOfflineTests } from "../../aPostOffline.test";
 import { testFileData } from "../../constants";
+import { DataUriToMD5Builder } from "../../utilities/data-uri-to-md5.builder";
 
 
 export class PostOnlineTest extends APostOfflineTests
@@ -68,7 +69,8 @@ export class PostOnlineTest extends APostOfflineTests
 				expect(offlineFile.URL).to.match(this.testsExecutor.getExpectedOfflineUrlRegex());
 
 				// Ensure the file exists in the provided URL
-				await this.testsExecutor.ensureLocalFileIsValid(offlineFile, expect);
+				const expectedMD5 = new DataUriToMD5Builder().build(testFileData);
+				await this.testsExecutor.ensureLocalFileIsValid(offlineFile, expectedMD5, expect);
 			});
 		});
 	}
