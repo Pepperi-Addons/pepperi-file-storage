@@ -110,12 +110,12 @@ export async function upgrade(client: Client, request: Request): Promise<any>
 		await migrateSchemasToPushLocalChanges(papiClient, client);
 	}
 
-	if(request.body.FromVersion && semverLessThan(request.body.FromVersion, "1.4.23"))
+	if(request.body.FromVersion && semverLessThan(request.body.FromVersion, "1.4.24"))
 	{
-		if(request.body.FromVersion && semverLessThan(request.body.FromVersion, "1.4.22"))
+		if(request.body.FromVersion && semverLessThan(request.body.FromVersion, "1.4.25"))
 		{
-			// Fail the upgrade process, endpoints introduced in 1.4.22 are required for the upgrade to 1.4.23
-			const errorMessage = `Upgrading to  version ${request.body.ToVersion} from versions earlier than 1.4.22 is not supported. Please upgrade to 1.4.22 before upgrading to ${request.body.ToVersion}.`;
+			// Fail the upgrade process, endpoints introduced in 1.4.24 are required for the upgrade to 1.4.25
+			const errorMessage = `Upgrading to  version ${request.body.ToVersion} from versions earlier than 1.4.24 is not supported. Please upgrade to 1.4.24 before upgrading to ${request.body.ToVersion}.`;
 			console.error(errorMessage);
 			upgradeResult.success = false;
 			upgradeResult.errorMessage = errorMessage;

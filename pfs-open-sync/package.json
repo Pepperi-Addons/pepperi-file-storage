@@ -17,7 +17,7 @@
 	"dependencies": {
 		"@pepperi-addons/addon-infra-sdk": "^2.0.1",
 		"@pepperi-addons/debug-server": "*",
-		"@pepperi-addons/papi-sdk": "^1.67.1",
+		"@pepperi-addons/papi-sdk": "^1.67.4",
 		"async": "^3.2.5"
 	},
 	"devDependencies": {

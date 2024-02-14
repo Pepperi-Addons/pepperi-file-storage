@@ -1,6 +1,6 @@
 import { Client } from "@pepperi-addons/debug-server/dist";
 
-import { IModifiedObjects, ModifiedObjectNotification } from "../../entities";
+import { ModifiedObjectNotification } from "../../entities";
 import { BaseCacheUpdateErrorHandlingStrategy } from "./base-cache-update-error-handling.strategy";
 import { InvokeRetryStrategy } from "./invoke-retry.strategy";
 import { InitiateAsyncCacheUpdateStrategy } from "./initiate-async-cache-update.strategy.ts";
@@ -12,7 +12,7 @@ import { AddonUUID as PfsAddonUUID } from "../../../../addon.config.json";
 
 export class CacheUpdateErrorHandlingStrategyFactory 
 {
-	create(client: Client, modifiedObjects: IModifiedObjects, pnsNotification: ModifiedObjectNotification): BaseCacheUpdateErrorHandlingStrategy
+	create(client: Client, pnsNotification: ModifiedObjectNotification): BaseCacheUpdateErrorHandlingStrategy
 	{
 		let errorHandlingStrategy: BaseCacheUpdateErrorHandlingStrategy;
 
@@ -36,7 +36,7 @@ export class CacheUpdateErrorHandlingStrategyFactory
 			}
 			else
 			{
-				errorHandlingStrategy = this.getNotifySystemHealthStrategy(client, modifiedObjects);
+				errorHandlingStrategy = this.getNotifySystemHealthStrategy(client, pnsNotification.FilterAttributes.Resource);
 			}
 		}
 
@@ -51,11 +51,11 @@ export class CacheUpdateErrorHandlingStrategyFactory
 		return new InitiateAsyncCacheUpdateStrategy(asyncPapiClient, pnsNotification);
 	}
 
-	protected getNotifySystemHealthStrategy(client: Client, modifiedObjects: IModifiedObjects): NotifySystemHealthStrategy
+	protected getNotifySystemHealthStrategy(client: Client, schemaName: string): NotifySystemHealthStrategy
 	{
 		const papiClientBuilder = new PapiClientBuilder();
 		const papiClient = papiClientBuilder.build(client, PfsAddonUUID, client.AddonSecretKey);
 
-		return new NotifySystemHealthStrategy(papiClient, client, modifiedObjects);
+		return new NotifySystemHealthStrategy(papiClient, client, schemaName);
 	}
 }

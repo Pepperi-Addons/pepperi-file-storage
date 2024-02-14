@@ -1,7 +1,7 @@
-import { AddonData, PapiClient, SearchBody, SearchData } from "@pepperi-addons/papi-sdk";
+import { AddonData, PapiClient, SearchBody, SearchData, CacheChangesInput, CacheRemoveInput } from "@pepperi-addons/papi-sdk";
 
 import { NucCacheService } from "./nuc-cache.service";
-import { ICacheService, IModifiedObjects } from "./entities";
+import { ICacheService } from "./entities";
 import { BaseCacheUpdateErrorHandlingStrategy } from "./update-cache/error-handlers/base-cache-update-error-handling.strategy";
 import { DataSearcher } from "./entities/data-searcher";
 import { DefaultDataSearcher } from "./utilities/default-data-searcher";
@@ -18,7 +18,7 @@ export class SyncSourceService
 		this.pepperiDal = pepperiDal ? pepperiDal : new DefaultDataSearcher(this.papiClient);
 	}
 
-	public async updateCache(modifiedObjects: IModifiedObjects): Promise<any>
+	public async updateCache(modifiedObjects: CacheChangesInput): Promise<any>
 	{    
 		// modifiedObject that has a Hidden field should be validated against the actual schema's data,
 		// to ensure the latest value of the Hidden field is used.
@@ -39,11 +39,11 @@ export class SyncSourceService
 	}
 
 	/**
- * Set the Hidden field of the modifiedObjects to the up-to-date value.
- * 
- * @param { IModifiedObjects } modifiedObjects - The modifiedObjects to update.
- */
-	protected async getUpToDateHiddenFields(modifiedObjects: IModifiedObjects): Promise<void>
+	 * Set the Hidden field of the modifiedObjects to the up-to-date value.
+	 * 
+	 * @param { CacheChangesInput } modifiedObjects - The modifiedObjects to update.
+	 */
+	protected async getUpToDateHiddenFields(modifiedObjects: CacheChangesInput): Promise<void>
 	{
 		// Filter out objects with defined Hidden field
 		const objectsWithHiddenField = modifiedObjects.Updates.filter(update => update.Hidden !== undefined);
@@ -78,5 +78,21 @@ export class SyncSourceService
 				}
 			}
 		});
+	}
+
+	public async removeFromCache(removedObjects: CacheRemoveInput): Promise<any>
+	{
+		let result;
+
+		try
+		{
+			result = await this.cacheService.removeEntries(removedObjects);
+		}
+		catch (error)
+		{
+			await this.errorHandler.handle(error as Error);
+		}
+
+		return result;
 	}
 }

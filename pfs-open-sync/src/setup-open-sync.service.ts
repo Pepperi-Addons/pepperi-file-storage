@@ -35,6 +35,7 @@ export class SetupOpenSyncService
 		for (const dataTypedSchema of syncableSchemas)
 		{
 			await this.unsubscribeFromUpsertedRecords(dataTypedSchema);
+			await this.unsubscribeFromRemovedRecords(dataTypedSchema);
 			await this.removeSchemaFromSyncCache(dataTypedSchema);
 		}
 	}
@@ -60,8 +61,28 @@ export class SetupOpenSyncService
 		if(dataTypedSchema.SyncData?.Sync && dataTypedSchema.SyncData.SyncRecords !== false)
 		{
 			await this.subscribeToUpsertedRecords(dataTypedSchema);
+			await this.subscribeToRemovedRecords(dataTypedSchema);
 			await this.upsertSchemaToSyncCache(dataTypedSchema);
 		}	
+	}
+
+	/**
+	 * Subscribe to removed records on the PFS's schema.
+	 * @returns {Promise<void>}
+	 */
+	protected async subscribeToRemovedRecords(dataTypedSchema: AddonDataScheme): Promise<Subscription>
+	{
+		return await this.papiClient.notification.subscriptions.upsert({
+			AddonUUID: PfsAddonUUID,
+			Name: `pfs-removed-records-${dataTypedSchema.Name}`, // Names of subscriptions should be unique
+			Type: "data",
+			FilterPolicy: {
+				Resource: [dataTypedSchema.Name],
+				Action: ["remove"],
+				AddonUUID: [PfsAddonUUID]
+			},
+			AddonRelativeURL: `/sync_source/remove_from_cache?resource_name=${dataTypedSchema.Name}`,
+		});
 	}
 
 	/**
@@ -127,19 +148,34 @@ export class SetupOpenSyncService
 	}
 
 	/**
+     * Unsubscribe from removed records on the PFS's schema.
+     * @returns {Promise<void>}
+     */
+	protected async unsubscribeFromRemovedRecords(dataTypedSchema: AddonDataScheme): Promise<void>
+	{
+		const subscriptions = await this.papiClient.notification.subscriptions.find({
+			where: `Name LIKE 'pfs-removed-records-${dataTypedSchema.Name}'`
+		});
+
+		for (const subscription of subscriptions)
+		{
+			subscription.Hidden = true;
+			await this.papiClient.notification.subscriptions.upsert(subscription);
+		}
+	}
+
+	/**
      * Remove the schema from the sync cache.
      */
 	protected async removeSchemaFromSyncCache(dataTypedSchema: AddonDataScheme)
 	{
-		// *** This is not currently implemented in NUC cache. ***
+		const syncCacheSchema = {
+			SchemeAddonUUID: PfsAddonUUID,
+			SourceAddonUUID: PfsAddonUUID,
+			SchemeName: dataTypedSchema.Name,
+		};
 
-		// const syncCacheSchema = {
-		// 	SchemeAddonUUID: PfsAddonUUID,
-		// 	SourceAddonUUID: PfsAddonUUID,
-		// 	SchemeName: dataTypedSchema.Name,
-		// };
-
-		// await this.papiClient.post(`/cache/purge`, syncCacheSchema);
+		await this.papiClient.post(`/cache/purge`, syncCacheSchema);
 	}
 
 	/**
