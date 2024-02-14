@@ -21,7 +21,7 @@
       "adal": "1.4.60",
       "cpi_data": "0.6.12",
       "crawler": "0.0.22",
-      "papi": "9.6.45"
+      "papi": "9.6.59"
     },
     "CPISide": [
       "addon-cpi.ts"
