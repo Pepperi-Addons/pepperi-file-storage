@@ -8,12 +8,13 @@ import {
 	ICacheService,
 	InitiateCrawlCommand,
 	NucCacheService,
-	PnsToModifiedObjectsConverter,
 	SyncSourceService,
 	DataSearcher,
 	DefaultDataSearcher,
 	PapiClientBuilder,
-	CacheUpdateErrorHandlingStrategyFactory
+	CacheUpdateErrorHandlingStrategyFactory,
+	PnsToCacheRemoveInputConverter,
+	PnsToCacheChangesInputConverter
 } from "pfs-open-sync";
 
 
@@ -35,14 +36,29 @@ export async function update_cache(client: Client, request: Request): Promise<an
 	const papiClientBuilder = new PapiClientBuilder();
 	const papiClient = papiClientBuilder.build(client, PfsAddonUUID, client.AddonSecretKey);
 
-	const pnsToModifiedObjectsConverter = new PnsToModifiedObjectsConverter(request.body);
+	const pnsToModifiedObjectsConverter = new PnsToCacheChangesInputConverter(request.body);
 	const modifiedObjects = pnsToModifiedObjectsConverter.convert();
 
-	const errorHandler = new CacheUpdateErrorHandlingStrategyFactory().create(client, modifiedObjects, request.body); 
+	const errorHandler = new CacheUpdateErrorHandlingStrategyFactory().create(client, request.body); 
 
 	const syncSourceService = new SyncSourceService(papiClient, errorHandler);
 	
 	return await syncSourceService.updateCache(modifiedObjects);
+}
+
+export async function remove_from_cache(client: Client, request: Request): Promise<any> 
+{
+	const papiClientBuilder = new PapiClientBuilder();
+	const papiClient = papiClientBuilder.build(client, PfsAddonUUID, client.AddonSecretKey);
+
+	const pnsToCacheRemoveInputConverter = new PnsToCacheRemoveInputConverter(request.body);
+	const removedObjects = pnsToCacheRemoveInputConverter.convert();
+
+	const errorHandler = new CacheUpdateErrorHandlingStrategyFactory().create(client, request.body); 
+
+	const syncSourceService = new SyncSourceService(papiClient, errorHandler);
+	
+	return await syncSourceService.removeFromCache(removedObjects);
 }
 
 export async function internal_crawler_source(client: Client, request: Request): Promise<CrawlerSourceOutput> 

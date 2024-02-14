@@ -1,16 +1,18 @@
-import { AddonUUID as PfsAddonUUID } from "../../../addon.config.json";
-import { IModifiedObjects, ModifiedObjectNotification, UpdatedObject } from "../entities";
+import { CacheChangesInput, CacheObject } from "@pepperi-addons/papi-sdk";
 
-export class PnsToModifiedObjectsConverter
+import { AddonUUID as PfsAddonUUID } from "../../../addon.config.json";
+import { ModifiedObjectNotification } from "../entities";
+
+export class PnsToCacheChangesInputConverter
 {
 	constructor(protected pnsNotification: ModifiedObjectNotification) 
 	{}
 
-	public convert(): IModifiedObjects
+	public convert(): CacheChangesInput
 	{
-		const result: IModifiedObjects = {
+		const result: CacheChangesInput = {
 			SourceAddonUUID: PfsAddonUUID,
-			AddonUUID: PfsAddonUUID,
+			SchemeAddonUUID: PfsAddonUUID,
 			SchemeName: this.pnsNotification.FilterAttributes.Resource,
 			Updates: this.processModifiedObjects(),
 		};
@@ -18,13 +20,13 @@ export class PnsToModifiedObjectsConverter
 		return result;
 	}
 
-	protected processModifiedObjects(): UpdatedObject[]
+	protected processModifiedObjects(): CacheObject[]
 	{
 		const modifiedObjects = this.pnsNotification.Message.ModifiedObjects;
 		
 		return modifiedObjects.map((obj) => 
 		{
-			const updatedObject: UpdatedObject = {
+			const updatedObject: CacheObject = {
 				Key: obj.ObjectKey,
 				ObjectModificationDateTime: obj.ObjectModificationDateTime,
 			};

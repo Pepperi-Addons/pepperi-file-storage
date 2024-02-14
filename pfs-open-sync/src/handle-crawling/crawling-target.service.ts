@@ -1,15 +1,15 @@
 import {mapLimit as asyncMapLimit} from "async";
-import { AddonData, CrawlerTargetInput } from "@pepperi-addons/papi-sdk";
+import { AddonData, CacheChangesInput, CacheUpdateResult, CrawlerTargetInput } from "@pepperi-addons/papi-sdk";
 
 import { AddonUUID as PfsAddonUUID } from "../../../addon.config.json";
 import { CrawlOutputsPrefixes, CrawlOutputsPrefixesEnum } from "./constants";
-import { CacheUpdateResult, ICacheService, IModifiedObjects } from "../entities";
+import { ICacheService } from "../entities";
 import { UpdatedObjectsBuilder } from "./updated-object.builder";
 
 
 export class CrawlingTargetService 
 {
-	protected schemaNameToModifiedObjects: Map<string, IModifiedObjects> = new Map<string, IModifiedObjects>();
+	protected schemaNameToModifiedObjects: Map<string, CacheChangesInput> = new Map<string, CacheChangesInput>();
 
 	/**
 	 * The maximum number of concurrent update requests to the cache.
@@ -103,7 +103,7 @@ export class CrawlingTargetService
 			{
 				// If not, initialize an entry with default IModifiedObjects
 				map.set(sourceSchemaName, {
-					AddonUUID: PfsAddonUUID,
+					SchemeAddonUUID: PfsAddonUUID,
 					SourceAddonUUID: PfsAddonUUID,
 					SchemeName: sourceSchemaName,
 					Updates: [],
@@ -118,7 +118,7 @@ export class CrawlingTargetService
 
 			// Return the updated Map for the next iteration
 			return map;
-		}, new Map<string, IModifiedObjects>());
+		}, new Map<string, CacheChangesInput>());
 
 		console.log("Modified objects constructed.");
 	}
@@ -153,14 +153,14 @@ export class CrawlingTargetService
 
 			case "Ignore":
 				result.Outputs[`${CrawlOutputsPrefixesEnum.TotalIgnores}_${schemaName}`]++;
-				console.log(`Cache update ignored for internalID: ${cacheUpdateResult.InternalID}`);
+				console.log(`Cache update ignored for Key: ${cacheUpdateResult.Key}`);
 				console.log(`Cache update result: ${JSON.stringify(cacheUpdateResult)}`);
 
 				break;
 
 			case "Error":
 				result.Outputs[`${CrawlOutputsPrefixesEnum.TotalChangesFailed}_${schemaName}`]++;
-				console.error(`Cache update failed for InternalID ${cacheUpdateResult.InternalID} with error: ${cacheUpdateResult.Message}`);
+				console.error(`Cache update failed for Key '${cacheUpdateResult.Key}' with error: ${cacheUpdateResult.Details}`);
 
 				break;
 
