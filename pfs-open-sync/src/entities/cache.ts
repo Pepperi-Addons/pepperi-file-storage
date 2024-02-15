@@ -1,27 +1,7 @@
-export interface IModifiedObjects
-{
-    SourceAddonUUID: string;
-    AddonUUID: string;
-    SchemeName: string;
-    Updates: UpdatedObject[];
-}
-
-export interface UpdatedObject {
-    Key: string;
-    ObjectModificationDateTime: string;
-    Hidden?: boolean;
-}
-
-export interface CacheUpdateResult {
-        InternalID: number;
-        UUID: string;
-        ExternalID: string;
-        Status: "Insert" | "Update" | "Ignore" | "Error";
-        Message: string;
-        URI: string;
-}
+import { CacheRemoveInput, CacheUpdateResult, CacheChangesInput } from '@pepperi-addons/papi-sdk'
 
 export interface ICacheService
 {    
-    updateCache(modifiedObjects: IModifiedObjects): Promise<CacheUpdateResult[]>;
+    updateCache(modifiedObjects: CacheChangesInput): Promise<CacheUpdateResult[]>;
+    removeEntries(removeCacheEntries: CacheRemoveInput): Promise<CacheUpdateResult[]>;
 }

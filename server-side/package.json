@@ -41,7 +41,7 @@
         "@pepperi-addons/addon-testing-framework": "^0.0.39",
         "@pepperi-addons/cpi-node": "^1.4.1",
         "@pepperi-addons/debug-server": "*",
-        "@pepperi-addons/papi-sdk": "^1.67.1",
+        "@pepperi-addons/papi-sdk": "^1.67.4",
         "async": "^3.2.5",
         "aws-sdk": "^2.1045.0",
         "jimp": "^0.10.3",
