@@ -169,15 +169,13 @@ export class SetupOpenSyncService
      */
 	protected async removeSchemaFromSyncCache(dataTypedSchema: AddonDataScheme)
 	{
-		// *** This is not currently implemented in NUC cache. ***
+		const syncCacheSchema = {
+			SchemeAddonUUID: PfsAddonUUID,
+			SourceAddonUUID: PfsAddonUUID,
+			SchemeName: dataTypedSchema.Name,
+		};
 
-		// const syncCacheSchema = {
-		// 	SchemeAddonUUID: PfsAddonUUID,
-		// 	SourceAddonUUID: PfsAddonUUID,
-		// 	SchemeName: dataTypedSchema.Name,
-		// };
-
-		// await this.papiClient.post(`/cache/purge`, syncCacheSchema);
+		await this.papiClient.post(`/cache/purge`, syncCacheSchema);
 	}
 
 	/**
