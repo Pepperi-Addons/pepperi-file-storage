@@ -36,8 +36,8 @@ export async function update_cache(client: Client, request: Request): Promise<an
 	const papiClientBuilder = new PapiClientBuilder();
 	const papiClient = papiClientBuilder.build(client, PfsAddonUUID, client.AddonSecretKey);
 
-	const pnsToModifiedObjectsConverter = new PnsToCacheChangesInputConverter(request.body);
-	const modifiedObjects = pnsToModifiedObjectsConverter.convert();
+	const pnsToModifiedObjectsConverter = new PnsToCacheChangesInputConverter();
+	const modifiedObjects = pnsToModifiedObjectsConverter.convert(request.body);
 
 	const errorHandler = new CacheUpdateErrorHandlingStrategyFactory().create(client, request.body); 
 
@@ -51,8 +51,8 @@ export async function remove_from_cache(client: Client, request: Request): Promi
 	const papiClientBuilder = new PapiClientBuilder();
 	const papiClient = papiClientBuilder.build(client, PfsAddonUUID, client.AddonSecretKey);
 
-	const pnsToCacheRemoveInputConverter = new PnsToCacheRemoveInputConverter(request.body);
-	const removedObjects = pnsToCacheRemoveInputConverter.convert();
+	const pnsToCacheRemoveInputConverter = new PnsToCacheRemoveInputConverter();
+	const removedObjects = pnsToCacheRemoveInputConverter.convert(request.body);
 
 	const errorHandler = new CacheUpdateErrorHandlingStrategyFactory().create(client, request.body); 
 

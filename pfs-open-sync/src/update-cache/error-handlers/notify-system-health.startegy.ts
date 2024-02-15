@@ -1,4 +1,4 @@
-import { CacheChangesInput, PapiClient } from "@pepperi-addons/papi-sdk";
+import { PapiClient } from "@pepperi-addons/papi-sdk";
 import { Client } from "@pepperi-addons/debug-server/dist";
 
 import { BaseCacheUpdateErrorHandlingStrategy } from "./base-cache-update-error-handling.strategy";

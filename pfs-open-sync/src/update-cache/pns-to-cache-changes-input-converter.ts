@@ -5,24 +5,31 @@ import { ModifiedObjectNotification } from "../entities";
 
 export class PnsToCacheChangesInputConverter
 {
-	constructor(protected pnsNotification: ModifiedObjectNotification) 
-	{}
+	protected readonly notificationActionTypes = ["insert", "update"];
 
-	public convert(): CacheChangesInput
+	public convert(pnsNotification: ModifiedObjectNotification): CacheChangesInput
 	{
 		const result: CacheChangesInput = {
 			SourceAddonUUID: PfsAddonUUID,
 			SchemeAddonUUID: PfsAddonUUID,
-			SchemeName: this.pnsNotification.FilterAttributes.Resource,
-			Updates: this.processModifiedObjects(),
+			SchemeName: pnsNotification.FilterAttributes.Resource,
+			Updates: this.processModifiedObjects(pnsNotification),
 		};
 
 		return result;
 	}
 
-	protected processModifiedObjects(): CacheObject[]
+	protected validateNotificationActionType(pnsNotification: ModifiedObjectNotification): void
 	{
-		const modifiedObjects = this.pnsNotification.Message.ModifiedObjects;
+		if(!this.notificationActionTypes.includes(pnsNotification.FilterAttributes.Action))
+		{
+			throw new Error(`Invalid notification action type: ${pnsNotification.FilterAttributes.Action}, expected: "${this.notificationActionTypes.join(", ")}"`);
+		}
+	}
+
+	protected processModifiedObjects(pnsNotification: ModifiedObjectNotification): CacheObject[]
+	{
+		const modifiedObjects = pnsNotification.Message.ModifiedObjects;
 		
 		return modifiedObjects.map((obj) => 
 		{
