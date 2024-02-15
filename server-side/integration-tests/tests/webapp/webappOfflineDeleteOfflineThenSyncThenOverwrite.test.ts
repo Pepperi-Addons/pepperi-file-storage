@@ -5,15 +5,15 @@ import { AWebAppOfflineTest } from "./aWebAppOffline.test";
 import { DataUriToMD5Builder } from "../../utilities/data-uri-to-md5.builder";
 
 
-export class WebappOfflineDeleteAndUpdateFileTest extends AWebAppOfflineTest
+export class WebappOfflineDeleteOfflineThenSyncThenOverwriteTest extends AWebAppOfflineTest
 {
-	subtitle = "Offline delete and update file - DI-26277";
+	subtitle = "Offline delete, sync, update file, sync, validate file data - DI-26277";
 
 	public override tests(describe: (suiteTitle: string, func: () => void) => void, it: (name: string, fn: Mocha.Func) => void, expect: Chai.ExpectStatic): void 
 	{
 		describe(this.title, () => 
 		{
-			it("Simulate offline mode - Delete offline and update file data", async () => 
+			it("Simulate offline mode - Delete offline, sync, and update file data offline", async () => 
 			{
 				console.log(`${this.title} - Starting test ${it.name}`);
 
@@ -21,7 +21,39 @@ export class WebappOfflineDeleteAndUpdateFileTest extends AWebAppOfflineTest
 
 				await this.deleteFileOffline();
 
+				await this.syncWithValidation(expect, {finish: true, success: true}, async () => 
+				{
+					let res: boolean;
+					try
+					{
+						const validateOnlineFile = await this.pfsOnlineService.getByKey(this.pfsSchemaName, await this.prefixedOnlineTestFileName);
+						res = validateOnlineFile?.Hidden === true;
+					}
+					catch(error)
+					{
+						res = false;
+					}
+					
+					return res;
+				});
+
 				await this.postUnhiddenFileOfflineWithData(orangeDotPngDataUri);
+
+				await this.syncWithValidation(expect, {finish: true, success: true}, async () => 
+				{
+					let res: boolean;
+					try
+					{
+						const validateOnlineFile = await this.pfsOnlineService.getByKey(this.pfsSchemaName, await this.prefixedOnlineTestFileName);
+						res = validateOnlineFile?.Hidden === false;
+					}
+					catch(error)
+					{
+						res = false;
+					}
+					
+					return res;
+				});
 
 				await this.validateOfflineFileHasData(orangeDotPngDataUri, expect);
 			});
@@ -79,6 +111,7 @@ export class WebappOfflineDeleteAndUpdateFileTest extends AWebAppOfflineTest
 			Key: await this.prefixedOnlineTestFileName,
 			URI: dataUri,
 			Hidden: false,
+			MIME: "image/png",
 			...(this.getIntegrationTestBody() ?? {})
 		};
 
