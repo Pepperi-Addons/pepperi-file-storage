@@ -131,9 +131,9 @@ export class TestError extends Error
 // When editing this list, please make sure to maintain alphabetical
 // order, to make it more readable.
 export const EXTENSIONS_WHITELIST: Array<string> = [
-	".bmp", ".csv", ".doc", ".docx", ".gif", ".jpg", ".jpeg", ".js",
+	".bmp", ".csv", ".doc", ".docx", ".gif", ".html", ".jpg", ".jpeg", ".js",
 	".json", ".log", ".mp4", ".mpeg", ".pdf", ".png", ".ppt",
-	".pptx", ".svg", ".txt", ".xls", ".xlsx", ".xml", ".zip"
+	".pptx", ".svg", ".txt", ".webp", ".xls", ".xlsx", ".xml", ".zip"
 ];
 
 export const DIMX_ADDON_UUID = "44c97115-6d14-4626-91dc-83f176e9a0fc";

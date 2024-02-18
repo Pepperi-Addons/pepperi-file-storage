@@ -91,7 +91,7 @@ export abstract class PostService extends PfsService
 	{
 		if (!this.request.body.Key.endsWith("/")) // Don't validate folders
 		{
-			const extension = path.extname(this.request.body.Key);
+			const extension = path.extname(this.request.body.Key).toLowerCase();
 
 			if (!EXTENSIONS_WHITELIST.includes(extension)) 
 			{
