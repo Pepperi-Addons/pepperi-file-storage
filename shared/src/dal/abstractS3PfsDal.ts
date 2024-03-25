@@ -1,4 +1,5 @@
 import { PutObjectCommandOutput } from "@aws-sdk/client-s3";
+import { CreateInvalidationCommandOutput } from "@aws-sdk/client-cloudfront";
 
 import { Request } from "@pepperi-addons/debug-server";
 import { CACHE_DEFAULT_VALUE, dataURLRegex, TransactionType } from "../";
@@ -57,7 +58,7 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 	
 	abstract override unlock(key: string);
 
-	async invalidateCDN(file: any)
+	async invalidateCDN(file: any): Promise<CreateInvalidationCommandOutput>
 	{
 		const keyInvalidationPath = `/${this.relativeAbsoluteKeyService.getAbsolutePath(file.Key)}`; //Invalidation path must start with a '/'.
 

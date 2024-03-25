@@ -1,4 +1,5 @@
 import { DeleteObjectCommandOutput } from "@aws-sdk/client-s3";
+import { CreateInvalidationCommandOutput } from "@aws-sdk/client-cloudfront";
 
 import { TransactionType } from "./constants";
 
@@ -69,7 +70,7 @@ export interface IPfsMutator
      * Invalidate the CDN cached version of the given file.
      * @param file The file whose CDN cached version is to be invalidated.
      */
-    invalidateCDN(file: any);
+    invalidateCDN(file: any): Promise<CreateInvalidationCommandOutput>;
 
     /**
      * Return the maximal lock time

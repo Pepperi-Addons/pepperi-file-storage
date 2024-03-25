@@ -15,6 +15,7 @@
 	"author": "",
 	"license": "ISC",
 	"dependencies": {
+		"@aws-sdk/client-cloudfront": "^3.540.0",
 		"@aws-sdk/client-s3": "^3.540.0",
 		"@jimp/bmp": "^0.22.7",
 		"@jimp/custom": "^0.22.7",

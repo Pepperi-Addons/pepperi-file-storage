@@ -16,6 +16,12 @@ import {
 	ListObjectVersionsCommandOutput,
 	S3Client 
 } from "@aws-sdk/client-s3";
+import { 
+	CloudFrontClient,
+	CreateInvalidationCommand,
+	CreateInvalidationCommandInput,
+	CreateInvalidationCommandOutput
+} from "@aws-sdk/client-cloudfront";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 
@@ -112,11 +118,11 @@ export default class AwsDal implements IAws
 		return allVersions;
 	}
 
-	public async cloudFrontInvalidate(objectsPath: string[]): Promise<PromiseResult<AWS.CloudFront.CreateInvalidationResult, AWS.AWSError>>
+	public async cloudFrontInvalidate(objectsPath: string[]): Promise<CreateInvalidationCommandOutput>
 	{
 		// Create invalidation request
-		const cloudfront = new AWS.CloudFront({apiVersion: "2020-05-31"});
-		const invalidationParams: AWS.CloudFront.CreateInvalidationRequest = {
+		const cloudFrontClient = new CloudFrontClient({apiVersion: "2020-05-31"});
+		const invalidationParams: CreateInvalidationCommandInput = {
 			DistributionId: this.CloudFrontDistribution,
   			InvalidationBatch: {
 				CallerReference: (new Date()).getTime().toString(), //A unique string to represent each invalidation request.
@@ -127,7 +133,9 @@ export default class AwsDal implements IAws
   			}
 		};
 
-		const invalidation = await cloudfront.createInvalidation(invalidationParams).promise();
+		const createInvalidationCommand = new CreateInvalidationCommand(invalidationParams);
+
+		const invalidation = await cloudFrontClient.send(createInvalidationCommand);
 
 		return invalidation;
 	}

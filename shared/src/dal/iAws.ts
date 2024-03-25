@@ -4,6 +4,7 @@ import {
     DeleteObjectCommandOutput,
     ListObjectVersionsCommandOutput
 } from "@aws-sdk/client-s3";
+import { CreateInvalidationCommandOutput } from "@aws-sdk/client-cloudfront";
 import { PromiseResult } from "aws-sdk/lib/request";
 
 export interface IAws
@@ -39,7 +40,7 @@ export interface IAws
 
     s3ListObjectVersions(objectPath: string): Promise<ListObjectVersionsCommandOutput>;
 
-    cloudFrontInvalidate(objectsPath: string[]): Promise<any>;
+    cloudFrontInvalidate(objectsPath: string[]): Promise<CreateInvalidationCommandOutput>;
 
     copyS3Object(originURL: string, destinationKey: string, shouldCache: boolean | undefined): Promise<PromiseResult<AWS.S3.CopyObjectOutput, AWS.AWSError>>;
 
