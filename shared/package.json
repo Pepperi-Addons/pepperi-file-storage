@@ -15,6 +15,7 @@
 	"author": "",
 	"license": "ISC",
 	"dependencies": {
+		"@aws-sdk/client-s3": "^3.540.0",
 		"@jimp/bmp": "^0.22.7",
 		"@jimp/custom": "^0.22.7",
 		"@jimp/jpeg": "^0.22.7",
@@ -23,7 +24,7 @@
 		"@jimp/png": "^0.22.7",
 		"@jimp/tiff": "^0.22.7",
 		"@jimp/types": "^0.22.7",
-		"@pepperi-addons/debug-server": "*",
+		"@pepperi-addons/debug-server": "^1.0.1",
 		"@pepperi-addons/papi-sdk": "^1.67.4",
 		"node-fetch": "^2.6.9",
 		"uuid": "^9.0.0"

@@ -1,13 +1,14 @@
 import { IAws } from "pfs-shared";
-import AWS from "aws-sdk";
-import { PromiseResult } from "aws-sdk/lib/request";
+// import AWS from "aws-sdk";
+// import { PromiseResult } from "aws-sdk/lib/request";
 import URL from "url-parse";
+import { PutObjectCommandOutput, PutObjectCommand, PutObjectCommandInput, S3Client } from "@aws-sdk/client-s3";
 
 
 export default class AwsDal implements IAws
 {
 
-	constructor(private S3Bucket: string, private CloudFrontDistribution: string, private s3: AWS.S3)
+	constructor(private S3Bucket: string, private CloudFrontDistribution: string, private s3: S3Client)
 	{
 	}
 
@@ -17,9 +18,9 @@ export default class AwsDal implements IAws
         Body: any, 
         ContentType: string,
         CacheControl?: string
-    }): Promise<AWS.S3.ManagedUpload.SendData>
+    }): Promise<PutObjectCommandOutput>
 	{			
-		const uploadParams: AWS.S3.PutObjectRequest = {
+		const uploadParams: PutObjectCommandInput = {
 			Bucket: params.Bucket ?? this.S3Bucket,
 			Key: params.Key,
 			Body: params.Body,
@@ -27,7 +28,9 @@ export default class AwsDal implements IAws
 			...(params.CacheControl && {CacheControl: params.CacheControl})
 		};
 
-		const uploaded = await this.s3.upload(uploadParams).promise();
+		const uploadCommand = new PutObjectCommand(uploadParams);
+
+		const uploaded = await this.s3.send(uploadCommand);
 		return uploaded;
 	}
 

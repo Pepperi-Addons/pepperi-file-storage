@@ -1,4 +1,4 @@
-import AWS from "aws-sdk";
+import { PutObjectCommandOutput } from "@aws-sdk/client-s3";
 import { PromiseResult } from "aws-sdk/lib/request";
 
 export interface IAws
@@ -9,7 +9,7 @@ export interface IAws
         Body: any, 
         ContentType: string,
         CacheControl?: string
-    }): Promise<any>;
+    }): Promise<PutObjectCommandOutput>;
 
     /**
     Generates a signed URL for uploading an object to an S3 bucket.

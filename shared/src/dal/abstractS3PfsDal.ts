@@ -1,3 +1,5 @@
+import { PutObjectCommandOutput } from "@aws-sdk/client-s3";
+
 import { Request } from "@pepperi-addons/debug-server";
 import { CACHE_DEFAULT_VALUE, dataURLRegex, TransactionType } from "../";
 import { AbstractBasePfsDal } from "./abstractBasePfsDal";
@@ -169,7 +171,7 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 	//#endregion
 
 	//#region public methods
-	public async uploadToS3(key, buffer, isCache = CACHE_DEFAULT_VALUE)
+	public async uploadToS3(key, buffer, isCache = CACHE_DEFAULT_VALUE): Promise<PutObjectCommandOutput>
 	{
 		const params: any = {};
 
@@ -183,7 +185,7 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 
 		// Upload to S3 bucket.
 		const uploaded = await this.awsDal.s3Upload(params);
-		console.log(`File uploaded successfully to ${uploaded.Location}`);
+		console.log(`File uploaded successfully.`);
 
 		return uploaded;
 	}
