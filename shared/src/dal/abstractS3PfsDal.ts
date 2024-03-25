@@ -133,7 +133,7 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 	//#endregion
 
 	//#region IPfsGetter
-	async getObjectS3FileVersion(Key: any) 
+	async getObjectS3FileVersion(Key: any): Promise<string | undefined>
 	{
 		console.log(`Trying to retrieve the latest VersionId of key: ${Key}`);
 		let latestVersionId;
@@ -160,9 +160,9 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 			// For more information about delete markers: https://docs.aws.amazon.com/AmazonS3/latest/userguide/DeleteMarker.html
 			// For more information about listObjectVersions: https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/S3.html#listObjectVersions-property
 
-			const filteredVersionId = allVersions.Versions.filter(ver => ver.IsLatest) ?? allVersions.DeleteMarkers.filter(ver => ver.IsLatest);
+			const filteredVersionId = allVersions.Versions?.filter(ver => ver.IsLatest) ?? allVersions.DeleteMarkers?.filter(ver => ver.IsLatest);
 
-			latestVersionId = filteredVersionId.length > 0 ? filteredVersionId[0].VersionId : undefined; // undefined will be returned in case no available version is found on S3.
+			latestVersionId = filteredVersionId && filteredVersionId.length > 0 ? filteredVersionId[0].VersionId : undefined; // undefined will be returned in case no available version is found on S3.
 
 			console.log(`Successfully retrieved the latest VersionId: ${latestVersionId} of key: ${Key}`);
 		}

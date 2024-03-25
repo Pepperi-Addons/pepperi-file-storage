@@ -11,6 +11,9 @@ import {
 	DeleteObjectCommand,
 	DeleteObjectCommandInput,
 	DeleteObjectCommandOutput,
+	ListObjectVersionsCommand,
+	ListObjectVersionsCommandInput,
+	ListObjectVersionsCommandOutput,
 	S3Client 
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
@@ -96,14 +99,16 @@ export default class AwsDal implements IAws
 		return deleted;
 	}
 
-	public async s3ListObjectVersions(objectPath: string): Promise<PromiseResult<AWS.S3.ListObjectVersionsOutput, AWS.AWSError>>
+	public async s3ListObjectVersions(objectPath: string): Promise<ListObjectVersionsCommandOutput>
 	{
-		const params = {
+		const params: ListObjectVersionsCommandInput = {
 			Bucket: this.S3Bucket,
 		    Prefix: objectPath
 		};
 		
-		const allVersions = await this.s3.listObjectVersions(params).promise();
+		const listObjectVersionsCommand = new ListObjectVersionsCommand(params);
+
+		const allVersions = await this.s3.send(listObjectVersionsCommand);
 		return allVersions;
 	}
 

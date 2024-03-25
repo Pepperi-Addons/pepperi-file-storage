@@ -1,7 +1,8 @@
 import { 
     PutObjectCommandOutput,
     DeleteObjectsCommandOutput,
-    DeleteObjectCommandOutput
+    DeleteObjectCommandOutput,
+    ListObjectVersionsCommandOutput
 } from "@aws-sdk/client-s3";
 import { PromiseResult } from "aws-sdk/lib/request";
 
@@ -36,7 +37,7 @@ export interface IAws
 
     s3DeleteObject(objectsPath: string): Promise<DeleteObjectCommandOutput>;
 
-    s3ListObjectVersions(objectPath: string): Promise<any>;
+    s3ListObjectVersions(objectPath: string): Promise<ListObjectVersionsCommandOutput>;
 
     cloudFrontInvalidate(objectsPath: string[]): Promise<any>;
 
