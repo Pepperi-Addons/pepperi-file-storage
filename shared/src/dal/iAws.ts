@@ -3,7 +3,8 @@ import {
     DeleteObjectsCommandOutput,
     DeleteObjectCommandOutput,
     ListObjectVersionsCommandOutput,
-    CopyObjectCommandOutput
+    CopyObjectCommandOutput,
+    CreateMultipartUploadOutput
 } from "@aws-sdk/client-s3";
 import { CreateInvalidationCommandOutput } from "@aws-sdk/client-cloudfront";
 import { PromiseResult } from "aws-sdk/lib/request";
@@ -53,7 +54,7 @@ export interface IAws
     @returns A Promise that resolves with the result of the createMultipartUpload() method from the AWS.S3 SDK.
     If an error occurs, the Promise will be rejected with an AWS.AWSError object.
     @throws If the createMultipartUpload() method from the AWS.S3 SDK throws an error, it will be rethrown by this method.
-    @see https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/S3.html#createMultipartUpload-property
+    @see https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/client/s3/command/CreateMultipartUploadCommand/
     @example
     const uploadRes = await s3.createMultipartUpload('myKey');
     console.log(uploadRes);
@@ -63,7 +64,7 @@ export interface IAws
     //   UploadId: 'myUploadId'
     // }
     */
-    createMultipartUpload(key: string): Promise<PromiseResult<AWS.S3.CreateMultipartUploadOutput, AWS.AWSError>>;
+    createMultipartUpload(key: string): Promise<CreateMultipartUploadOutput>;
 
     /**
     Copies a part of a multipart upload of a file from a given source to a given destination.

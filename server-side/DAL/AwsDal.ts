@@ -3,9 +3,9 @@ import { IAws } from "pfs-shared";
 // import { PromiseResult } from "aws-sdk/lib/request";
 import URL from "url-parse";
 import { 
-	PutObjectCommandOutput,
 	PutObjectCommand,
 	PutObjectCommandInput,
+	PutObjectCommandOutput,
 	DeleteObjectsCommand,
 	DeleteObjectsCommandOutput,
 	DeleteObjectCommand,
@@ -20,6 +20,9 @@ import {
 	HeadObjectCommand,
 	HeadObjectCommandInput,
 	HeadObjectCommandOutput,
+	CreateMultipartUploadCommand,
+	CreateMultipartUploadCommandInput,
+	CreateMultipartUploadCommandOutput,
 	S3Client 
 } from "@aws-sdk/client-s3";
 import { 
@@ -201,17 +204,20 @@ export default class AwsDal implements IAws
 		return headRes.ContentLength ?? 0;
 	}
 
-	public async createMultipartUpload(key: string): Promise<PromiseResult<AWS.S3.CreateMultipartUploadOutput, AWS.AWSError>>
+	public async createMultipartUpload(key: string): Promise<CreateMultipartUploadCommandOutput>
 	{
 		console.log(`Trying to create multipart upload of ${key}...`);
-		const params: AWS.S3.CreateMultipartUploadRequest = {
+		const params: CreateMultipartUploadCommandInput = {
 			Bucket: this.S3Bucket,
 			Key: key
 		};
-		let createRes: PromiseResult<AWS.S3.CreateMultipartUploadOutput, AWS.AWSError>;
+
+		const createCommand = new CreateMultipartUploadCommand(params);
+
+		let createRes: CreateMultipartUploadCommandOutput;
 		try
 		{
-			createRes = await this.s3.createMultipartUpload(params).promise();
+			createRes = await this.s3.send(createCommand);
 		}
 		catch (err)
 		{
