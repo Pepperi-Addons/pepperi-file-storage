@@ -1,4 +1,4 @@
-import { AWSError, S3 } from "aws-sdk";
+import { CompletedPart } from "aws-sdk/clients/s3";
 import { PromiseResult } from "aws-sdk/lib/request";
 import { MutateS3HandleFileCopy } from "./mutateS3HandleFileCopy";
 
@@ -49,9 +49,9 @@ export class MutateS3HandleMultipartUpload extends MutateS3HandleFileCopy
 	* @param UploadId - The upload ID
 	* @returns The uploaded parts
 	*/
-	private async copyUploadParts(tempFileURLs: string[], absolutePath: string, UploadId: string | undefined): Promise<AWS.S3.CompletedPart[]>
+	private async copyUploadParts(tempFileURLs: string[], absolutePath: string, UploadId: string | undefined): Promise<CompletedPart[]>
 	{
-		const uploadedParts: AWS.S3.CompletedPart[] = [];
+		const uploadedParts: CompletedPart[] = [];
 		for (let i = 0; i < tempFileURLs.length; i += this.BATCH_SIZE) 
 		{
 			const end = Math.min(i + this.BATCH_SIZE, tempFileURLs.length);

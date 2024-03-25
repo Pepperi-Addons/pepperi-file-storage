@@ -23,6 +23,9 @@ import {
 	CreateMultipartUploadCommand,
 	CreateMultipartUploadCommandInput,
 	CreateMultipartUploadCommandOutput,
+	UploadPartCopyCommand,
+	UploadPartCopyCommandInput,
+	UploadPartCopyCommandOutput,
 	S3Client 
 } from "@aws-sdk/client-s3";
 import { 
@@ -229,21 +232,24 @@ export default class AwsDal implements IAws
 		return createRes;
 	}
 
-	public async copyUploadPart(key: string, uploadId: string, partNumber: number, copySource: string): Promise<PromiseResult<AWS.S3.UploadPartCopyOutput, AWS.AWSError>>
+	public async copyUploadPart(key: string, uploadId: string, partNumber: number, copySource: string): Promise<UploadPartCopyCommandOutput>
 	{
-		const params: AWS.S3.UploadPartCopyRequest = {
+		const params: UploadPartCopyCommandInput = {
 			Bucket: this.S3Bucket,
 			Key: key,
 			UploadId: uploadId,
 			PartNumber: partNumber,
 			CopySource: encodeURI(`/${this.S3Bucket}${new URL(copySource).pathname}`),
 		};
-		let copyRes: PromiseResult<AWS.S3.UploadPartCopyOutput, AWS.AWSError>;
+
+		const copyCommand = new UploadPartCopyCommand(params);
+
+		let copyRes: UploadPartCopyCommandOutput;
 
 		console.log(`Trying to copy upload part number ${partNumber} of "${key}" from "${copySource}"...`);
 		try
 		{
-			copyRes = await this.s3.uploadPartCopy(params).promise();
+			copyRes = await this.s3.send(copyCommand);
 		}
 		catch (err)
 		{

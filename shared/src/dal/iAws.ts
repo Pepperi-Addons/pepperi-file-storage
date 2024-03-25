@@ -4,7 +4,8 @@ import {
     DeleteObjectCommandOutput,
     ListObjectVersionsCommandOutput,
     CopyObjectCommandOutput,
-    CreateMultipartUploadOutput
+    CreateMultipartUploadOutput,
+    UploadPartCopyCommandOutput
 } from "@aws-sdk/client-s3";
 import { CreateInvalidationCommandOutput } from "@aws-sdk/client-cloudfront";
 import { PromiseResult } from "aws-sdk/lib/request";
@@ -74,7 +75,7 @@ export interface IAws
     @param copySource - The source of the part to be copied in the form of "bucket/object".
     @returns A Promise that resolves to the result of the uploadPartCopy API call.
     @throws An error if there was an issue copying the upload part.
-    @see https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/S3.html#uploadPartCopy-property
+    @see https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/client/s3/command/UploadPartCopyCommand/
     @example
     const copyRes = await s3.copyUploadPart('myKey', 'myUploadId', 1, 'myBucket/myObject');
     console.log(copyRes);
@@ -87,7 +88,7 @@ export interface IAws
     //   RequestCharged: 'requester',
     // }
     */
-    copyUploadPart(key: string, uploadId: string, partNumber: number, copySource: string): Promise<PromiseResult<AWS.S3.UploadPartCopyOutput, AWS.AWSError>>;
+    copyUploadPart(key: string, uploadId: string, partNumber: number, copySource: string): Promise<UploadPartCopyCommandOutput>;
 
     /**
     Completes a multipart upload by assembling previously uploaded parts into a single object and creates the object in Amazon S3.
