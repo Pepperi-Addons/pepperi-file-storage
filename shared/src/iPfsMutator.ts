@@ -1,3 +1,5 @@
+import { DeleteObjectCommandOutput } from "@aws-sdk/client-s3";
+
 import { TransactionType } from "./constants";
 
 export interface IPfsMutator
@@ -7,7 +9,7 @@ export interface IPfsMutator
      * @param Key The key whose version is to be deleted.
      * @param s3FileVersion The version to be deleted.
      */
-    deleteS3FileVersion(Key: any, s3FileVersion: any);
+    deleteS3FileVersion(Key: any, s3FileVersion: any): Promise<DeleteObjectCommandOutput>;
     
     /**
      * Returns the lock data if the key is locked, null otherwise.

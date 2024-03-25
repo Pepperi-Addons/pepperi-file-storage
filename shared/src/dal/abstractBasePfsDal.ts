@@ -1,3 +1,4 @@
+import { DeleteObjectCommandOutput } from "@aws-sdk/client-s3";
 import { Request } from "@pepperi-addons/debug-server";
 import { AddonData, SearchBody, SearchData } from "@pepperi-addons/papi-sdk";
 import jwtDecode from "jwt-decode";
@@ -53,7 +54,7 @@ export abstract class AbstractBasePfsDal implements IPfsGetter, IPfsMutator
 
 	abstract invalidateCDN(file: any);
 
-	abstract deleteS3FileVersion(Key: any, s3FileVersion: any);
+	abstract deleteS3FileVersion(Key: any, s3FileVersion: any): Promise<DeleteObjectCommandOutput>;
 
 	abstract batchDeleteS3(keys: string[]);
 

@@ -1,3 +1,5 @@
+import { DeleteObjectCommandOutput } from "@aws-sdk/client-s3";
+
 import { CACHE_DEFAULT_VALUE } from "../../constants";
 import { AbstractS3PfsDal } from "../abstractS3PfsDal";
 
@@ -17,7 +19,7 @@ export abstract class AMutateS3Handler
 
 	abstract execute(): Promise<void>;
 
-	protected async deleteFileData(removedKey: string): Promise<any> 
+	protected async deleteFileData(removedKey: string): Promise<DeleteObjectCommandOutput> 
 	{
 		console.log(`Trying to delete Key: ${removedKey}`);
 

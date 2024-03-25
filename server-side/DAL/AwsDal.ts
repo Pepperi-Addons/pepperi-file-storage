@@ -8,6 +8,9 @@ import {
 	PutObjectCommandInput,
 	DeleteObjectsCommand,
 	DeleteObjectsCommandOutput,
+	DeleteObjectCommand,
+	DeleteObjectCommandInput,
+	DeleteObjectCommandOutput,
 	S3Client 
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
@@ -78,16 +81,17 @@ export default class AwsDal implements IAws
 		return deleteObjectsRes;
 	}
 
-	public async s3DeleteObject(objectsPath: string): Promise<PromiseResult<AWS.S3.DeleteObjectOutput, AWS.AWSError>>
+	public async s3DeleteObject(objectsPath: string): Promise<DeleteObjectCommandOutput>
 	{
-		const params: any = {};
+		const params: DeleteObjectCommandInput = {
+			Bucket: this.S3Bucket,
+			Key: objectsPath
+		};
 
-		// Create S3 params
-		params.Bucket = this.S3Bucket;
-		params.Key = objectsPath;
+		const deleteObjectCommand = new DeleteObjectCommand(params);
 		
 		// delete thumbnail from S3 bucket.
-		const deleted = await this.s3.deleteObject(params).promise();
+		const deleted = await this.s3.send(deleteObjectCommand);
 
 		return deleted;
 	}

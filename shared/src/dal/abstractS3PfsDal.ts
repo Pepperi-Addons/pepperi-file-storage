@@ -96,7 +96,7 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		}
 	}
 
-	async deleteS3FileVersion(Key: any, s3FileVersion: any) 
+	async deleteS3FileVersion(Key: any, s3FileVersion: any): Promise<PutObjectCommandOutput>
 	{
 		console.log(`Trying to delete version: ${s3FileVersion} of key: ${Key}`);
 
