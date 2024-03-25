@@ -1,4 +1,7 @@
-import { PutObjectCommandOutput } from "@aws-sdk/client-s3";
+import { 
+    PutObjectCommandOutput,
+    DeleteObjectsCommandOutput
+} from "@aws-sdk/client-s3";
 import { PromiseResult } from "aws-sdk/lib/request";
 
 export interface IAws
@@ -28,7 +31,7 @@ export interface IAws
         ContentType?: string
     }): Promise<string>;
 
-    s3DeleteObjects(objectsPaths: Array<string>): Promise<any>;
+    s3DeleteObjects(objectsPaths: Array<string>): Promise<DeleteObjectsCommandOutput>;
 
     s3DeleteObject(objectsPath: string): Promise<any>;
 

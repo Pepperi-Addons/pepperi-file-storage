@@ -117,10 +117,12 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		
 		// Delete all thumbnails for the deleted files
 		await this.batchDeleteThumbnails(keys);
-
-		for (const error of deleteObjectsRes.Errors) 
+		if(deleteObjectsRes.Errors)
 		{
-			console.error(`Delete objects encountered an error:${JSON.stringify(error)}`);
+			for (const error of deleteObjectsRes.Errors) 
+			{
+				console.error(`Delete objects encountered an error:${JSON.stringify(error)}`);
+			}
 		}
 
 		console.log(`Successfully deleted batch.`);
@@ -238,9 +240,12 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		// Call DeleteObjects
 		const deleteObjectsRes = await this.deleteObjects(keys);
 
-		for (const error of deleteObjectsRes.Errors) 
+		if(deleteObjectsRes.Errors)
 		{
-			console.error(`Delete objects encountered an error:${JSON.stringify(error)}`);
+			for (const error of deleteObjectsRes.Errors) 
+			{
+				console.error(`Delete objects encountered an error:${JSON.stringify(error)}`);
+			}
 		}
 
 		console.log(`Successfully deleted batch.`);
