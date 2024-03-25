@@ -39,6 +39,7 @@
     },
     "dependencies": {
         "@aws-sdk/client-s3": "^3.540.0",
+        "@aws-sdk/s3-request-presigner": "^3.540.0",
         "@pepperi-addons/addon-testing-framework": "^0.0.39",
         "@pepperi-addons/cpi-node": "^1.4.1",
         "@pepperi-addons/debug-server": "*",

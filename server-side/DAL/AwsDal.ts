@@ -2,7 +2,13 @@ import { IAws } from "pfs-shared";
 // import AWS from "aws-sdk";
 // import { PromiseResult } from "aws-sdk/lib/request";
 import URL from "url-parse";
-import { PutObjectCommandOutput, PutObjectCommand, PutObjectCommandInput, S3Client } from "@aws-sdk/client-s3";
+import { 
+	PutObjectCommandOutput,
+	PutObjectCommand,
+	PutObjectCommandInput,
+	S3Client 
+} from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 
 export default class AwsDal implements IAws
@@ -44,9 +50,8 @@ export default class AwsDal implements IAws
 		params.Bucket = params.Bucket ?? this.S3Bucket;
 		params.Expires = params.Expires ?? 24 * 60 * 60; //PUT presigned URL will expire after 24 hours = 60 sec * 60 min * 24 hrs
 
-		const urlString: string = await this.s3.getSignedUrl("putObject", params);
-		
-		return urlString;
+		const command = new PutObjectCommand({ Bucket: params.Bucket, Key: params.Key, ContentType: params.ContentType});
+  		return getSignedUrl(this.s3, command, { expiresIn: 3600 });
 	}
 
 	public async s3DeleteObjects(objectsPaths: Array<string>): Promise<PromiseResult<AWS.S3.DeleteObjectsOutput, AWS.AWSError>>
