@@ -14,6 +14,9 @@ import {
 	ListObjectVersionsCommand,
 	ListObjectVersionsCommandInput,
 	ListObjectVersionsCommandOutput,
+	CopyObjectCommand,
+	CopyObjectCommandInput,
+	CopyObjectCommandOutput,
 	S3Client 
 } from "@aws-sdk/client-s3";
 import { 
@@ -140,22 +143,24 @@ export default class AwsDal implements IAws
 		return invalidation;
 	}
 
-	public async copyS3Object(originURL: string, destinationKey: string, cacheControl: boolean | undefined): Promise<PromiseResult<AWS.S3.CopyObjectOutput, AWS.AWSError>>
+	public async copyS3Object(originURL: string, destinationKey: string, cacheControl: boolean | undefined): Promise<CopyObjectCommandOutput>
 	{
-		const copyParams: AWS.S3.CopyObjectRequest = {
+		const copyParams: CopyObjectCommandInput = {
 			Bucket: this.S3Bucket,
 			CopySource: encodeURI(`/${this.S3Bucket}${new URL(originURL).pathname}`),
 			Key: destinationKey,
 			...(!cacheControl && {CacheControl: "no-cache"}),
 		};
 
+		const copyCommand = new CopyObjectCommand(copyParams);
+
 		console.log(`Trying to copy object from ${originURL} to ${destinationKey}...`);
 		console.log(JSON.stringify(copyParams));
 
-		let copyRes: PromiseResult<AWS.S3.CopyObjectOutput, AWS.AWSError>;
+		let copyRes: CopyObjectCommandOutput;
 		try
 		{
-			copyRes = await this.s3.copyObject(copyParams).promise();
+			copyRes = await this.s3.send(copyCommand);
 		}
 		catch (err)
 		{

@@ -2,7 +2,8 @@ import {
     PutObjectCommandOutput,
     DeleteObjectsCommandOutput,
     DeleteObjectCommandOutput,
-    ListObjectVersionsCommandOutput
+    ListObjectVersionsCommandOutput,
+    CopyObjectCommandOutput
 } from "@aws-sdk/client-s3";
 import { CreateInvalidationCommandOutput } from "@aws-sdk/client-cloudfront";
 import { PromiseResult } from "aws-sdk/lib/request";
@@ -42,7 +43,7 @@ export interface IAws
 
     cloudFrontInvalidate(objectsPath: string[]): Promise<CreateInvalidationCommandOutput>;
 
-    copyS3Object(originURL: string, destinationKey: string, shouldCache: boolean | undefined): Promise<PromiseResult<AWS.S3.CopyObjectOutput, AWS.AWSError>>;
+    copyS3Object(originURL: string, destinationKey: string, shouldCache: boolean | undefined): Promise<CopyObjectCommandOutput>;
 
     getFileSize(key: string): Promise<number>;
 
