@@ -7,6 +7,7 @@ import {
 	PutObjectCommandInput,
 	PutObjectCommandOutput,
 	DeleteObjectsCommand,
+	DeleteObjectsCommandInput,
 	DeleteObjectsCommandOutput,
 	DeleteObjectCommand,
 	DeleteObjectCommandInput,
@@ -30,6 +31,9 @@ import {
 	CompleteMultipartUploadCommandInput,
 	CompleteMultipartUploadCommandOutput,
 	CompletedPart,
+	AbortMultipartUploadCommand,
+	AbortMultipartUploadCommandInput,
+	AbortMultipartUploadCommandOutput,
 	S3Client 
 } from "@aws-sdk/client-s3";
 import { 
@@ -86,7 +90,7 @@ export default class AwsDal implements IAws
 
 	public async s3DeleteObjects(objectsPaths: Array<string>): Promise<DeleteObjectsCommandOutput>
 	{
-		const params: AWS.S3.DeleteObjectsRequest = {
+		const params: DeleteObjectsCommandInput = {
 			Bucket: this.S3Bucket,
 			Delete: {
 				Objects: objectsPaths.map(key => ({Key: key})),
@@ -94,13 +98,7 @@ export default class AwsDal implements IAws
 			}
 		};
 
-		const deleteObjectsCommand = new DeleteObjectsCommand({
-			Bucket: params.Bucket,
-			Delete: {
-				Objects: objectsPaths.map(key => ({Key: key})),
-				Quiet: true	// Non verbose, returns info only for failed deletes.
-			}
-		});
+		const deleteObjectsCommand = new DeleteObjectsCommand(params);
 		// For more information on S3's deleteObjects function see: https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/S3.html#deleteObjects-property
 		const deleteObjectsRes = await this.s3.send(deleteObjectsCommand);
 		return deleteObjectsRes;
@@ -295,19 +293,21 @@ export default class AwsDal implements IAws
 		return completeRes;
 	}
 
-	public async abortMultipartUpload(key: string, uploadId: string): Promise<PromiseResult<AWS.S3.AbortMultipartUploadOutput, AWS.AWSError>>
+	public async abortMultipartUpload(key: string, uploadId: string): Promise<AbortMultipartUploadCommandOutput>
 	{
-		const params: AWS.S3.AbortMultipartUploadRequest = {
+		const params: AbortMultipartUploadCommandInput = {
 			Bucket: this.S3Bucket,
 			Key: key,
 			UploadId: uploadId
 		};
-		let abortRes: PromiseResult<AWS.S3.AbortMultipartUploadOutput, AWS.AWSError>;
+
+		const abortCommand = new AbortMultipartUploadCommand(params);
+		let abortRes: AbortMultipartUploadCommandOutput;
 
 		console.log(`Trying to abort multipart upload of ${key}...`);
 		try
 		{
-			abortRes = await this.s3.abortMultipartUpload(params).promise();
+			abortRes = await this.s3.send(abortCommand);
 		}
 		catch (err)
 		{
