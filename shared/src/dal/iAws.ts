@@ -5,7 +5,9 @@ import {
     ListObjectVersionsCommandOutput,
     CopyObjectCommandOutput,
     CreateMultipartUploadOutput,
-    UploadPartCopyCommandOutput
+    UploadPartCopyCommandOutput,
+    CompleteMultipartUploadCommandOutput,
+    CompletedPart,
 } from "@aws-sdk/client-s3";
 import { CreateInvalidationCommandOutput } from "@aws-sdk/client-cloudfront";
 import { PromiseResult } from "aws-sdk/lib/request";
@@ -116,7 +118,7 @@ export interface IAws
     //   VersionId: 'myVersionId',
     // }
     */
-    completeMultipartUpload(key: string, uploadId: string, parts: AWS.S3.CompletedPart[]): Promise<PromiseResult<AWS.S3.CompleteMultipartUploadOutput, AWS.AWSError>>;
+    completeMultipartUpload(key: string, uploadId: string, parts: CompletedPart[]): Promise<CompleteMultipartUploadCommandOutput>;
 
     /**
 	 * Aborts a multipart upload.

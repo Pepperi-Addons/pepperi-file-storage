@@ -26,6 +26,10 @@ import {
 	UploadPartCopyCommand,
 	UploadPartCopyCommandInput,
 	UploadPartCopyCommandOutput,
+	CompleteMultipartUploadCommand,
+	CompleteMultipartUploadCommandInput,
+	CompleteMultipartUploadCommandOutput,
+	CompletedPart,
 	S3Client 
 } from "@aws-sdk/client-s3";
 import { 
@@ -261,9 +265,9 @@ export default class AwsDal implements IAws
 		return copyRes;
 	}
 
-	public async completeMultipartUpload(key: string, uploadId: string, parts: AWS.S3.CompletedPart[]): Promise<PromiseResult<AWS.S3.CompleteMultipartUploadOutput, AWS.AWSError>>
+	public async completeMultipartUpload(key: string, uploadId: string, parts: CompletedPart[]): Promise<CompleteMultipartUploadCommandOutput>
 	{
-		const params: AWS.S3.CompleteMultipartUploadRequest = {
+		const params: CompleteMultipartUploadCommandInput = {
 			Bucket: this.S3Bucket,
 			Key: key,
 			UploadId: uploadId,
@@ -271,12 +275,15 @@ export default class AwsDal implements IAws
 				Parts: parts
 			}
 		};
-		let completeRes: PromiseResult<AWS.S3.CompleteMultipartUploadOutput, AWS.AWSError>;
+
+		const completeCommand = new CompleteMultipartUploadCommand(params);
+
+		let completeRes: CompleteMultipartUploadCommandOutput;
 
 		console.log(`Trying to complete multipart upload of ${key}...`);
 		try
 		{
-			completeRes = await this.s3.completeMultipartUpload(params).promise();
+			completeRes = await this.s3.send(completeCommand);
 		}
 		catch (err)
 		{
