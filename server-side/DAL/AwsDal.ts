@@ -17,6 +17,9 @@ import {
 	CopyObjectCommand,
 	CopyObjectCommandInput,
 	CopyObjectCommandOutput,
+	HeadObjectCommand,
+	HeadObjectCommandInput,
+	HeadObjectCommandOutput,
 	S3Client 
 } from "@aws-sdk/client-s3";
 import { 
@@ -175,14 +178,17 @@ export default class AwsDal implements IAws
 
 	public async getFileSize(key: string): Promise<number>
 	{
-		const params: AWS.S3.HeadObjectRequest = {
+		const params: HeadObjectCommandInput = {
 			Bucket: this.S3Bucket,
 			Key: key
 		};
-		let headRes: PromiseResult<AWS.S3.HeadObjectOutput, AWS.AWSError>;
+
+		const headCommand = new HeadObjectCommand(params);
+
+		let headRes: HeadObjectCommandOutput;
 		try
 		{
-			headRes = await this.s3.headObject(params).promise();
+			headRes = await this.s3.send(headCommand);
 		}
 		catch (err)
 		{
