@@ -1,3 +1,6 @@
+import { PutObjectCommandOutput } from "@aws-sdk/client-s3";
+import { CreateInvalidationCommandOutput } from "@aws-sdk/client-cloudfront";
+
 import { Request } from "@pepperi-addons/debug-server";
 import { CACHE_DEFAULT_VALUE, dataURLRegex, TransactionType } from "../";
 import { AbstractBasePfsDal } from "./abstractBasePfsDal";
@@ -55,7 +58,7 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 	
 	abstract override unlock(key: string);
 
-	async invalidateCDN(file: any)
+	async invalidateCDN(file: any): Promise<CreateInvalidationCommandOutput>
 	{
 		const keyInvalidationPath = `/${this.relativeAbsoluteKeyService.getAbsolutePath(file.Key)}`; //Invalidation path must start with a '/'.
 
@@ -94,7 +97,7 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		}
 	}
 
-	async deleteS3FileVersion(Key: any, s3FileVersion: any) 
+	async deleteS3FileVersion(Key: any, s3FileVersion: any): Promise<PutObjectCommandOutput>
 	{
 		console.log(`Trying to delete version: ${s3FileVersion} of key: ${Key}`);
 
@@ -115,10 +118,12 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		
 		// Delete all thumbnails for the deleted files
 		await this.batchDeleteThumbnails(keys);
-
-		for (const error of deleteObjectsRes.Errors) 
+		if(deleteObjectsRes.Errors)
 		{
-			console.error(`Delete objects encountered an error:${JSON.stringify(error)}`);
+			for (const error of deleteObjectsRes.Errors) 
+			{
+				console.error(`Delete objects encountered an error:${JSON.stringify(error)}`);
+			}
 		}
 
 		console.log(`Successfully deleted batch.`);
@@ -129,7 +134,7 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 	//#endregion
 
 	//#region IPfsGetter
-	async getObjectS3FileVersion(Key: any) 
+	async getObjectS3FileVersion(Key: any): Promise<string | undefined>
 	{
 		console.log(`Trying to retrieve the latest VersionId of key: ${Key}`);
 		let latestVersionId;
@@ -156,9 +161,9 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 			// For more information about delete markers: https://docs.aws.amazon.com/AmazonS3/latest/userguide/DeleteMarker.html
 			// For more information about listObjectVersions: https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/S3.html#listObjectVersions-property
 
-			const filteredVersionId = allVersions.Versions.filter(ver => ver.IsLatest) ?? allVersions.DeleteMarkers.filter(ver => ver.IsLatest);
+			const filteredVersionId = allVersions.Versions?.filter(ver => ver.IsLatest) ?? allVersions.DeleteMarkers?.filter(ver => ver.IsLatest);
 
-			latestVersionId = filteredVersionId.length > 0 ? filteredVersionId[0].VersionId : undefined; // undefined will be returned in case no available version is found on S3.
+			latestVersionId = filteredVersionId && filteredVersionId.length > 0 ? filteredVersionId[0].VersionId : undefined; // undefined will be returned in case no available version is found on S3.
 
 			console.log(`Successfully retrieved the latest VersionId: ${latestVersionId} of key: ${Key}`);
 		}
@@ -169,7 +174,7 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 	//#endregion
 
 	//#region public methods
-	public async uploadToS3(key, buffer, isCache = CACHE_DEFAULT_VALUE)
+	public async uploadToS3(key, buffer, isCache = CACHE_DEFAULT_VALUE): Promise<PutObjectCommandOutput>
 	{
 		const params: any = {};
 
@@ -183,7 +188,7 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 
 		// Upload to S3 bucket.
 		const uploaded = await this.awsDal.s3Upload(params);
-		console.log(`File uploaded successfully to ${uploaded.Location}`);
+		console.log(`File uploaded successfully.`);
 
 		return uploaded;
 	}
@@ -236,9 +241,12 @@ export abstract class AbstractS3PfsDal extends AbstractBasePfsDal
 		// Call DeleteObjects
 		const deleteObjectsRes = await this.deleteObjects(keys);
 
-		for (const error of deleteObjectsRes.Errors) 
+		if(deleteObjectsRes.Errors)
 		{
-			console.error(`Delete objects encountered an error:${JSON.stringify(error)}`);
+			for (const error of deleteObjectsRes.Errors) 
+			{
+				console.error(`Delete objects encountered an error:${JSON.stringify(error)}`);
+			}
 		}
 
 		console.log(`Successfully deleted batch.`);

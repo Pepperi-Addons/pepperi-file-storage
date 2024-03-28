@@ -1,5 +1,4 @@
-import { AWSError, S3 } from "aws-sdk";
-import { PromiseResult } from "aws-sdk/lib/request";
+import { CompleteMultipartUploadCommandOutput, CompletedPart } from "@aws-sdk/client-s3";
 import { MutateS3HandleFileCopy } from "./mutateS3HandleFileCopy";
 
 
@@ -12,7 +11,7 @@ export class MutateS3HandleMultipartUpload extends MutateS3HandleFileCopy
 		// Copy the file's data from the temp location to the final location.
 		const absolutePath = this.s3PfsDal.relativeAbsoluteKeyService.getAbsolutePath(this.newFileFields.Key);
 		const tempFileURLs: Array<string> = this.newFileFields.TemporaryFileURLs;
-		let completeMultipartUploadResult: PromiseResult<S3.CompleteMultipartUploadOutput, AWSError>;
+		let completeMultipartUploadResult: CompleteMultipartUploadCommandOutput;
 
 		// Create multipart upload
 		const { UploadId } = await this.s3PfsDal.awsDal.createMultipartUpload(absolutePath);
@@ -35,7 +34,7 @@ export class MutateS3HandleMultipartUpload extends MutateS3HandleFileCopy
 		}
 
 		// Set the file version and size
-		this.newFileFields.FileVersion = completeMultipartUploadResult.$response.data?.VersionId;
+		this.newFileFields.FileVersion = completeMultipartUploadResult.VersionId;
 		this.newFileFields.FileSize = await this.s3PfsDal.awsDal.getFileSize(absolutePath);
 
 		// Delete the TemporaryFileURLs
@@ -49,9 +48,9 @@ export class MutateS3HandleMultipartUpload extends MutateS3HandleFileCopy
 	* @param UploadId - The upload ID
 	* @returns The uploaded parts
 	*/
-	private async copyUploadParts(tempFileURLs: string[], absolutePath: string, UploadId: string | undefined): Promise<AWS.S3.CompletedPart[]>
+	private async copyUploadParts(tempFileURLs: string[], absolutePath: string, UploadId: string | undefined): Promise<CompletedPart[]>
 	{
-		const uploadedParts: AWS.S3.CompletedPart[] = [];
+		const uploadedParts: CompletedPart[] = [];
 		for (let i = 0; i < tempFileURLs.length; i += this.BATCH_SIZE) 
 		{
 			const end = Math.min(i + this.BATCH_SIZE, tempFileURLs.length);

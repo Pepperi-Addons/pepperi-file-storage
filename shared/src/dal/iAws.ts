@@ -1,4 +1,16 @@
-import AWS from "aws-sdk";
+import { 
+    PutObjectCommandOutput,
+    DeleteObjectsCommandOutput,
+    DeleteObjectCommandOutput,
+    ListObjectVersionsCommandOutput,
+    CopyObjectCommandOutput,
+    CreateMultipartUploadOutput,
+    UploadPartCopyCommandOutput,
+    CompleteMultipartUploadCommandOutput,
+    CompletedPart,
+    AbortMultipartUploadCommandOutput
+} from "@aws-sdk/client-s3";
+import { CreateInvalidationCommandOutput } from "@aws-sdk/client-cloudfront";
 import { PromiseResult } from "aws-sdk/lib/request";
 
 export interface IAws
@@ -9,7 +21,7 @@ export interface IAws
         Body: any, 
         ContentType: string,
         CacheControl?: string
-    }): Promise<any>;
+    }): Promise<PutObjectCommandOutput>;
 
     /**
     Generates a signed URL for uploading an object to an S3 bucket.
@@ -28,15 +40,15 @@ export interface IAws
         ContentType?: string
     }): Promise<string>;
 
-    s3DeleteObjects(objectsPaths: Array<string>): Promise<any>;
+    s3DeleteObjects(objectsPaths: Array<string>): Promise<DeleteObjectsCommandOutput>;
 
-    s3DeleteObject(objectsPath: string): Promise<any>;
+    s3DeleteObject(objectsPath: string): Promise<DeleteObjectCommandOutput>;
 
-    s3ListObjectVersions(objectPath: string): Promise<any>;
+    s3ListObjectVersions(objectPath: string): Promise<ListObjectVersionsCommandOutput>;
 
-    cloudFrontInvalidate(objectsPath: string[]): Promise<any>;
+    cloudFrontInvalidate(objectsPath: string[]): Promise<CreateInvalidationCommandOutput>;
 
-    copyS3Object(originURL: string, destinationKey: string, shouldCache: boolean | undefined): Promise<PromiseResult<AWS.S3.CopyObjectOutput, AWS.AWSError>>;
+    copyS3Object(originURL: string, destinationKey: string, shouldCache: boolean | undefined): Promise<CopyObjectCommandOutput>;
 
     getFileSize(key: string): Promise<number>;
 
@@ -46,7 +58,7 @@ export interface IAws
     @returns A Promise that resolves with the result of the createMultipartUpload() method from the AWS.S3 SDK.
     If an error occurs, the Promise will be rejected with an AWS.AWSError object.
     @throws If the createMultipartUpload() method from the AWS.S3 SDK throws an error, it will be rethrown by this method.
-    @see https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/S3.html#createMultipartUpload-property
+    @see https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/client/s3/command/CreateMultipartUploadCommand/
     @example
     const uploadRes = await s3.createMultipartUpload('myKey');
     console.log(uploadRes);
@@ -56,7 +68,7 @@ export interface IAws
     //   UploadId: 'myUploadId'
     // }
     */
-    createMultipartUpload(key: string): Promise<PromiseResult<AWS.S3.CreateMultipartUploadOutput, AWS.AWSError>>;
+    createMultipartUpload(key: string): Promise<CreateMultipartUploadOutput>;
 
     /**
     Copies a part of a multipart upload of a file from a given source to a given destination.
@@ -66,7 +78,7 @@ export interface IAws
     @param copySource - The source of the part to be copied in the form of "bucket/object".
     @returns A Promise that resolves to the result of the uploadPartCopy API call.
     @throws An error if there was an issue copying the upload part.
-    @see https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/S3.html#uploadPartCopy-property
+    @see https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/client/s3/command/UploadPartCopyCommand/
     @example
     const copyRes = await s3.copyUploadPart('myKey', 'myUploadId', 1, 'myBucket/myObject');
     console.log(copyRes);
@@ -79,16 +91,16 @@ export interface IAws
     //   RequestCharged: 'requester',
     // }
     */
-    copyUploadPart(key: string, uploadId: string, partNumber: number, copySource: string): Promise<PromiseResult<AWS.S3.UploadPartCopyOutput, AWS.AWSError>>;
+    copyUploadPart(key: string, uploadId: string, partNumber: number, copySource: string): Promise<UploadPartCopyCommandOutput>;
 
     /**
     Completes a multipart upload by assembling previously uploaded parts into a single object and creates the object in Amazon S3.
     @param {string} key - The key under which the multipart upload was initiated.
     @param {string} uploadId - The ID of the multipart upload.
-    @param {AWS.S3.CompletedPart[]} parts - An array of CompletedPart data types that identifies the individual parts that were uploaded.
-    @return {Promise<PromiseResult<AWS.S3.CompleteMultipartUploadOutput, AWS.AWSError>>} - A Promise that returns a PromiseResult object containing the response data from Amazon S3 or an error.
+    @param {CompletedPart[]} parts - An array of CompletedPart data types that identifies the individual parts that were uploaded.
+    @return {Promise<CompleteMultipartUploadCommandOutput>} - A Promise that returns a PromiseResult object containing the response data from Amazon S3 or an error.
     @throws {AWS.AWSError} - Throws an error if the completion of multipart upload fails.
-    @see https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/S3.html#completeMultipartUpload-property
+    @see https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/client/s3/command/CompleteMultipartUploadCommand/
     @example
     const completeRes = await s3.completeMultipartUpload('myKey', 'myUploadId', [
         {
@@ -107,7 +119,7 @@ export interface IAws
     //   VersionId: 'myVersionId',
     // }
     */
-    completeMultipartUpload(key: string, uploadId: string, parts: AWS.S3.CompletedPart[]): Promise<PromiseResult<AWS.S3.CompleteMultipartUploadOutput, AWS.AWSError>>;
+    completeMultipartUpload(key: string, uploadId: string, parts: CompletedPart[]): Promise<CompleteMultipartUploadCommandOutput>;
 
     /**
 	 * Aborts a multipart upload.
@@ -116,7 +128,7 @@ export interface IAws
 	 * @returns The result of the abort operation.
 	 * @throws An error if the abort operation fails.
 	 * 
-	 * @see https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/S3.html#abortMultipartUpload-property
+	 * @see https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/client/s3/command/AbortMultipartUploadCommand/
 	 * @example
 	 * const abortRes = await s3.abortMultipartUpload('myKey', 'myUploadId');
 	 * console.log(abortRes);
@@ -127,6 +139,5 @@ export interface IAws
 	 * // }
 	 * 
 	 */
-	abortMultipartUpload(key: string, uploadId: string): Promise<PromiseResult<AWS.S3.AbortMultipartUploadOutput, AWS.AWSError>>
-
+	abortMultipartUpload(key: string, uploadId: string): Promise<AbortMultipartUploadCommandOutput>
 }

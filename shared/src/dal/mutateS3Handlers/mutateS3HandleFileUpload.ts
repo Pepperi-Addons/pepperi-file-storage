@@ -1,3 +1,5 @@
+import { PutObjectCommandOutput } from "@aws-sdk/client-s3";
+
 import { MutateS3HandlePostBase } from "./mutateS3HandlePostBase";
 
 export class MutateS3HandleFileUpload extends MutateS3HandlePostBase
@@ -10,7 +12,7 @@ export class MutateS3HandleFileUpload extends MutateS3HandlePostBase
 		delete this.newFileFields.buffer;
 	}
 
-	protected async uploadFileData(): Promise<any> 
+	protected async uploadFileData(): Promise<PutObjectCommandOutput> 
 	{
 		const key = this.s3PfsDal.relativeAbsoluteKeyService.getAbsolutePath(this.newFileFields.Key);
 		return this.s3PfsDal.uploadToS3(key, this.newFileFields.buffer, this.shouldUseCache);

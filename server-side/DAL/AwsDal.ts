@@ -1,13 +1,54 @@
 import { IAws } from "pfs-shared";
-import AWS from "aws-sdk";
-import { PromiseResult } from "aws-sdk/lib/request";
+// import AWS from "aws-sdk";
+// import { PromiseResult } from "aws-sdk/lib/request";
 import URL from "url-parse";
+import { 
+	PutObjectCommand,
+	PutObjectCommandInput,
+	PutObjectCommandOutput,
+	DeleteObjectsCommand,
+	DeleteObjectsCommandInput,
+	DeleteObjectsCommandOutput,
+	DeleteObjectCommand,
+	DeleteObjectCommandInput,
+	DeleteObjectCommandOutput,
+	ListObjectVersionsCommand,
+	ListObjectVersionsCommandInput,
+	ListObjectVersionsCommandOutput,
+	CopyObjectCommand,
+	CopyObjectCommandInput,
+	CopyObjectCommandOutput,
+	HeadObjectCommand,
+	HeadObjectCommandInput,
+	HeadObjectCommandOutput,
+	CreateMultipartUploadCommand,
+	CreateMultipartUploadCommandInput,
+	CreateMultipartUploadCommandOutput,
+	UploadPartCopyCommand,
+	UploadPartCopyCommandInput,
+	UploadPartCopyCommandOutput,
+	CompleteMultipartUploadCommand,
+	CompleteMultipartUploadCommandInput,
+	CompleteMultipartUploadCommandOutput,
+	CompletedPart,
+	AbortMultipartUploadCommand,
+	AbortMultipartUploadCommandInput,
+	AbortMultipartUploadCommandOutput,
+	S3Client 
+} from "@aws-sdk/client-s3";
+import { 
+	CloudFrontClient,
+	CreateInvalidationCommand,
+	CreateInvalidationCommandInput,
+	CreateInvalidationCommandOutput
+} from "@aws-sdk/client-cloudfront";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 
 export default class AwsDal implements IAws
 {
 
-	constructor(private S3Bucket: string, private CloudFrontDistribution: string, private s3: AWS.S3)
+	constructor(private S3Bucket: string, private CloudFrontDistribution: string, private s3: S3Client)
 	{
 	}
 
@@ -17,9 +58,9 @@ export default class AwsDal implements IAws
         Body: any, 
         ContentType: string,
         CacheControl?: string
-    }): Promise<AWS.S3.ManagedUpload.SendData>
+    }): Promise<PutObjectCommandOutput>
 	{			
-		const uploadParams: AWS.S3.PutObjectRequest = {
+		const uploadParams: PutObjectCommandInput = {
 			Bucket: params.Bucket ?? this.S3Bucket,
 			Key: params.Key,
 			Body: params.Body,
@@ -27,7 +68,9 @@ export default class AwsDal implements IAws
 			...(params.CacheControl && {CacheControl: params.CacheControl})
 		};
 
-		const uploaded = await this.s3.upload(uploadParams).promise();
+		const uploadCommand = new PutObjectCommand(uploadParams);
+
+		const uploaded = await this.s3.send(uploadCommand);
 		return uploaded;
 	}
 
@@ -41,14 +84,13 @@ export default class AwsDal implements IAws
 		params.Bucket = params.Bucket ?? this.S3Bucket;
 		params.Expires = params.Expires ?? 24 * 60 * 60; //PUT presigned URL will expire after 24 hours = 60 sec * 60 min * 24 hrs
 
-		const urlString: string = await this.s3.getSignedUrl("putObject", params);
-		
-		return urlString;
+		const command = new PutObjectCommand({ Bucket: params.Bucket, Key: params.Key, ContentType: params.ContentType});
+  		return getSignedUrl(this.s3, command, { expiresIn: 3600 });
 	}
 
-	public async s3DeleteObjects(objectsPaths: Array<string>): Promise<PromiseResult<AWS.S3.DeleteObjectsOutput, AWS.AWSError>>
+	public async s3DeleteObjects(objectsPaths: Array<string>): Promise<DeleteObjectsCommandOutput>
 	{
-		const params: AWS.S3.DeleteObjectsRequest = {
+		const params: DeleteObjectsCommandInput = {
 			Bucket: this.S3Bucket,
 			Delete: {
 				Objects: objectsPaths.map(key => ({Key: key})),
@@ -56,41 +98,45 @@ export default class AwsDal implements IAws
 			}
 		};
 
+		const deleteObjectsCommand = new DeleteObjectsCommand(params);
 		// For more information on S3's deleteObjects function see: https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/S3.html#deleteObjects-property
-		const deleteObjectsRes = await this.s3.deleteObjects(params).promise();
+		const deleteObjectsRes = await this.s3.send(deleteObjectsCommand);
 		return deleteObjectsRes;
 	}
 
-	public async s3DeleteObject(objectsPath: string): Promise<PromiseResult<AWS.S3.DeleteObjectOutput, AWS.AWSError>>
+	public async s3DeleteObject(objectsPath: string): Promise<DeleteObjectCommandOutput>
 	{
-		const params: any = {};
+		const params: DeleteObjectCommandInput = {
+			Bucket: this.S3Bucket,
+			Key: objectsPath
+		};
 
-		// Create S3 params
-		params.Bucket = this.S3Bucket;
-		params.Key = objectsPath;
+		const deleteObjectCommand = new DeleteObjectCommand(params);
 		
 		// delete thumbnail from S3 bucket.
-		const deleted = await this.s3.deleteObject(params).promise();
+		const deleted = await this.s3.send(deleteObjectCommand);
 
 		return deleted;
 	}
 
-	public async s3ListObjectVersions(objectPath: string): Promise<PromiseResult<AWS.S3.ListObjectVersionsOutput, AWS.AWSError>>
+	public async s3ListObjectVersions(objectPath: string): Promise<ListObjectVersionsCommandOutput>
 	{
-		const params = {
+		const params: ListObjectVersionsCommandInput = {
 			Bucket: this.S3Bucket,
 		    Prefix: objectPath
 		};
 		
-		const allVersions = await this.s3.listObjectVersions(params).promise();
+		const listObjectVersionsCommand = new ListObjectVersionsCommand(params);
+
+		const allVersions = await this.s3.send(listObjectVersionsCommand);
 		return allVersions;
 	}
 
-	public async cloudFrontInvalidate(objectsPath: string[]): Promise<PromiseResult<AWS.CloudFront.CreateInvalidationResult, AWS.AWSError>>
+	public async cloudFrontInvalidate(objectsPath: string[]): Promise<CreateInvalidationCommandOutput>
 	{
 		// Create invalidation request
-		const cloudfront = new AWS.CloudFront({apiVersion: "2020-05-31"});
-		const invalidationParams: AWS.CloudFront.CreateInvalidationRequest = {
+		const cloudFrontClient = new CloudFrontClient({apiVersion: "2020-05-31"});
+		const invalidationParams: CreateInvalidationCommandInput = {
 			DistributionId: this.CloudFrontDistribution,
   			InvalidationBatch: {
 				CallerReference: (new Date()).getTime().toString(), //A unique string to represent each invalidation request.
@@ -101,27 +147,31 @@ export default class AwsDal implements IAws
   			}
 		};
 
-		const invalidation = await cloudfront.createInvalidation(invalidationParams).promise();
+		const createInvalidationCommand = new CreateInvalidationCommand(invalidationParams);
+
+		const invalidation = await cloudFrontClient.send(createInvalidationCommand);
 
 		return invalidation;
 	}
 
-	public async copyS3Object(originURL: string, destinationKey: string, cacheControl: boolean | undefined): Promise<PromiseResult<AWS.S3.CopyObjectOutput, AWS.AWSError>>
+	public async copyS3Object(originURL: string, destinationKey: string, cacheControl: boolean | undefined): Promise<CopyObjectCommandOutput>
 	{
-		const copyParams: AWS.S3.CopyObjectRequest = {
+		const copyParams: CopyObjectCommandInput = {
 			Bucket: this.S3Bucket,
 			CopySource: encodeURI(`/${this.S3Bucket}${new URL(originURL).pathname}`),
 			Key: destinationKey,
 			...(!cacheControl && {CacheControl: "no-cache"}),
 		};
 
+		const copyCommand = new CopyObjectCommand(copyParams);
+
 		console.log(`Trying to copy object from ${originURL} to ${destinationKey}...`);
 		console.log(JSON.stringify(copyParams));
 
-		let copyRes: PromiseResult<AWS.S3.CopyObjectOutput, AWS.AWSError>;
+		let copyRes: CopyObjectCommandOutput;
 		try
 		{
-			copyRes = await this.s3.copyObject(copyParams).promise();
+			copyRes = await this.s3.send(copyCommand);
 		}
 		catch (err)
 		{
@@ -136,14 +186,17 @@ export default class AwsDal implements IAws
 
 	public async getFileSize(key: string): Promise<number>
 	{
-		const params: AWS.S3.HeadObjectRequest = {
+		const params: HeadObjectCommandInput = {
 			Bucket: this.S3Bucket,
 			Key: key
 		};
-		let headRes: PromiseResult<AWS.S3.HeadObjectOutput, AWS.AWSError>;
+
+		const headCommand = new HeadObjectCommand(params);
+
+		let headRes: HeadObjectCommandOutput;
 		try
 		{
-			headRes = await this.s3.headObject(params).promise();
+			headRes = await this.s3.send(headCommand);
 		}
 		catch (err)
 		{
@@ -156,17 +209,20 @@ export default class AwsDal implements IAws
 		return headRes.ContentLength ?? 0;
 	}
 
-	public async createMultipartUpload(key: string): Promise<PromiseResult<AWS.S3.CreateMultipartUploadOutput, AWS.AWSError>>
+	public async createMultipartUpload(key: string): Promise<CreateMultipartUploadCommandOutput>
 	{
 		console.log(`Trying to create multipart upload of ${key}...`);
-		const params: AWS.S3.CreateMultipartUploadRequest = {
+		const params: CreateMultipartUploadCommandInput = {
 			Bucket: this.S3Bucket,
 			Key: key
 		};
-		let createRes: PromiseResult<AWS.S3.CreateMultipartUploadOutput, AWS.AWSError>;
+
+		const createCommand = new CreateMultipartUploadCommand(params);
+
+		let createRes: CreateMultipartUploadCommandOutput;
 		try
 		{
-			createRes = await this.s3.createMultipartUpload(params).promise();
+			createRes = await this.s3.send(createCommand);
 		}
 		catch (err)
 		{
@@ -178,21 +234,24 @@ export default class AwsDal implements IAws
 		return createRes;
 	}
 
-	public async copyUploadPart(key: string, uploadId: string, partNumber: number, copySource: string): Promise<PromiseResult<AWS.S3.UploadPartCopyOutput, AWS.AWSError>>
+	public async copyUploadPart(key: string, uploadId: string, partNumber: number, copySource: string): Promise<UploadPartCopyCommandOutput>
 	{
-		const params: AWS.S3.UploadPartCopyRequest = {
+		const params: UploadPartCopyCommandInput = {
 			Bucket: this.S3Bucket,
 			Key: key,
 			UploadId: uploadId,
 			PartNumber: partNumber,
 			CopySource: encodeURI(`/${this.S3Bucket}${new URL(copySource).pathname}`),
 		};
-		let copyRes: PromiseResult<AWS.S3.UploadPartCopyOutput, AWS.AWSError>;
+
+		const copyCommand = new UploadPartCopyCommand(params);
+
+		let copyRes: UploadPartCopyCommandOutput;
 
 		console.log(`Trying to copy upload part number ${partNumber} of "${key}" from "${copySource}"...`);
 		try
 		{
-			copyRes = await this.s3.uploadPartCopy(params).promise();
+			copyRes = await this.s3.send(copyCommand);
 		}
 		catch (err)
 		{
@@ -204,9 +263,9 @@ export default class AwsDal implements IAws
 		return copyRes;
 	}
 
-	public async completeMultipartUpload(key: string, uploadId: string, parts: AWS.S3.CompletedPart[]): Promise<PromiseResult<AWS.S3.CompleteMultipartUploadOutput, AWS.AWSError>>
+	public async completeMultipartUpload(key: string, uploadId: string, parts: CompletedPart[]): Promise<CompleteMultipartUploadCommandOutput>
 	{
-		const params: AWS.S3.CompleteMultipartUploadRequest = {
+		const params: CompleteMultipartUploadCommandInput = {
 			Bucket: this.S3Bucket,
 			Key: key,
 			UploadId: uploadId,
@@ -214,12 +273,15 @@ export default class AwsDal implements IAws
 				Parts: parts
 			}
 		};
-		let completeRes: PromiseResult<AWS.S3.CompleteMultipartUploadOutput, AWS.AWSError>;
+
+		const completeCommand = new CompleteMultipartUploadCommand(params);
+
+		let completeRes: CompleteMultipartUploadCommandOutput;
 
 		console.log(`Trying to complete multipart upload of ${key}...`);
 		try
 		{
-			completeRes = await this.s3.completeMultipartUpload(params).promise();
+			completeRes = await this.s3.send(completeCommand);
 		}
 		catch (err)
 		{
@@ -231,19 +293,21 @@ export default class AwsDal implements IAws
 		return completeRes;
 	}
 
-	public async abortMultipartUpload(key: string, uploadId: string): Promise<PromiseResult<AWS.S3.AbortMultipartUploadOutput, AWS.AWSError>>
+	public async abortMultipartUpload(key: string, uploadId: string): Promise<AbortMultipartUploadCommandOutput>
 	{
-		const params: AWS.S3.AbortMultipartUploadRequest = {
+		const params: AbortMultipartUploadCommandInput = {
 			Bucket: this.S3Bucket,
 			Key: key,
 			UploadId: uploadId
 		};
-		let abortRes: PromiseResult<AWS.S3.AbortMultipartUploadOutput, AWS.AWSError>;
+
+		const abortCommand = new AbortMultipartUploadCommand(params);
+		let abortRes: AbortMultipartUploadCommandOutput;
 
 		console.log(`Trying to abort multipart upload of ${key}...`);
 		try
 		{
-			abortRes = await this.s3.abortMultipartUpload(params).promise();
+			abortRes = await this.s3.send(abortCommand);
 		}
 		catch (err)
 		{

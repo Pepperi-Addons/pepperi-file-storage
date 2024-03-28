@@ -1,3 +1,4 @@
+import { PutObjectCommandOutput } from "@aws-sdk/client-s3";
 import { AMutateS3Handler } from "./aMutateS3Handler";
 
 export class MutateS3HandlePostBase extends AMutateS3Handler
@@ -47,7 +48,7 @@ export class MutateS3HandlePostBase extends AMutateS3Handler
 		}
 	}
 
-	protected async uploadThumbnail(size: string, Body: Buffer): Promise<any> 
+	protected async uploadThumbnail(size: string, Body: Buffer): Promise<PutObjectCommandOutput> 
 	{
 		const key = `thumbnails/${this.s3PfsDal.relativeAbsoluteKeyService.getAbsolutePath(this.newFileFields.Key)}_${size}`;
 		return this.s3PfsDal.uploadToS3(key, Body, this.shouldUseCache);
