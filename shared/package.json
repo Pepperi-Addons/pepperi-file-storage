@@ -25,15 +25,15 @@
 		"@jimp/png": "^0.22.7",
 		"@jimp/tiff": "^0.22.7",
 		"@jimp/types": "^0.22.7",
-		"@pepperi-addons/debug-server": "^1.0.1",
-		"@pepperi-addons/papi-sdk": "^1.67.4",
+		"@pepperi-addons/debug-server": "^1.0.2",
+		"@pepperi-addons/papi-sdk": "^1.70.0",
 		"node-fetch": "^2.6.9",
 		"uuid": "^9.0.0"
 	},
 	"devDependencies": {
 		"@types/chai-as-promised": "^7.1.5",
 		"@types/mocha": "^9.1.1",
-		"@types/node": "^10.17.24",
+		"@types/node": "20.11",
 		"@typescript-eslint/eslint-plugin": "^5.33.1",
 		"@typescript-eslint/parser": "^5.33.1",
 		"aws-sdk": "^2.1310.0",

@@ -1,12 +1,24 @@
+import { 
+    PutObjectCommandOutput,
+    DeleteObjectsCommandOutput,
+    DeleteObjectCommandOutput,
+    ListObjectVersionsCommandOutput,
+    CopyObjectCommandOutput,
+    CreateMultipartUploadOutput,
+    UploadPartCopyCommandOutput,
+    CompleteMultipartUploadCommandOutput,
+    CompletedPart,
+    AbortMultipartUploadCommandOutput
+} from "@aws-sdk/client-s3";
+
 import { IAws } from "pfs-shared";
-import { PromiseResult } from "aws-sdk/lib/request";
 
 
 export default class CpiAwsDal implements IAws
 {
 	// AWS connectivity isn't supported on CPI side.
     
-	s3Upload(params: { Bucket?: string | undefined; Key: string; Body: any; ContentType: string; CacheControl?: string | undefined; }): Promise<any> 
+	s3Upload(params: { Bucket?: string | undefined; Key: string; Body: any; ContentType: string; CacheControl?: string | undefined; }): Promise<PutObjectCommandOutput> 
 	{
 		throw new Error("Method not implemented.");
 	}
@@ -14,15 +26,15 @@ export default class CpiAwsDal implements IAws
 	{
 		throw new Error("Method not implemented.");
 	}
-	s3DeleteObjects(objectsPaths: string[]): Promise<any> 
+	s3DeleteObjects(objectsPaths: string[]): Promise<DeleteObjectsCommandOutput> 
 	{
 		throw new Error("Method not implemented.");
 	}
-	s3DeleteObject(objectsPath: string): Promise<any> 
+	s3DeleteObject(objectsPath: string): Promise<DeleteObjectCommandOutput> 
 	{
 		throw new Error("Method not implemented.");
 	}
-	s3ListObjectVersions(objectPath: string): Promise<any> 
+	s3ListObjectVersions(objectPath: string): Promise<ListObjectVersionsCommandOutput> 
 	{
 		throw new Error("Method not implemented.");
 	}
@@ -34,27 +46,27 @@ export default class CpiAwsDal implements IAws
 	{
 		throw new Error("Method not implemented.");
 	}
-	copyS3Object(originURL: string, destinationKey: string, shouldCache: boolean | undefined): Promise<any> 
+	copyS3Object(originURL: string, destinationKey: string, shouldCache: boolean | undefined): Promise<CopyObjectCommandOutput> 
 	{
 		throw new Error("Method not implemented.");
 	}
 
-	createMultipartUpload(key: string): Promise<PromiseResult<AWS.S3.CreateMultipartUploadOutput, AWS.AWSError>>
+	createMultipartUpload(key: string): Promise<CreateMultipartUploadOutput>
 	{
 		throw new Error("Method not implemented.");
 	}
 
-	copyUploadPart(key: string, uploadId: string, partNumber: number, copySource: string): Promise<PromiseResult<AWS.S3.UploadPartCopyOutput, AWS.AWSError>>
+	copyUploadPart(key: string, uploadId: string, partNumber: number, copySource: string): Promise<UploadPartCopyCommandOutput>
 	{
 		throw new Error("Method not implemented.");
 	}
 
-	completeMultipartUpload(key: string, uploadId: string, parts: AWS.S3.CompletedPart[]): Promise<PromiseResult<AWS.S3.CompleteMultipartUploadOutput, AWS.AWSError>>
+	completeMultipartUpload(key: string, uploadId: string, parts: CompletedPart[]): Promise<CompleteMultipartUploadCommandOutput>
 	{
 		throw new Error("Method not implemented.");
 	}
 
-	abortMultipartUpload(key: string, uploadId: string): Promise<PromiseResult<AWS.S3.AbortMultipartUploadOutput, AWS.AWSError>>
+	abortMultipartUpload(key: string, uploadId: string): Promise<AbortMultipartUploadCommandOutput>
 	{
 		throw new Error("Method not implemented.");
 	}
